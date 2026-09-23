@@ -750,6 +750,53 @@
         "width": 1471,
         "height": 922
       }
+    },
+    "proof-core": {
+      "id": "proof-core",
+      "dir": "fairness",
+      "master": "art-masters/fairness/proof-core.png",
+      "variants": [
+        {
+          "width": 480,
+          "height": 278,
+          "file": "art/bacha/fairness/proof-core-480.webp",
+          "bytes": 26428
+        },
+        {
+          "width": 960,
+          "height": 555,
+          "file": "art/bacha/fairness/proof-core-960.webp",
+          "bytes": 73268
+        },
+        {
+          "width": 1440,
+          "height": 833,
+          "file": "art/bacha/fairness/proof-core-1440.webp",
+          "bytes": 133382
+        },
+        {
+          "width": 1446,
+          "height": 836,
+          "file": "art/bacha/fairness/proof-core-1446.webp",
+          "bytes": 114668
+        }
+      ],
+      "section": "Fairness — reproduce the result",
+      "aspectRatio": "16:9",
+      "size": "1536x1024",
+      "themeCompatibility": "both",
+      "transparentBackground": true,
+      "model": "gpt-image-2.5-sunburst",
+      "prompt": "Premium industrial isometric product visualization for the Bacha ecosystem. Matte graphite anodized aluminium, black machined metal, brushed dark steel, clear acrylic chambers, smoked transparent glass, soft yellow polymer, and warm BNB-yellow internal illumination. Precise rounded bevels, machined panels, small rounded-square ventilation patterns, physical switches and large circular yellow interaction buttons. Japanese premium consumer hardware design in the spirit of Teenage Engineering and Nothing. Orthographic three-quarter camera at 30 to 45 degrees elevation, soft studio lighting, controlled reflections and bloom, soft contact shadow, minimal technical geometry. Premium fintech hardware aesthetic. Isometric 3D render of a transparent mechanical verification core: a clear acrylic housing with machined graphite end caps, containing a single suspended cube of glowing warm yellow light at its centre. A machined input rail enters the housing from the left and a second rail exits to the right, both traced by a thin continuous yellow light line that passes straight through the core. Directly behind the housing, three small chamfered graphite blocks sit locked in a row on a shared mount, each with a fine yellow seam. Precise, instrument-like and completely unlabelled — no markings or engraving of any kind. True isometric projection, camera at 30 degrees elevation and 45 degrees azimuth, orthographic, no perspective distortion, object centred in frame. Materials strictly limited to the Bacha palette: matte graphite, deep near-black anodised metal, brushed aluminium, clear acrylic, smoked glass, and one saturated warm yellow (#F0B90B) used as emissive light and accent only. Polished chrome only for rare variants. No gold plating, no casino gold, no rainbow materials, no chrome overload. Soft studio key light from the upper left, gentle neutral fill from the right, and warm yellow illumination emanating from inside the object. Contained lighting with no large glow spill. Crisp edges, restrained specular highlights, soft contact shadow beneath the object. No dramatic neon, no cyberpunk rim lighting, no coloured haze. Reads as a real manufactured product from a single hardware company: minimal, technical, precisely machined, expensive. Physically based rendering, high detail, clean topology, product-catalogue quality. Fully transparent background. The object is completely isolated with no backdrop, no ground plane, no environment, no room, no vignette and no painted background of any kind. Not a pharmaceutical pill, not a medicine capsule, not an elongated lozenge shape, not a battery, not a cylinder. Absolutely no text, no letters, no words, no numbers, no typography, no logos, no brand marks, no token symbols, no watermarks, no signage, no labels, no UI screens, no percentages, no prices. No people, no hands, no faces, no photography, no photographic realism of real rooms, no cartoon or anime style, no casino imagery, no playing cards, no poker chips, no roulette, no slot machines, no coins with symbols, no neon cyberpunk, no purple, no rainbow gradients, no fantasy elements, no clutter.",
+      "containsGeneratedText": false,
+      "generatedAt": "2026-09-23",
+      "display": "/art/bacha/fairness/proof-core-1446.webp",
+      "intrinsicWidth": 1446,
+      "intrinsicHeight": 836,
+      "trimmedSource": {
+        "width": 1446,
+        "height": 836
+      }
     }
   },
   "optimisedAt": "2026-09-23"

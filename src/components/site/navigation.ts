@@ -85,7 +85,7 @@ export function buildNavigation(machines: Machine[]): NavGroup[] {
         { key: 'bacha', href: '/docs#about', icon: 'info' },
         { key: 'bnb', href: 'https://www.bnbchain.org', external: true, icon: 'chain' },
         { key: 'faq', href: '/docs#faq', icon: 'faq' },
-        { key: 'community', href: 'https://x.com', external: true, icon: 'community' },
+        { key: 'community', href: 'https://x.com/bachabnb', external: true, icon: 'community' },
       ],
     },
   ]

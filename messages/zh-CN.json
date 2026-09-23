@@ -301,90 +301,212 @@
       }
     },
     "artAlt": "将光束分离的验证仪器等距渲染图。",
-    "page": {
+    "hero": {
       "title": "每一次转动都有凭证。",
-      "body": "Bacha 不要求你相信标称的概率。奖池表、随机数和结果都有记录，而把前者变成后者的算法只有四行。",
-      "verifyHeading": "验证一次转动",
-      "howHeading": "一个结果是怎么产生的。",
-      "contractsHeading": "合约。",
-      "tablesHeading": "公开的概率。",
-      "tablesBody": "这些就是各机型实际结算所用的奖池表。此处每一个百分比都由合约中相同的权重计算得出——界面没有另一份会与之脱节的概率副本。",
-      "methodHeading": "自己算一遍。",
-      "methodBody": "奖项选择是一次按权重的遍历。给定一个随机数和一张表，答案有且只有一个，且不依赖时间、区块高度、余额或任何运营方可控的因素。",
-      "methodNote": "这与 BachaGame._selectPrize 完全一致。上方的验证器会在你的浏览器里跑同样的遍历，并与链上记录的结果比对。",
-      "steps": {
-        "one": {
-          "title": "你提交一次转动。",
-          "body": "钱包支付该档位的价格。在同一笔交易里，合约记录下你是谁、用的哪台机器，以及那一刻生效的确切奖池表。"
-        },
-        "two": {
-          "title": "奖池表随即锁定。",
-          "body": "这次转动被打上机型版本号和该版本奖池表的哈希。已发布的版本只能新增不能修改——合约里根本不存在编辑它的函数，因此运营方事后调整概率也触及不到你这次转动。"
-        },
-        "three": {
-          "title": "由可验证随机数完成结算。",
-          "body": "合约向 Chainlink VRF 请求一个随机数。随机数返回后，回调函数在已冻结的加权表上遍历，并且只记录一个奖项。它只写存储，别的什么都不做——不转账，不调用外部合约。"
-        },
-        "four": {
-          "title": "结果被永久记录。",
-          "body": "随机数、奖项序号、资产与数量全部被写入事件与存储。任何人都能重放同样的算法并得到同样的答案——本页做的正是这件事。"
-        }
-      },
-      "contracts": {
-        "game": "档位、奖池表、转动、随机性与领取。",
-        "vault": "奖励库存与发放。不能动用任何已被转动占用的资产。",
-        "vrf": "生产环境中随机性的唯一来源。",
-        "network": "网络",
-        "chainId": "链 ID {id}",
-        "testnetNote": "测试网资产没有任何价值。",
-        "notDeployed": "尚未部署",
-        "chainlinkDocs": "Chainlink 文档"
-      },
-      "table": {
-        "index": "序号",
-        "asset": "资产",
-        "amount": "数量",
-        "baseUnits": "最小单位",
-        "weight": "权重",
-        "chance": "概率",
-        "rarity": "稀有度",
-        "tierMeta": "档位 {tier} · {price} BNB · 总权重 {weight}",
-        "hash": "奖池表哈希",
-        "localHash": "本地表哈希",
-        "rtp": "按编写时价格估算的参考返还率 {value}"
-      }
+      "body": "从付款到发放，每一次转动都可追溯。机器公开概率、锁定奖池表、记录随机数，并把最终结果存在链上。",
+      "primary": "验证一次转动",
+      "secondary": "查看合约"
+    },
+    "proof": {
+      "tableLocked": "奖池表已锁定",
+      "randomnessRecorded": "随机数已记录",
+      "resultStored": "结果已存储",
+      "payoutTraceable": "发放可追溯",
+      "simulated": "模拟运行 — 合约尚未部署"
+    },
+    "nav": {
+      "verify": "验证",
+      "how": "运作方式",
+      "contracts": "合约",
+      "odds": "概率",
+      "math": "算法"
+    },
+    "view": {
+      "simple": "简明",
+      "technical": "技术",
+      "label": "详细程度"
     },
     "verifier": {
-      "placeholder": "转动 ID — 例如 1024",
-      "label": "转动 ID",
+      "title": "验证一次转动",
+      "hint": "粘贴转动 ID 或交易哈希。这里不需要连接钱包。",
+      "placeholder": "输入转动 ID 或交易哈希",
       "submit": "验证",
       "checking": "查询中…",
-      "idle": "每次付款转动都会获得一个 ID。把它粘贴到这里，本页会调出它的记录，并独立重新推导一次结果。",
-      "spinTitle": "转动 #{id}",
-      "pending": "这次转动尚未结算。它的奖池表已经锁定，因此结果无法在此之后被影响——只是随机数还没到。",
-      "matched": "独立重算完成——本页得到了相同的结果。",
-      "matchedDetail": "在你的浏览器里，用记录的随机数遍历机型版本 {version} 的奖池表，得到条目 #{index}——与机器记录的资产和数量完全一致。",
-      "mismatched": "重算结果与记录不符。",
-      "mismatchedDetail": "对于该随机数，这张表算出的奖励与记录的奖励不一致。请将此结果视为未通过验证并予以反馈。",
+      "useLatest": "使用最新一次转动",
       "fields": {
-        "wallet": "钱包",
+        "spin": "转动",
+        "status": "状态",
+        "player": "玩家",
         "machine": "机型",
         "version": "机型版本",
-        "tableHash": "奖池表哈希",
         "paid": "支付",
-        "vrfRequest": "VRF 请求",
+        "tableHash": "奖池表哈希",
+        "request": "随机数请求",
         "randomWord": "随机数",
-        "prizeEntry": "奖项条目",
-        "spinTx": "转动交易",
-        "payoutTx": "发放交易",
         "reward": "奖励",
-        "notRequested": "尚未请求",
-        "pendingValue": "等待中",
-        "notClaimed": "尚未领取",
-        "baseUnits": "{units} 最小单位 · {decimals} 位精度"
+        "rarity": "稀有度",
+        "payout": "发放",
+        "prizeEntry": "奖项条目"
       },
-      "notFound": "找不到这次转动。",
-      "unreachable": "无法连接验证服务，请稍后重试。"
+      "actions": {
+        "request": "查看请求",
+        "result": "查看结果交易",
+        "payout": "查看发放"
+      },
+      "states": {
+        "notFound": "找不到对应的转动 ID 或哈希。",
+        "notFoundHint": "请检查后重试——转动 ID 是数字，哈希以 0x 开头。",
+        "pending": "等待随机数。",
+        "pendingHint": "奖池表已经锁定，因此结果无法在此之后被影响，只是随机数还没到。",
+        "settled": "已结算 — 奖励已记录。",
+        "claimable": "已结算 — 奖励可领取。",
+        "claimed": "已领取 — 奖励已发放。",
+        "simulated": "模拟转动。本地结算，并非链上结果。",
+        "unreachable": "无法连接验证服务。",
+        "unreachableHint": "这是连接问题，与这次转动本身无关。请稍后重试。"
+      },
+      "recomputed": {
+        "matched": "已独立重新推导。",
+        "matchedDetail": "在你的浏览器里，用记录的随机数遍历机型版本 {version} 的奖池表，得到条目 #{index}——与机器记录的资产和数量完全一致。",
+        "mismatched": "重算结果与记录不符。",
+        "mismatchedDetail": "对于该随机数，这张表算出的奖励与记录的奖励不一致。请将此结果视为未通过验证并予以反馈。"
+      },
+      "timeline": {
+        "title": "时间线",
+        "payment": "付款",
+        "paymentDetail": "转动已付款并记录。",
+        "locked": "奖池表锁定",
+        "lockedDetail": "打上机型版本 {version} 的标记。",
+        "requested": "请求随机数",
+        "requestedDetail": "已向协调器发起请求。",
+        "returned": "随机数返回",
+        "returnedDetail": "随机数已记录。",
+        "calculated": "计算结果",
+        "calculatedDetail": "加权表解析出唯一条目。",
+        "payout": "发放",
+        "payoutDetail": "奖励已转入记录在案的钱包。",
+        "done": "完成",
+        "active": "进行中",
+        "waiting": "等待中"
+      }
+    },
+    "how": {
+      "title": "一个结果是怎么产生的。",
+      "body": "五个步骤。点击其中一步，看它对应机器的哪个部分。",
+      "technicalDetails": "技术细节",
+      "steps": {
+        "submit": {
+          "title": "你提交一次转动",
+          "body": "钱包支付该档位的价格。合约记录下你是谁、用的哪台机器，以及那一刻生效的奖池表。",
+          "technical": "spin(uint8 tierId) 为 payable，并要求 msg.value 与档位价格完全相等。在发起任何请求之前，它就已把 player、tier、versionId、prizeTableHash 和 payment 写入存储。"
+        },
+        "lock": {
+          "title": "奖池表随即锁定",
+          "body": "这次转动被打上机型版本号和该版本奖池表的哈希。已发布的版本只能新增不能修改——合约里没有任何函数能编辑它。",
+          "technical": "publishPrizeTable 总是分配一个新的 versionId，且不存在修改既有版本的函数。重新指向某个档位只会改变之后售出的转动，绝不会影响已经在途的那一次。"
+        },
+        "randomness": {
+          "title": "由可验证随机数完成结算",
+          "body": "合约向 Chainlink VRF 请求一个随机数。回调函数在已冻结的加权表上遍历，并且只记录一个奖项。",
+          "technical": "fulfillRandomWords 只写存储，别的什么都不做——不转账、不调用外部合约、没有无界运算。同一请求的第二次投递会被忽略，而不是回滚。"
+        },
+        "record": {
+          "title": "结果被记录",
+          "body": "随机数、奖项序号、资产与数量都会被写入事件与存储。任何人都能重放同样的算法并得到同样的答案。",
+          "technical": "SpinSettled 事件携带 spinId、player、rewardToken、rewardAmount、rarity、prizeIndex、randomWord 与 settledAt。previewPrize(versionId, randomWord) 可作为 view 调用复现整个选择过程。"
+        },
+        "payout": {
+          "title": "发放",
+          "body": "记录在案的奖励会转给支付这次转动的钱包。收款地址在随机数存在之前就已确定，因此无法被改变。",
+          "technical": "claimFor(spinId) 无需权限即可调用，收款地址读取自请求时写入的转动状态。结算机器人可以代为触发而不接触资产，玩家也随时可以自己调用。"
+        }
+      },
+      "simulatedNote": "在当前版本中，第三步和第五步为本地模拟。这里描述的合约行为是部署之后实际运行的逻辑。"
+    },
+    "contracts": {
+      "title": "合约。",
+      "role": "职责",
+      "address": "地址",
+      "status": "状态",
+      "network": "网络",
+      "verified": "已验证",
+      "notDeployed": "尚未部署",
+      "bscscan": "BscScan",
+      "source": "源码",
+      "game": {
+        "name": "Bacha Game",
+        "role": "转动请求、机型版本、随机性与结果"
+      },
+      "vault": {
+        "name": "Bacha Vault",
+        "role": "奖励储备与发放"
+      },
+      "vrf": {
+        "name": "Chainlink VRF v2.5",
+        "role": "生产环境中随机性的唯一来源"
+      },
+      "strip": {
+        "network": "网络",
+        "chainId": "链 ID",
+        "game": "Game",
+        "vault": "Vault",
+        "randomness": "随机性",
+        "source": "源码",
+        "deployed": "已部署",
+        "notDeployed": "尚未部署",
+        "vrf": "Chainlink VRF",
+        "simulated": "模拟",
+        "verified": "已验证"
+      },
+      "demoTitle": "演示环境",
+      "demoBody": "合约尚未部署。随机数为模拟生成，不会发放任何真实代币。本页描述的，是部署之后系统的实际运行方式。"
+    },
+    "immutable": {
+      "title": "转动之后，概率不会再变。",
+      "body": "每一次转动都会记录提交时生效的机型版本与奖池表哈希。之后的任何配置调整，都无法改变一次已经在途的转动。"
+    },
+    "odds": {
+      "title": "公开的概率。",
+      "body": "各机型实际结算所用的表。此处每一个百分比，都由合约中相同的权重计算得出。",
+      "spin": "单次费用",
+      "version": "机型版本",
+      "assets": "奖励资产",
+      "published": "发布于",
+      "tableHash": "奖池表哈希",
+      "totalWeight": "总权重",
+      "estimatedValue": "预估奖励价值",
+      "estimatedNote": "按编写时价格估算，并非任何形式的回报承诺。",
+      "copyJson": "复制 JSON",
+      "copied": "已复制",
+      "download": "下载奖池表",
+      "filterAll": "全部",
+      "columns": {
+        "token": "代币",
+        "amount": "数量",
+        "rarity": "稀有度",
+        "weight": "权重",
+        "probability": "概率",
+        "address": "代币地址"
+      },
+      "history": {
+        "title": "版本历史",
+        "current": "当前",
+        "onlyVersion": "目前只有这一个已发布版本。"
+      }
+    },
+    "math": {
+      "title": "自己算一遍。",
+      "body": "奖项选择是一次按权重的遍历。给定一个随机数和一张表，答案有且只有一个，且不依赖任何运营方可控的因素。",
+      "note": "这与 BachaGame._selectPrize 完全一致。上方的验证器会在你的浏览器里跑同样的遍历，并与链上记录比对。",
+      "example": "示例",
+      "exampleBody": "以 {machine} 的公开表为例：",
+      "randomWord": "随机数",
+      "totalWeight": "总权重",
+      "selection": "选中值",
+      "lands": "落入",
+      "range": "区间",
+      "entry": "条目",
+      "artAlt": "内含随机数立方体的透明验证核心等距渲染图。"
     }
   },
   "story": {
