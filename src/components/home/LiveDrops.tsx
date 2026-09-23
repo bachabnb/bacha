@@ -18,9 +18,8 @@ import { useTimeAgo } from '@/lib/useTimeAgo'
 /**
  * "Just pulled."
  *
- * Rows are real settled spins — from chain when contracts are live, from the
- * demo machine otherwise — and the eyebrow always says which. No row is ever
- * invented to fill the section.
+ * Rows are real settled spins. No row is ever invented to fill the section —
+ * when nothing has settled, the feed says so.
  */
 export function LiveDrops() {
   const t = useTranslations('activity')
@@ -28,14 +27,13 @@ export function LiveDrops() {
   const reduce = useReducedMotion()
 
   const spins = (data?.spins ?? []).filter((s) => s.status !== 'PENDING').slice(0, 6)
-  const isDemo = data?.mode === 'demo'
 
   return (
     <section data-zone="pale" className="canvas-atmosphere section-viewport">
       <div className="shell-wide">
       <SectionHeader
         index="06"
-        eyebrow={isDemo ? t('eyebrowDemo') : t('eyebrow')}
+        eyebrow={t('eyebrow')}
         title={t('title')}
         action={
           <Button asChild variant="secondary">
@@ -43,7 +41,7 @@ export function LiveDrops() {
           </Button>
         }
       >
-        {isDemo ? t('bodyDemo') : t('body')}
+        {t('body')}
       </SectionHeader>
 
       <div className="mt-12 grid gap-8 lg:grid-cols-[1fr_2.1fr] lg:items-center lg:gap-12">

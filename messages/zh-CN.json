@@ -166,7 +166,7 @@
     "inMachine": "这台机器里有",
     "openMachine": "打开机器",
     "noSettlement": "还没有结算记录",
-    "demoNotice": "演示配置——此版本尚未部署合约。"
+    "loaded": "已装填"
   },
   "rewards": {
     "eyebrow": "奖励阵容",
@@ -238,10 +238,8 @@
   },
   "activity": {
     "eyebrow": "来自链上",
-    "eyebrowDemo": "演示机器 · 模拟结果",
     "title": "刚刚掉落。",
     "body": "已结算的转动，直接来自合约事件。每一行都可跳转到对应交易。",
-    "bodyDemo": "此版本尚未部署合约，因此这些是本地演示机器的模拟结果，并非主网交易。",
     "fullActivity": "全部动态",
     "pulled": "转出了",
     "page": {
@@ -263,7 +261,6 @@
       "all": "全部"
     },
     "modeLive": "链上实时",
-    "modeDemo": "演示 · 模拟",
     "empty": {
       "title": "还没有结算记录。",
       "titleFiltered": "还没有{rarity}掉落。",
@@ -341,8 +338,7 @@
         "chainId": "链 ID {id}",
         "testnetNote": "测试网资产没有任何价值。",
         "notDeployed": "尚未部署",
-        "chainlinkDocs": "Chainlink 文档",
-        "demoNotice": "此版本尚未部署合约，因此机器运行在演示模式：转动由服务端模拟，结果在任何出现的位置都会标注为「模拟」，也不会产生任何交易。演示随机数位于独立模块中，绝不会出现在真实结算的代码路径上。"
+        "chainlinkDocs": "Chainlink 文档"
       },
       "table": {
         "index": "序号",
@@ -384,7 +380,6 @@
         "reward": "奖励",
         "notRequested": "尚未请求",
         "pendingValue": "等待中",
-        "simulated": "模拟 — 无交易",
         "notClaimed": "尚未领取",
         "baseUnits": "{units} 最小单位 · {decimals} 位精度"
       },
@@ -510,7 +505,6 @@
       "fairness": "公平性",
       "treasury": "金库",
       "vrf": "Chainlink VRF",
-      "simulated": "模拟",
       "funded": "已注资",
       "notDeployed": "尚未部署"
     },
@@ -530,8 +524,7 @@
       "lastDrop": "最近掉落",
       "network": "网络",
       "none": "暂无",
-      "healthy": "充足",
-      "demo": "演示"
+      "healthy": "充足"
     },
     "reveal": {
       "youPulled": "你转出了",
@@ -545,15 +538,12 @@
       "randomWord": "随机数",
       "settlement": "结算方式",
       "settlementVrf": "Chainlink VRF",
-      "settlementDemo": "模拟（演示）",
-      "demoNote": "这是一次演示转动。没有花费任何费用，也没有代币发生转移。",
       "unknownAsset": "未知资产",
       "dialogLabel": "转动结果"
     },
     "stage": {
       "eyebrow": "机器",
       "live": "运行中",
-      "demo": "演示",
       "sound": "音效",
       "fairness": "公平性",
       "howItWorks": "运作方式",
@@ -577,9 +567,7 @@
       "fairness": "公平性",
       "treasury": "金库",
       "vrf": "Chainlink VRF",
-      "simulated": "模拟",
       "healthy": "充足",
-      "demoTreasury": "演示",
       "notDeployed": "尚未部署",
       "distribution": "奖池分布",
       "possibleDrops": "可能掉落",
@@ -615,13 +603,7 @@
     "settles": {
       "title": "一次转动是怎么结算的。",
       "body": "五个步骤，每一步都有记录。从你付款到拿到奖励，中间没有任何一步由我们决定。",
-      "verify": "验证一次转动",
-      "simulatedNotice": "此版本的随机数为模拟生成，这里的结果都不是主网结果。"
-    },
-    "demoBanner": {
-      "label": "演示模式",
-      "body": "转动由模拟生成。没有交易，也没有真实代币。",
-      "learnMore": "了解更多"
+      "verify": "验证一次转动"
     }
   },
   "me": {
@@ -655,22 +637,14 @@
   "common": {
     "loading": "加载中…",
     "unavailable": "暂不可用",
-    "demo": "演示",
     "testnet": "测试网",
     "dev": "开发",
-    "simulated": "模拟",
     "onchain": "链上",
     "justNow": "刚刚",
     "secondsAgo": "{count} 秒前",
     "minutesAgo": "{count} 分钟前",
     "hoursAgo": "{count} 小时前",
     "daysAgo": "{count} 天前"
-  },
-  "environment": {
-    "demo": "演示机器——转动由服务端模拟。无交易、无真实代币、未使用 Chainlink VRF。",
-    "testnet": "BNB Chain 测试网——转动在链上结算，使用的测试资产没有任何价值。",
-    "dev": "开发版本。",
-    "hide": "隐藏"
   },
   "ageGate": {
     "title": "开始之前。",

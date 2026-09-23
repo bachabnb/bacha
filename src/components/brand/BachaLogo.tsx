@@ -88,7 +88,7 @@ export function BachaWordmark({
 }) {
   return (
     <span className={cn('inline-flex select-none items-center gap-2.5', className)}>
-      {showIcon && <BachaIcon className={cn('h-9 w-9 text-brand', iconClassName)} />}
+      {showIcon && <BachaIcon className={cn('h-10 w-[33px] text-brand', iconClassName)} />}
       <span
         className={cn(
           'font-display text-[1.45rem] font-extrabold leading-none tracking-[-0.05em] text-foreground',

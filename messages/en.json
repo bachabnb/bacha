@@ -166,7 +166,7 @@
     "inMachine": "In this machine",
     "openMachine": "Open the machine",
     "noSettlement": "Nothing settled yet",
-    "demoNotice": "Demo configuration — contracts are not deployed on this build."
+    "loaded": "Loaded"
   },
   "rewards": {
     "eyebrow": "Reward roster",
@@ -238,10 +238,8 @@
   },
   "activity": {
     "eyebrow": "Live from the chain",
-    "eyebrowDemo": "Demo machine · simulated",
     "title": "Just pulled.",
     "body": "Settled spins, straight from contract events. Every row links to its transaction.",
-    "bodyDemo": "Contracts are not deployed on this build, so these are simulated results from the local demo machine — not mainnet transactions.",
     "fullActivity": "Full activity",
     "pulled": "pulled",
     "page": {
@@ -263,7 +261,6 @@
       "all": "All"
     },
     "modeLive": "Live from chain",
-    "modeDemo": "Demo · simulated",
     "empty": {
       "title": "Nothing has settled yet.",
       "titleFiltered": "No {rarity} pulls yet.",
@@ -341,8 +338,7 @@
         "chainId": "Chain ID {id}",
         "testnetNote": "Test assets carry no value.",
         "notDeployed": "Not deployed",
-        "chainlinkDocs": "Chainlink docs",
-        "demoNotice": "Contracts are not deployed on this build, so the machine runs in demo mode: spins are simulated server-side, results are labelled Simulated everywhere they appear, and no transaction is made. Demo randomness lives in its own module and is never on the path that settles a real spin."
+        "chainlinkDocs": "Chainlink docs"
       },
       "table": {
         "index": "#",
@@ -384,7 +380,6 @@
         "reward": "Reward",
         "notRequested": "Not yet requested",
         "pendingValue": "Pending",
-        "simulated": "Simulated — no transaction",
         "notClaimed": "Not claimed yet",
         "baseUnits": "{units} base units · {decimals} decimals"
       },
@@ -510,7 +505,6 @@
       "fairness": "Fairness",
       "treasury": "Treasury",
       "vrf": "Chainlink VRF",
-      "simulated": "Simulated",
       "funded": "Funded",
       "notDeployed": "Not deployed"
     },
@@ -530,8 +524,7 @@
       "lastDrop": "Last drop",
       "network": "Network",
       "none": "None yet",
-      "healthy": "Healthy",
-      "demo": "Demo"
+      "healthy": "Healthy"
     },
     "reveal": {
       "youPulled": "You pulled",
@@ -545,15 +538,12 @@
       "randomWord": "Random word",
       "settlement": "Settlement",
       "settlementVrf": "Chainlink VRF",
-      "settlementDemo": "Simulated (demo)",
-      "demoNote": "This was a demo pull. Nothing was spent and no tokens moved.",
       "unknownAsset": "Unknown asset",
       "dialogLabel": "Spin result"
     },
     "stage": {
       "eyebrow": "The machine",
       "live": "Live",
-      "demo": "Demo",
       "sound": "Sound",
       "fairness": "Fairness",
       "howItWorks": "How it works",
@@ -577,9 +567,7 @@
       "fairness": "Fairness",
       "treasury": "Treasury",
       "vrf": "Chainlink VRF",
-      "simulated": "Simulated",
       "healthy": "Healthy",
-      "demoTreasury": "Demo",
       "notDeployed": "Not deployed",
       "distribution": "Prize distribution",
       "possibleDrops": "Possible drops",
@@ -615,13 +603,7 @@
     "settles": {
       "title": "How a spin settles.",
       "body": "Five steps, every one of them recorded. Nothing between your payment and your reward is decided by us.",
-      "verify": "Verify a spin",
-      "simulatedNotice": "Randomness is simulated on this build. Nothing here is a mainnet result."
-    },
-    "demoBanner": {
-      "label": "Demo mode",
-      "body": "Spins are simulated. No transactions and no real tokens.",
-      "learnMore": "Learn more"
+      "verify": "Verify a spin"
     }
   },
   "me": {
@@ -655,22 +637,14 @@
   "common": {
     "loading": "Loading…",
     "unavailable": "Unavailable",
-    "demo": "Demo",
     "testnet": "Testnet",
     "dev": "Dev",
-    "simulated": "Simulated",
     "onchain": "Onchain",
     "justNow": "just now",
     "secondsAgo": "{count} sec ago",
     "minutesAgo": "{count} min ago",
     "hoursAgo": "{count} hr ago",
     "daysAgo": "{count}d ago"
-  },
-  "environment": {
-    "demo": "Demo machine — spins are simulated server-side. No transaction, no real tokens, no Chainlink VRF.",
-    "testnet": "BNB Chain Testnet — spins settle onchain with test assets that carry no value.",
-    "dev": "Development build.",
-    "hide": "Hide"
   },
   "ageGate": {
     "title": "Before you spin.",

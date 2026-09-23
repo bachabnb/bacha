@@ -48,7 +48,7 @@ export function SiteHeader() {
         <div className="flex min-w-0 items-center gap-6 xl:gap-9">
           <Link href="/" className="shrink-0 rounded-[12px]" aria-label="Bacha">
             <BachaWordmark
-              iconClassName="h-[36px] w-[32px] sm:h-[42px] sm:w-[37px]"
+              iconClassName="h-[36px] w-[30px] sm:h-[44px] sm:w-[36px]"
               wordmarkClassName="text-[1.3rem] sm:text-[1.45rem]"
             />
           </Link>

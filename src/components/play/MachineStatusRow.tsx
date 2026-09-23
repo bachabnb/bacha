@@ -11,9 +11,9 @@ import { cn } from '@/lib/cn'
 /**
  * A quiet instrument row beneath the stage.
  *
- * Real values only — pool health reads Demo when nothing is deployed rather
- * than claiming Healthy, and "last drop" shows nothing at all until a spin has
- * actually settled.
+ * Real values only. Pool health is omitted entirely until there is a deployed
+ * vault to report on — an unbacked "Healthy" would be worse than a gap — and
+ * "last drop" stays empty until a spin has actually settled.
  */
 export function MachineStatusRow({
   machine,
@@ -32,31 +32,27 @@ export function MachineStatusRow({
   return (
     <dl
       className={cn(
-        'grid grid-cols-2 gap-px overflow-hidden rounded-[14px] border border-border bg-border sm:grid-cols-3 lg:grid-cols-5',
+        'grid grid-cols-2 gap-px overflow-hidden rounded-[14px] border border-border bg-border sm:grid-cols-3',
+        contractsConfigured ? 'lg:grid-cols-5' : 'lg:grid-cols-4',
         className,
       )}
     >
       <Cell label={t('machine')}>
         <span className="flex items-center gap-2">
-          {contractsConfigured ? <span className="live-dot" /> : null}
+          {contractsConfigured && <span className="live-dot" />}
           <span className="num">{machine.label}</span>
-          <span
-            className={cn(
-              'rounded-[4px] border px-1 py-px font-mono text-[0.54rem] uppercase tracking-[0.12em]',
-              contractsConfigured
-                ? 'border-success/35 bg-success-soft text-success'
-                : 'border-border-strong text-foreground-muted',
-            )}
-          >
-            {contractsConfigured ? s('live') : s('demo')}
-          </span>
+          {contractsConfigured && (
+            <span className="rounded-[4px] border border-success/35 bg-success-soft px-1 py-px font-mono text-[0.54rem] uppercase tracking-[0.12em] text-success">
+              {s('live')}
+            </span>
+          )}
         </span>
       </Cell>
-      <Cell label={t('pool')}>
-        <span className={contractsConfigured ? 'text-success' : 'text-foreground-secondary'}>
-          {contractsConfigured ? t('healthy') : t('demo')}
-        </span>
-      </Cell>
+      {contractsConfigured && (
+        <Cell label={t('pool')}>
+          <span className="text-success">{t('healthy')}</span>
+        </Cell>
+      )}
       <Cell label={t('rewards')}>
         <span className="num">{rewardCount}</span>
       </Cell>

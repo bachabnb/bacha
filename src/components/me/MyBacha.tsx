@@ -16,7 +16,6 @@ import { tokenByAddress } from '@/lib/tokens'
 import { machineById } from '@/lib/machine'
 import { formatTokenAmount, formatUsd, shortHash } from '@/lib/format'
 import { explorer } from '@/lib/chain'
-import { spinMode } from '@/lib/env'
 import { useHumanError } from '@/lib/errors'
 import type { MarketQuote } from '@/lib/market'
 import type { SpinRecord } from '@/lib/spin/types'
@@ -104,7 +103,7 @@ export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
           </dl>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            {summary.unclaimed.length > 0 && spinMode === 'demo' && (
+            {summary.unclaimed.length > 0 && (
               <Button onClick={claimAll} disabled={claiming}>
                 {claiming ? t('claiming') : t('claimAll')}
               </Button>

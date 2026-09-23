@@ -6,7 +6,6 @@ import { Inter, Inter_Tight, JetBrains_Mono, Noto_Sans_SC } from 'next/font/goog
 import { Providers } from '@/app/providers'
 import { SiteHeader } from '@/components/site/SiteHeader'
 import { SiteFooter } from '@/components/site/SiteFooter'
-import { EnvironmentRibbon } from '@/components/site/EnvironmentRibbon'
 import { AgeGate } from '@/components/site/AgeGate'
 import { ThemeScript } from '@/lib/theme/ThemeScript'
 import { routing, locales, localeMeta, type Locale } from '@/i18n/routing'
@@ -111,7 +110,6 @@ export default async function LocaleLayout({
             >
               {t('skipToContent')}
             </a>
-            <EnvironmentRibbon />
             <SiteHeader />
             <main id="main" className="-mt-[78px] pt-[78px] sm:-mt-[90px] sm:pt-[90px]">{children}</main>
             <SiteFooter />

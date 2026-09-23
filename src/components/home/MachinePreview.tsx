@@ -21,7 +21,7 @@ import { cn } from '@/lib/cn'
  *
  * Everything here is read from the same prize tables a spin resolves against,
  * so switching tiers genuinely changes what is shown. The latest settlement is
- * a real record when one exists and is labelled when it is simulated.
+ * a real record, or nothing at all.
  */
 export function MachinePreview({ latest }: { latest: SpinRecord | null }) {
   const t = useTranslations('machinePreview')
@@ -63,12 +63,14 @@ export function MachinePreview({ latest }: { latest: SpinRecord | null }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-3">
             <span className="eyebrow">{t('label')}</span>
-            <span className="inline-flex items-center gap-2 rounded-[6px] border border-border px-2 py-1">
-              <span className="live-dot" />
-              <span className="text-[0.62rem] font-medium uppercase tracking-[0.16em] text-foreground-secondary">
-                {t('live')}
+            {contractsConfigured && (
+              <span className="inline-flex items-center gap-2 rounded-[6px] border border-border px-2 py-1">
+                <span className="live-dot" />
+                <span className="text-[0.62rem] font-medium uppercase tracking-[0.16em] text-foreground-secondary">
+                  {t('live')}
+                </span>
               </span>
-            </span>
+            )}
           </div>
 
           <h2 className="type-section mt-4 font-display font-extrabold text-foreground">{t('title')}</h2>
@@ -174,9 +176,6 @@ export function MachinePreview({ latest }: { latest: SpinRecord | null }) {
               </div>
             </div>
 
-            {!contractsConfigured && (
-              <p className="mt-5 text-[0.7rem] leading-relaxed text-foreground-muted">{t('demoNotice')}</p>
-            )}
           </div>
         </div>
       </div>

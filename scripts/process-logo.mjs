@@ -56,28 +56,30 @@ const prepared = await removeFlatBackground(input)
 // Trim the margin, then pad back a hair so edges never clip.
 const trimmed = await sharp(prepared).trim({ threshold: 12 }).toBuffer({ resolveWithObject: true })
 const { width, height } = trimmed.info
-const side = Math.max(width, height)
-const pad = Math.round(side * 0.02)
+// A hair of padding so the outer glow never clips, but the artwork keeps its
+// own proportions — squaring it would letterbox the mark inside its own file.
+const pad = Math.round(Math.max(width, height) * 0.015)
 
-const squared = await sharp(trimmed.data)
-  .extend({
-    top: Math.round((side - height) / 2) + pad,
-    bottom: Math.ceil((side - height) / 2) + pad,
-    left: Math.round((side - width) / 2) + pad,
-    right: Math.ceil((side - width) / 2) + pad,
-    background: { r: 0, g: 0, b: 0, alpha: 0 },
-  })
+const padded = await sharp(trimmed.data)
+  .extend({ top: pad, bottom: pad, left: pad, right: pad, background: { r: 0, g: 0, b: 0, alpha: 0 } })
   .png()
   .toBuffer()
 
-// The default asset the app loads.
-await sharp(squared).resize(512, 512).png({ compressionLevel: 9 }).toFile(path.join(OUT_DIR, 'bacha-logo.png'))
+const final = await sharp(padded).metadata()
+const aspect = final.width / final.height
+
+// The default asset, and the one the icon route reads.
+await sharp(padded).resize({ height: 512 }).png({ compressionLevel: 9 }).toFile(path.join(OUT_DIR, 'bacha-logo.png'))
 
 const variants = []
 for (const size of SIZES) {
   const out = path.join(OUT_DIR, `bacha-logo-${size}.webp`)
-  const info = await sharp(squared).resize(size, size).webp({ quality: 92, alphaQuality: 100, effort: 6 }).toFile(out)
-  variants.push({ size, bytes: info.size })
+  // Sized by height, so every variant shares the artwork's real aspect.
+  const info = await sharp(padded)
+    .resize({ height: size })
+    .webp({ quality: 92, alphaQuality: 100, effort: 6 })
+    .toFile(out)
+  variants.push({ size, bytes: info.size, width: info.width, height: info.height })
 }
 
 const after = (await stat(path.join(OUT_DIR, 'bacha-logo.png'))).size
@@ -85,8 +87,9 @@ const after = (await stat(path.join(OUT_DIR, 'bacha-logo.png'))).size
 console.log(`source   ${trimmed.info.width}×${trimmed.info.height} after trim (was square with margin)`)
 console.log(`png      ${(before / 1024).toFixed(0)}KB → ${(after / 1024).toFixed(0)}KB`)
 for (const v of variants) {
-  console.log(`webp     ${String(v.size).padStart(3)}px  ${(v.bytes / 1024).toFixed(1)}KB`)
+  console.log(`webp     ${String(v.width).padStart(3)}×${v.height}  ${(v.bytes / 1024).toFixed(1)}KB`)
 }
+console.log(`aspect   ${aspect.toFixed(3)} — use a box with this ratio`)
 console.log('\nThe mark now fills its own box, so it reads correctly at nav size.')
 
 /**

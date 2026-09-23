@@ -33,7 +33,7 @@ export function SiteFooter() {
         <div className="grid gap-12 lg:grid-cols-[1.3fr_2.7fr]">
           <div>
             <BachaWordmark
-              iconClassName="h-[62px] w-[54px]"
+              iconClassName="h-[64px] w-[53px]"
               wordmarkClassName="text-[2.1rem]"
               className="gap-3.5"
             />
