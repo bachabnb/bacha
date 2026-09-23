@@ -39,12 +39,20 @@ export function HowProduced() {
         {t('body')}
       </p>
 
-      <div className="mt-10 grid gap-10 lg:grid-cols-[0.62fr_1.38fr] lg:items-start lg:gap-14">
+      <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] lg:items-start lg:gap-14">
         {/* ------------------------------------------------- the machine */}
-        <div className="relative mx-auto w-full max-w-[13rem] lg:sticky lg:top-28 lg:max-w-none">
+        {/* The exploded machine is nearly three times taller than it is wide,
+            so it is sized by height. Left to fill its column it would run far
+            past the steps it is meant to annotate. */}
+        <div className="relative mx-auto lg:sticky lg:top-28">
           <span aria-hidden className="atmosphere-glow pointer-events-none absolute inset-[8%] rounded-full" />
-          <div className="relative">
-            <ArtImage id="machine-exploded" alt="" sizes="(max-width: 1024px) 45vw, 18vw" />
+          <div className="relative mx-auto h-[clamp(19rem,46vh,30rem)]">
+            <ArtImage
+              id="machine-exploded"
+              alt=""
+              className="mx-auto h-full w-auto"
+              sizes="(max-width: 1024px) 34vw, 11vw"
+            />
 
             {/* The lit band, tracking the selected step. */}
             <motion.span

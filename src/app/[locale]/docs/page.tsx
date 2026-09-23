@@ -36,9 +36,16 @@ export default async function DocsPage({ params }: { params: Promise<{ locale: s
               : 'Contracts, randomness, treasury safety and token configuration — enough to judge whether this machine is worth trusting.'}
           </p>
         </div>
-        <div className="relative mx-auto w-full max-w-[16rem] lg:max-w-none">
+        <div className="relative mx-auto lg:sticky lg:top-28">
           <span aria-hidden className="atmosphere-glow pointer-events-none absolute inset-[12%] rounded-full" />
-          <ArtImage id="machine-exploded" alt="" className="relative" sizes="(max-width: 1024px) 50vw, 22vw" />
+          <div className="relative mx-auto h-[clamp(16rem,34vh,24rem)]">
+            <ArtImage
+              id="machine-exploded"
+              alt=""
+              className="mx-auto h-full w-auto"
+              sizes="(max-width: 1024px) 32vw, 13vw"
+            />
+          </div>
         </div>
       </header>
 
