@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bacha",
+      "runtimeExecutable": "/Users/vishalsharma/.local/node24/bin/node",
+      "runtimeArgs": ["node_modules/next/dist/bin/next", "dev"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}
