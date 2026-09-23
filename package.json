@@ -2,7 +2,7 @@
   "name": "bacha",
   "version": "0.1.0",
   "private": true,
-  "description": "Bacha \u2014 an onchain gacha game for discovering BNB Chain tokens.",
+  "description": "Bacha — an onchain gacha game for discovering BNB Chain tokens.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -30,7 +30,7 @@
     "@tanstack/react-query": "^5.66.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.4.7",
-    "next": "15.5.4",
+    "next": "15.5.9",
     "next-intl": "^4.14.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",
