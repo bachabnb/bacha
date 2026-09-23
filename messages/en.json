@@ -1,0 +1,706 @@
+{
+  "meta": {
+    "title": "Bacha — Gacha on BNB Chain",
+    "titleTemplate": "{page} — Bacha",
+    "description": "Spin the machine and pull real tokens from across the BNB Chain ecosystem.",
+    "play": {
+      "title": "Play",
+      "description": "Choose a machine and take a spin. Real BNB Chain tokens, verifiable results."
+    },
+    "rewards": {
+      "title": "Rewards",
+      "description": "Every asset the Bacha machine can drop, with live prices and real odds."
+    },
+    "activity": {
+      "title": "Activity",
+      "description": "Every settled spin on the Bacha machine, newest first."
+    },
+    "fairness": {
+      "title": "Fairness",
+      "description": "How Bacha produces a result, and how to check one yourself."
+    },
+    "me": {
+      "title": "My Bacha",
+      "description": "Your spins, your rewards, your history."
+    },
+    "terms": {
+      "title": "Terms & Risk",
+      "description": "What Bacha is, what it is not, and what you are agreeing to."
+    },
+    "docs": {
+      "title": "Docs",
+      "description": "How Bacha is built: contracts, randomness, treasury and token configuration."
+    }
+  },
+  "announce": {
+    "live": "Bacha is live on BNB Chain",
+    "cta": "Take a spin",
+    "dismiss": "Dismiss"
+  },
+  "nav": {
+    "play": "Play",
+    "explore": "Explore",
+    "transparency": "Transparency",
+    "about": "About",
+    "menu": "Menu",
+    "close": "Close",
+    "openMenu": "Open navigation",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "themeToggle": "Switch theme",
+    "language": "Language",
+    "languageSelect": "Select language",
+    "skipToContent": "Skip to content",
+    "groups": {
+      "play": {
+        "bacha": {
+          "title": "Play Bacha",
+          "description": "Start a spin"
+        },
+        "quick": {
+          "title": "Quick",
+          "description": "{price} machine"
+        },
+        "boost": {
+          "title": "Boost",
+          "description": "{price} machine"
+        },
+        "max": {
+          "title": "Max",
+          "description": "{price} machine"
+        },
+        "me": {
+          "title": "My Bacha",
+          "description": "Your spins and rewards"
+        }
+      },
+      "explore": {
+        "rewards": {
+          "title": "Rewards",
+          "description": "See what's inside"
+        },
+        "activity": {
+          "title": "Activity",
+          "description": "Latest pulls"
+        },
+        "tokens": {
+          "title": "Tokens",
+          "description": "Explore reward assets"
+        }
+      },
+      "transparency": {
+        "fairness": {
+          "title": "Fairness",
+          "description": "Verify any spin"
+        },
+        "howItWorks": {
+          "title": "How it works",
+          "description": "From payment to payout"
+        },
+        "contracts": {
+          "title": "Contracts",
+          "description": "View on BscScan"
+        },
+        "docs": {
+          "title": "Docs",
+          "description": "Technical documentation"
+        }
+      },
+      "about": {
+        "bacha": {
+          "title": "About Bacha",
+          "description": "What this is"
+        },
+        "bnb": {
+          "title": "BNB Chain",
+          "description": "The chain it runs on"
+        },
+        "faq": {
+          "title": "FAQ",
+          "description": "Common questions"
+        },
+        "community": {
+          "title": "Community",
+          "description": "X and Telegram"
+        }
+      }
+    },
+    "status": {
+      "label": "Machine live",
+      "assets": "{count} reward assets",
+      "tiers": "{count} spin tiers",
+      "network": "BNB Chain"
+    }
+  },
+  "hero": {
+    "eyebrow": "Gacha on BNB Chain",
+    "headlineLead": "Spin the",
+    "headlineAccent": "chain.",
+    "subcopy": "Spin once. See what drops.",
+    "primary": "Spin now",
+    "secondary": "What's inside",
+    "trust": "Every result is verifiable onchain.",
+    "meta": {
+      "network": "BNB Chain",
+      "randomness": "Verifiable randomness",
+      "rewards": "Real token rewards"
+    },
+    "machineAlt": "An isometric render of the Bacha capsule machine.",
+    "lead": "Bacha is an onchain reward machine for BNB Chain.",
+    "perSpin": "Per spin",
+    "currentOdds": "Current odds",
+    "proofOdds": "Odds shown upfront"
+  },
+  "machinePreview": {
+    "label": "Machine 01",
+    "live": "Live",
+    "title": "Loaded and running.",
+    "body": "This is the live configuration — the same prize tables a spin resolves against. Switch tiers to see what changes.",
+    "spinPrice": "Your spin",
+    "poolHealth": "Reward assets",
+    "latest": "Latest settlement",
+    "distribution": "Prize distribution",
+    "network": "Network",
+    "inMachine": "In this machine",
+    "openMachine": "Open the machine",
+    "noSettlement": "Nothing settled yet",
+    "demoNotice": "Demo configuration — contracts are not deployed on this build."
+  },
+  "rewards": {
+    "eyebrow": "Reward roster",
+    "title": "What's in the machine?",
+    "body": "Every asset here is a BNB Chain project, verified by contract address before it was ever added. Bridged versions of other chains' assets are deliberately left out.",
+    "allRewards": "All rewards",
+    "price": "Price",
+    "bestOdds": "Best odds",
+    "change24h": "24h",
+    "priceNote": "Prices are indicative and move constantly. They never influence what the machine drops — a spin resolves to a token amount, not a dollar amount.",
+    "vaultAlt": "An isometric render of an open vault holding capsules.",
+    "page": {
+      "eyebrow": "The roster",
+      "title": "Inside Bacha.",
+      "body": "Every asset below was verified by contract address against three independent sources before it was added, and every percentage comes from the prize table a spin actually resolves against.",
+      "changes": "The reward roster changes as the BNB ecosystem changes.",
+      "assets": "Assets",
+      "machines": "Machines",
+      "footnote": "Prices are indicative and sourced from a cached third-party feed. They are never an input to settlement — a spin resolves to a fixed token amount, and what that amount is worth is a separate question the market answers.",
+      "priceUnavailable": "Live pricing is unavailable right now, so prices are hidden rather than guessed."
+    },
+    "detail": {
+      "whereItDrops": "Where it can drop",
+      "verification": "Verification",
+      "contract": "Contract",
+      "verified": "Verified",
+      "sources": "Sources",
+      "decimals": "Decimals",
+      "category": "Category",
+      "spinForIt": "Spin for it",
+      "notInMachine": "Not in this machine",
+      "close": "Close"
+    }
+  },
+  "howItWorks": {
+    "eyebrow": "How it works",
+    "title": "Three moves, start to finish.",
+    "connect": {
+      "title": "Connect",
+      "body": "Connect your wallet on BNB Chain. Bacha never asks for a seed phrase and never signs anything for you."
+    },
+    "spin": {
+      "title": "Spin",
+      "body": "Choose a machine and make a pull. The price is paid in BNB and the prize table locks the moment you do."
+    },
+    "reveal": {
+      "title": "Reveal",
+      "body": "Your result settles onchain with verifiable randomness, then the reward is yours to claim."
+    }
+  },
+  "tiers": {
+    "eyebrow": "Machines",
+    "title": "Pick your machine.",
+    "body": "Three tiers, one roster. Higher tiers cost more per pull and weight the table further toward the rare end — the odds below come straight from each machine's prize table.",
+    "quick": {
+      "note": "The everyday pull."
+    },
+    "boost": {
+      "note": "More weight on the deep end."
+    },
+    "max": {
+      "note": "Every rare on the roster."
+    },
+    "possibleRewards": "Possible rewards",
+    "prizeEntries": "Prize entries",
+    "tokens": "{count} tokens",
+    "spinTier": "Spin {tier}",
+    "priceNote": "Priced in BNB. The dollar figure is an estimate that moves with the market."
+  },
+  "activity": {
+    "eyebrow": "Live from the chain",
+    "eyebrowDemo": "Demo machine · simulated",
+    "title": "Just pulled.",
+    "body": "Settled spins, straight from contract events. Every row links to its transaction.",
+    "bodyDemo": "Contracts are not deployed on this build, so these are simulated results from the local demo machine — not mainnet transactions.",
+    "fullActivity": "Full activity",
+    "pulled": "pulled",
+    "page": {
+      "eyebrow": "Activity",
+      "title": "Every pull.",
+      "body": "Settled spins, newest first. Nothing on this page is invented — if a row is here, a spin resolved to produce it."
+    },
+    "columns": {
+      "time": "Time",
+      "player": "Player",
+      "machine": "Machine",
+      "paid": "Paid",
+      "pulled": "Pulled",
+      "value": "Value",
+      "rarity": "Rarity",
+      "transaction": "Tx"
+    },
+    "filters": {
+      "all": "All"
+    },
+    "modeLive": "Live from chain",
+    "modeDemo": "Demo · simulated",
+    "empty": {
+      "title": "Nothing has settled yet.",
+      "titleFiltered": "No {rarity} pulls yet.",
+      "hint": "Rows appear here only when a spin actually settles."
+    },
+    "error": {
+      "title": "Could not load activity.",
+      "hint": "The feed will retry on its own."
+    },
+    "railAlt": "An isometric render of capsules on a conveyor rail."
+  },
+  "fairness": {
+    "eyebrow": "Fairness",
+    "titleLead": "Don't trust the machine.",
+    "titleAccent": "Verify it.",
+    "body": "Outcomes come from Chainlink VRF, not from us. The random word, the prize table it resolved against and the payout are all recorded onchain — so anyone can redo the maths and get the same answer.",
+    "cta": "Verify a spin",
+    "chain": {
+      "spin": {
+        "label": "Spin",
+        "detail": "You pay. The table locks."
+      },
+      "request": {
+        "label": "Request",
+        "detail": "A VRF request is opened."
+      },
+      "randomness": {
+        "label": "Randomness",
+        "detail": "Chainlink returns a word."
+      },
+      "result": {
+        "label": "Result",
+        "detail": "The weighted table resolves."
+      },
+      "payout": {
+        "label": "Payout",
+        "detail": "The reward goes to your wallet."
+      }
+    },
+    "artAlt": "An isometric render of a verification instrument splitting a beam of light.",
+    "page": {
+      "title": "Every spin has receipts.",
+      "body": "Bacha does not ask you to believe the odds on the tin. The table, the randomness and the result are all recorded, and the maths that turns one into the other is four lines long.",
+      "verifyHeading": "Verify a spin",
+      "howHeading": "How a result is produced.",
+      "contractsHeading": "The contracts.",
+      "tablesHeading": "Published odds.",
+      "tablesBody": "These are the tables the machines resolve against. Every percentage here is computed from the same weights the contract holds — the UI has no separate copy of the odds to drift out of sync with.",
+      "methodHeading": "Redo the maths.",
+      "methodBody": "Prize selection is a weighted walk. Given a random word and a table, there is exactly one answer, and it does not depend on time, block number, balances or anything an operator controls.",
+      "methodNote": "This mirrors BachaGame._selectPrize exactly. The verifier above runs the same walk in your browser and compares its answer to the recorded one.",
+      "steps": {
+        "one": {
+          "title": "You submit a spin.",
+          "body": "Your wallet pays the tier price. In the same transaction the contract records who you are, which machine you used, and the exact prize table in force at that instant."
+        },
+        "two": {
+          "title": "Its prize table is locked.",
+          "body": "The spin is stamped with a machine version and the hash of that version's table. Published versions are append-only — there is no function in the contract that can edit one, so an operator changing odds afterwards cannot reach your spin."
+        },
+        "three": {
+          "title": "Verifiable randomness settles it.",
+          "body": "The contract asks Chainlink VRF for a random word. When it arrives, the callback walks the frozen weighted table and records exactly one prize. It writes storage and nothing else — no transfers, no outside calls."
+        },
+        "four": {
+          "title": "The result is permanently recorded.",
+          "body": "Random word, prize index, asset and amount are all emitted and stored. Anyone can replay the same maths and land on the same answer — this page does exactly that."
+        }
+      },
+      "contracts": {
+        "game": "Tiers, prize tables, spins, randomness and claims.",
+        "vault": "Reward inventory and payouts. Cannot release anything a spin has a claim on.",
+        "vrf": "The only source of production randomness.",
+        "network": "Network",
+        "chainId": "Chain ID {id}",
+        "testnetNote": "Test assets carry no value.",
+        "notDeployed": "Not deployed",
+        "chainlinkDocs": "Chainlink docs",
+        "demoNotice": "Contracts are not deployed on this build, so the machine runs in demo mode: spins are simulated server-side, results are labelled Simulated everywhere they appear, and no transaction is made. Demo randomness lives in its own module and is never on the path that settles a real spin."
+      },
+      "table": {
+        "index": "#",
+        "asset": "Asset",
+        "amount": "Amount",
+        "baseUnits": "Base units",
+        "weight": "Weight",
+        "chance": "Chance",
+        "rarity": "Rarity",
+        "tierMeta": "Tier {tier} · {price} BNB · total weight {weight}",
+        "hash": "Prize table hash",
+        "localHash": "Local table hash",
+        "rtp": "Reference RTP {value} at authoring-time prices"
+      }
+    },
+    "verifier": {
+      "placeholder": "Spin ID — e.g. 1024",
+      "label": "Spin ID",
+      "submit": "Verify spin",
+      "checking": "Checking…",
+      "idle": "Every spin gets an id when it is paid for. Paste one here and this page will pull its record and re-derive the outcome independently.",
+      "spinTitle": "Spin #{id}",
+      "pending": "This spin has not settled yet. Its prize table is already locked, so the outcome cannot be influenced from here — the randomness simply has not arrived.",
+      "matched": "Independently re-derived — this page reached the same result.",
+      "matchedDetail": "Running the recorded random word through machine version {version}'s prize table in your browser produced entry #{index} — the same asset and amount the machine recorded.",
+      "mismatched": "Re-derivation did not match the recorded result.",
+      "mismatchedDetail": "The recorded reward differs from what this table produces for that random word. Treat this result as unverified and report it.",
+      "fields": {
+        "wallet": "Wallet",
+        "machine": "Machine",
+        "version": "Machine version",
+        "tableHash": "Prize table hash",
+        "paid": "Paid",
+        "vrfRequest": "VRF request",
+        "randomWord": "Random word",
+        "prizeEntry": "Prize entry",
+        "spinTx": "Spin transaction",
+        "payoutTx": "Payout transaction",
+        "reward": "Reward",
+        "notRequested": "Not yet requested",
+        "pendingValue": "Pending",
+        "simulated": "Simulated — no transaction",
+        "notClaimed": "Not claimed yet",
+        "baseUnits": "{units} base units · {decimals} decimals"
+      },
+      "notFound": "That spin could not be found.",
+      "unreachable": "Could not reach the verifier. Try again in a moment."
+    }
+  },
+  "story": {
+    "eyebrow": "Context",
+    "titleLead": "An old idea,",
+    "titleAccent": "moved onchain.",
+    "body": "Capsule machines have worked the same way for fifty years: you pay, the drum turns, something comes out. Bacha keeps the mechanism and replaces the drum with a contract you can read.",
+    "stats": {
+      "assets": "Reward assets",
+      "assetsHint": "All verified by address",
+      "machines": "Machines",
+      "machinesHint": "Each with its own table",
+      "entries": "Prize entries",
+      "entriesHint": "Across all tables",
+      "rarities": "Rarity tiers",
+      "raritiesHint": "Common to Epic"
+    },
+    "sceneAlt": "An isometric scene showing a traditional capsule machine becoming an onchain one.",
+    "stages": {
+      "coin": {
+        "label": "Coin",
+        "detail": "Someone pays a fixed price."
+      },
+      "mechanism": {
+        "label": "Mechanism",
+        "detail": "A drum turns, or a contract records."
+      },
+      "randomness": {
+        "label": "Randomness",
+        "detail": "Friction, or verifiable randomness."
+      },
+      "token": {
+        "label": "Token",
+        "detail": "Something comes out of the tray."
+      }
+    }
+  },
+  "discovery": {
+    "eyebrow": "Token discovery",
+    "titleLead": "Every spin discovers",
+    "titleAccent": "a piece of BNB Chain.",
+    "body": "The roster is built from projects native to BNB Chain — a DEX, a money market, a launchpad, a wallet, a couple of community tokens. Pulling one is how most people meet it.",
+    "cta": "Explore rewards",
+    "orbitAlt": "An isometric render of an orbital arrangement of empty mounting plates.",
+    "assetsLabel": "Reward assets",
+    "verifiedLabel": "Verified by address",
+    "chainLabel": "All on BNB Chain"
+  },
+  "cta": {
+    "titleLead": "There's something",
+    "titleAccent": "in the machine.",
+    "body": "Connect. Spin. See what drops.",
+    "primary": "Take a spin",
+    "secondary": "View rewards",
+    "risk": "Reward values can change. A spin does not guarantee a profit.",
+    "capsuleAlt": "An isometric render of a large Bacha capsule opening."
+  },
+  "footer": {
+    "tagline": "An onchain gacha game for discovering BNB Chain tokens.",
+    "builtOn": "Built on BNB Smart Chain",
+    "columns": {
+      "play": "Play",
+      "explore": "Explore",
+      "transparency": "Transparency",
+      "about": "About"
+    },
+    "links": {
+      "play": "Play",
+      "machines": "Machines",
+      "me": "My Bacha",
+      "rewards": "Rewards",
+      "activity": "Activity",
+      "tokens": "Tokens",
+      "fairness": "Fairness",
+      "contracts": "Contracts",
+      "docs": "Docs",
+      "about": "About",
+      "faq": "FAQ",
+      "terms": "Terms",
+      "risk": "Risk notice",
+      "responsible": "Responsible use"
+    },
+    "disclaimer": "Reward values can change. A spin does not guarantee a profit. Bacha is an independent project and is not operated or endorsed by BNB Chain, Binance or any token issuer named on this site.",
+    "contractsNotDeployed": "Contracts not deployed"
+  },
+  "wallet": {
+    "connect": "Connect Wallet",
+    "connecting": "Waiting…",
+    "connected": "Connected",
+    "disconnect": "Disconnect",
+    "copyAddress": "Copy address",
+    "copied": "Copied",
+    "balance": "Balance",
+    "myBacha": "My Bacha",
+    "wrongNetwork": "Wrong network",
+    "switchNetwork": "Switch to {network}",
+    "switching": "Check your wallet…",
+    "dialogTitle": "Connect a wallet",
+    "dialogBody": "Bacha runs on {network}. Your wallet stays yours — Bacha never asks for a seed phrase and never signs on your behalf.",
+    "connectAction": "Connect",
+    "termsNotice": "By connecting you accept the terms. Reward values change and a spin does not guarantee a profit.",
+    "termsLink": "terms"
+  },
+  "play": {
+    "eyebrow": "The machine",
+    "howResults": "How results are produced",
+    "soundOn": "Sound on",
+    "soundOff": "Sound off",
+    "soundEnable": "Turn machine sound on",
+    "soundDisable": "Turn machine sound off",
+    "yourSpin": "Your spin",
+    "priceNote": "You pay exactly {amount} BNB. The dollar figure is an estimate that moves with the market — the contract never sees a price.",
+    "distribution": "Prize distribution",
+    "entries": "{count} entries",
+    "facts": {
+      "possibleRewards": "Possible rewards",
+      "network": "Network",
+      "fairness": "Fairness",
+      "treasury": "Treasury",
+      "vrf": "Chainlink VRF",
+      "simulated": "Simulated",
+      "funded": "Funded",
+      "notDeployed": "Not deployed"
+    },
+    "actions": {
+      "spinFor": "Spin for {price}",
+      "confirmInWallet": "Confirm in wallet",
+      "submitting": "Submitting",
+      "running": "The machine is running",
+      "tryAgain": "Try again",
+      "notEnough": "Not enough BNB",
+      "notEnoughHint": "This spin costs {amount} BNB plus gas. Top up and come back."
+    },
+    "status": {
+      "machine": "Machine",
+      "pool": "Pool",
+      "rewards": "Rewards",
+      "lastDrop": "Last drop",
+      "network": "Network",
+      "none": "None yet",
+      "healthy": "Healthy",
+      "demo": "Demo"
+    },
+    "reveal": {
+      "youPulled": "You pulled",
+      "claim": "Claim reward",
+      "claiming": "Claiming…",
+      "viewTx": "View tx",
+      "verify": "Verify",
+      "spinAgain": "Spin again",
+      "spin": "Spin",
+      "machineVersion": "Machine version",
+      "randomWord": "Random word",
+      "settlement": "Settlement",
+      "settlementVrf": "Chainlink VRF",
+      "settlementDemo": "Simulated (demo)",
+      "demoNote": "This was a demo pull. Nothing was spent and no tokens moved.",
+      "unknownAsset": "Unknown asset",
+      "dialogLabel": "Spin result"
+    },
+    "stage": {
+      "eyebrow": "The machine",
+      "live": "Live",
+      "demo": "Demo",
+      "sound": "Sound",
+      "fairness": "Fairness",
+      "howItWorks": "How it works",
+      "trayIdle": "Waiting for a drop",
+      "trayArmed": "Machine armed",
+      "trayRunning": "Running",
+      "traySettling": "Reading randomness",
+      "trayResult": "Reward in the tray"
+    },
+    "selector": {
+      "label": "Choose a machine",
+      "rewards": "{count} rewards",
+      "entries": "{count} entries",
+      "select": "Select {label}"
+    },
+    "console": {
+      "title": "Your spin",
+      "payNote": "You'll pay exactly {amount} BNB. The dollar figure is an estimate.",
+      "rewards": "Rewards",
+      "network": "Network",
+      "fairness": "Fairness",
+      "treasury": "Treasury",
+      "vrf": "Chainlink VRF",
+      "simulated": "Simulated",
+      "healthy": "Healthy",
+      "demoTreasury": "Demo",
+      "notDeployed": "Not deployed",
+      "distribution": "Prize distribution",
+      "possibleDrops": "Possible drops",
+      "spinLabel": "Spin {label} — {price}",
+      "connectPrompt": "Connect your wallet to spin.",
+      "switchPrompt": "Switch to BNB Chain.",
+      "pausedPrompt": "This machine is temporarily unavailable."
+    },
+    "states": {
+      "waitingSignature": "Waiting for signature…",
+      "submitted": "Spin submitted.",
+      "waitingRandomness": "Waiting for randomness…",
+      "resultReceived": "Result received.",
+      "tx": "Tx"
+    },
+    "session": {
+      "title": "Your session",
+      "spins": "Spins",
+      "rewards": "Rewards",
+      "rare": "Rare pulls",
+      "unclaimed": "Unclaimed",
+      "note": "Approximate values at current prices. Not a performance figure."
+    },
+    "drops": {
+      "title": "Just pulled.",
+      "empty": "No settled spins yet."
+    },
+    "inside": {
+      "title": "Inside {label}.",
+      "body": "Every asset this machine can drop, with the rarity it sits at and what it is worth right now.",
+      "viewAll": "View all rewards"
+    },
+    "settles": {
+      "title": "How a spin settles.",
+      "body": "Five steps, every one of them recorded. Nothing between your payment and your reward is decided by us.",
+      "verify": "Verify a spin",
+      "simulatedNotice": "Randomness is simulated on this build. Nothing here is a mainnet result."
+    },
+    "demoBanner": {
+      "label": "Demo mode",
+      "body": "Spins are simulated. No transactions and no real tokens.",
+      "learnMore": "Learn more"
+    }
+  },
+  "me": {
+    "eyebrow": "My Bacha",
+    "title": "Your machine history.",
+    "connectPrompt": "Connect a wallet to see your spins.",
+    "totalSpins": "Total spins",
+    "totalRewards": "Rewards pulled",
+    "rarePulls": "Rare or better",
+    "unclaimed": "Unclaimed",
+    "claimAll": "Claim all",
+    "claiming": "Claiming…",
+    "viewActivity": "View activity",
+    "history": "History",
+    "noSpins": "No spins yet.",
+    "noSpinsHint": "Your pulls will appear here as soon as one settles.",
+    "valueNote": "Values are indicative and based on current prices. They are not a performance figure."
+  },
+  "rarity": {
+    "COMMON": "Common",
+    "UNCOMMON": "Uncommon",
+    "RARE": "Rare",
+    "EPIC": "Epic"
+  },
+  "status": {
+    "PENDING": "Pending",
+    "SETTLED": "Settled",
+    "CLAIMED": "Claimed",
+    "REFUNDED": "Refunded"
+  },
+  "common": {
+    "loading": "Loading…",
+    "unavailable": "Unavailable",
+    "demo": "Demo",
+    "testnet": "Testnet",
+    "dev": "Dev",
+    "simulated": "Simulated",
+    "onchain": "Onchain",
+    "justNow": "just now",
+    "secondsAgo": "{count} sec ago",
+    "minutesAgo": "{count} min ago",
+    "hoursAgo": "{count} hr ago",
+    "daysAgo": "{count}d ago"
+  },
+  "environment": {
+    "demo": "Demo machine — spins are simulated server-side. No transaction, no real tokens, no Chainlink VRF.",
+    "testnet": "BNB Chain Testnet — spins settle onchain with test assets that carry no value.",
+    "dev": "Development build.",
+    "hide": "Hide"
+  },
+  "ageGate": {
+    "title": "Before you spin.",
+    "bodyOne": "Bacha is a game with randomised outcomes. A spin costs money and what comes out is worth whatever the market says it is worth — which may be less than you paid.",
+    "bodyTwo": "You need to be 18 or older, and paid randomised prizes are regulated differently depending on where you are. Check what applies where you live.",
+    "accept": "I'm 18+ and I understand",
+    "readTerms": "Read the terms"
+  },
+  "errors": {
+    "userRejected": "You cancelled the request in your wallet.",
+    "insufficientFunds": "There isn't enough BNB in this wallet to cover the spin and gas.",
+    "priceChanged": "The spin price changed. Reload and try again.",
+    "outOfInventory": "This machine is out of prize inventory right now. Try another tier.",
+    "tierInactive": "That machine is not accepting spins at the moment.",
+    "paused": "Bacha is paused right now. Nothing can be spent while it is.",
+    "notSettled": "That spin has not settled yet. Give the randomness a moment.",
+    "unknownSpin": "We couldn't find that spin.",
+    "refundTooEarly": "The refund window has not opened yet for this spin.",
+    "pendingTx": "A previous transaction from this wallet is still pending. Wait for it to finish.",
+    "wrongChain": "Your wallet is on the wrong network. Switch to BNB Chain.",
+    "timeout": "The network took too long to respond. Try again in a moment.",
+    "network": "Could not reach the network. Check your connection and try again.",
+    "rateLimit": "Too many requests right now. Wait a few seconds and try again.",
+    "generic": "Something went wrong with that request. Nothing was spent — try again.",
+    "connectFirst": "Connect a wallet first.",
+    "switchFirst": "Switch to BNB Chain before spinning.",
+    "noContracts": "Contracts are not configured.",
+    "noRpc": "No RPC connection.",
+    "notFound": "Not found",
+    "notFoundBody": "That page doesn't exist. The machine is still where you left it.",
+    "backHome": "Back to the machine"
+  }
+}

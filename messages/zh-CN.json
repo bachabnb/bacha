@@ -1,0 +1,706 @@
+{
+  "meta": {
+    "title": "Bacha — BNB Chain 上的扭蛋机",
+    "titleTemplate": "{page} — Bacha",
+    "description": "转动机器，掉落来自 BNB Chain 生态的真实代币。",
+    "play": {
+      "title": "开始游戏",
+      "description": "选一台机器，转一次。真实的 BNB Chain 代币，结果可验证。"
+    },
+    "rewards": {
+      "title": "奖励",
+      "description": "Bacha 机器可能掉落的全部资产，含实时价格与真实概率。"
+    },
+    "activity": {
+      "title": "动态",
+      "description": "Bacha 机器上已结算的每一次转动，最新在前。"
+    },
+    "fairness": {
+      "title": "公平性",
+      "description": "Bacha 如何产生结果，以及你如何自己验证。"
+    },
+    "me": {
+      "title": "我的 Bacha",
+      "description": "你的转动、奖励与历史记录。"
+    },
+    "terms": {
+      "title": "条款与风险",
+      "description": "Bacha 是什么、不是什么，以及你同意了哪些内容。"
+    },
+    "docs": {
+      "title": "文档",
+      "description": "Bacha 的构建方式：合约、随机性、金库与代币配置。"
+    }
+  },
+  "announce": {
+    "live": "Bacha 已在 BNB Chain 上线",
+    "cta": "来转一次",
+    "dismiss": "关闭"
+  },
+  "nav": {
+    "play": "开始",
+    "explore": "探索",
+    "transparency": "透明度",
+    "about": "关于",
+    "menu": "菜单",
+    "close": "关闭",
+    "openMenu": "打开导航",
+    "theme": "主题",
+    "themeLight": "浅色",
+    "themeDark": "深色",
+    "themeSystem": "跟随系统",
+    "themeToggle": "切换主题",
+    "language": "语言",
+    "languageSelect": "选择语言",
+    "skipToContent": "跳到主要内容",
+    "groups": {
+      "play": {
+        "bacha": {
+          "title": "开始游戏",
+          "description": "转动一次"
+        },
+        "quick": {
+          "title": "Quick",
+          "description": "{price} 机型"
+        },
+        "boost": {
+          "title": "Boost",
+          "description": "{price} 机型"
+        },
+        "max": {
+          "title": "Max",
+          "description": "{price} 机型"
+        },
+        "me": {
+          "title": "我的 Bacha",
+          "description": "你的转动与奖励"
+        }
+      },
+      "explore": {
+        "rewards": {
+          "title": "奖励",
+          "description": "看看里面有什么"
+        },
+        "activity": {
+          "title": "动态",
+          "description": "最新掉落"
+        },
+        "tokens": {
+          "title": "代币",
+          "description": "了解奖励资产"
+        }
+      },
+      "transparency": {
+        "fairness": {
+          "title": "公平性",
+          "description": "验证任意一次转动"
+        },
+        "howItWorks": {
+          "title": "运作方式",
+          "description": "从付款到发放"
+        },
+        "contracts": {
+          "title": "合约",
+          "description": "在 BscScan 上查看"
+        },
+        "docs": {
+          "title": "文档",
+          "description": "技术文档"
+        }
+      },
+      "about": {
+        "bacha": {
+          "title": "关于 Bacha",
+          "description": "这是什么"
+        },
+        "bnb": {
+          "title": "BNB Chain",
+          "description": "它运行的链"
+        },
+        "faq": {
+          "title": "常见问题",
+          "description": "你可能想问的"
+        },
+        "community": {
+          "title": "社区",
+          "description": "X 与 Telegram"
+        }
+      }
+    },
+    "status": {
+      "label": "机器运行中",
+      "assets": "{count} 种奖励资产",
+      "tiers": "{count} 档机型",
+      "network": "BNB Chain"
+    }
+  },
+  "hero": {
+    "eyebrow": "BNB CHAIN 上的扭蛋机",
+    "headlineLead": "转动",
+    "headlineAccent": "这条链。",
+    "subcopy": "转一次，看看掉出什么。",
+    "primary": "立即转动",
+    "secondary": "看看里面",
+    "trust": "每个结果都可在链上验证。",
+    "meta": {
+      "network": "BNB Chain",
+      "randomness": "可验证随机数",
+      "rewards": "真实代币奖励"
+    },
+    "machineAlt": "Bacha 扭蛋机的等距视角渲染图。",
+    "lead": "Bacha 是一台运行在 BNB Chain 上的链上奖励机器。",
+    "perSpin": "每次转动",
+    "currentOdds": "当前概率",
+    "proofOdds": "概率公开透明"
+  },
+  "machinePreview": {
+    "label": "机器 01",
+    "live": "运行中",
+    "title": "已装填，正在运行。",
+    "body": "这是当前的真实配置——与转动时实际结算所用的奖池表完全一致。切换机型，看看有什么不同。",
+    "spinPrice": "本次转动",
+    "poolHealth": "奖励资产",
+    "latest": "最近一次结算",
+    "distribution": "奖池分布",
+    "network": "网络",
+    "inMachine": "这台机器里有",
+    "openMachine": "打开机器",
+    "noSettlement": "还没有结算记录",
+    "demoNotice": "演示配置——此版本尚未部署合约。"
+  },
+  "rewards": {
+    "eyebrow": "奖励阵容",
+    "title": "机器里装了什么？",
+    "body": "这里的每一种资产都是 BNB Chain 上的项目，加入前都按合约地址逐一核对过。其他链资产的跨链封装版本被刻意排除在外。",
+    "allRewards": "全部奖励",
+    "price": "价格",
+    "bestOdds": "最高概率",
+    "change24h": "24 小时",
+    "priceNote": "价格仅供参考且时刻变动，不会影响机器掉落什么——一次转动结算的是代币数量，而不是美元金额。",
+    "vaultAlt": "装满扭蛋的开启式金库等距渲染图。",
+    "page": {
+      "eyebrow": "奖励阵容",
+      "title": "Bacha 里有什么。",
+      "body": "下列每一种资产在加入前，都按合约地址在三个独立来源上核对过；每一个百分比也都来自转动时真正结算所用的奖池表。",
+      "changes": "奖励阵容会随 BNB 生态的变化而调整。",
+      "assets": "资产",
+      "machines": "机型",
+      "footnote": "价格来自缓存的第三方行情源，仅供参考，绝不参与结算——一次转动结算的是固定的代币数量，这个数量值多少钱，是市场另行回答的问题。",
+      "priceUnavailable": "当前无法获取实时行情，因此价格不予显示，而不是估算。"
+    },
+    "detail": {
+      "whereItDrops": "可能在哪里掉落",
+      "verification": "核验信息",
+      "contract": "合约",
+      "verified": "核验于",
+      "sources": "来源",
+      "decimals": "精度",
+      "category": "类别",
+      "spinForIt": "去转一次",
+      "notInMachine": "这台机器里没有",
+      "close": "关闭"
+    }
+  },
+  "howItWorks": {
+    "eyebrow": "运作方式",
+    "title": "三步，从头到尾。",
+    "connect": {
+      "title": "连接",
+      "body": "在 BNB Chain 上连接你的钱包。Bacha 从不索要助记词，也不会替你签署任何交易。"
+    },
+    "spin": {
+      "title": "转动",
+      "body": "选一台机器转一次。费用以 BNB 支付，你付款的那一刻，奖池表即被锁定。"
+    },
+    "reveal": {
+      "title": "揭晓",
+      "body": "结果由可验证随机数在链上结算，奖励随后即可由你领取。"
+    }
+  },
+  "tiers": {
+    "eyebrow": "机型",
+    "title": "选择你的机器。",
+    "body": "三种机型，同一套奖励阵容。档位越高，单次费用越高，奖池表也越向稀有端倾斜——下方概率直接来自各机型的奖池表。",
+    "quick": {
+      "note": "日常的一次转动。"
+    },
+    "boost": {
+      "note": "稀有端权重更高。"
+    },
+    "max": {
+      "note": "阵容里的每一种稀有资产。"
+    },
+    "possibleRewards": "可能的奖励",
+    "prizeEntries": "奖项条目",
+    "tokens": "{count} 种代币",
+    "spinTier": "转动 {tier}",
+    "priceNote": "以 BNB 计价。美元金额为估算值，会随行情变动。"
+  },
+  "activity": {
+    "eyebrow": "来自链上",
+    "eyebrowDemo": "演示机器 · 模拟结果",
+    "title": "刚刚掉落。",
+    "body": "已结算的转动，直接来自合约事件。每一行都可跳转到对应交易。",
+    "bodyDemo": "此版本尚未部署合约，因此这些是本地演示机器的模拟结果，并非主网交易。",
+    "fullActivity": "全部动态",
+    "pulled": "转出了",
+    "page": {
+      "eyebrow": "动态",
+      "title": "每一次掉落。",
+      "body": "已结算的转动，最新在前。这个页面上没有任何虚构内容——出现在这里的每一行，都对应一次真实结算。"
+    },
+    "columns": {
+      "time": "时间",
+      "player": "玩家",
+      "machine": "机型",
+      "paid": "支付",
+      "pulled": "转出",
+      "value": "价值",
+      "rarity": "稀有度",
+      "transaction": "交易"
+    },
+    "filters": {
+      "all": "全部"
+    },
+    "modeLive": "链上实时",
+    "modeDemo": "演示 · 模拟",
+    "empty": {
+      "title": "还没有结算记录。",
+      "titleFiltered": "还没有{rarity}掉落。",
+      "hint": "只有真正结算的转动才会出现在这里。"
+    },
+    "error": {
+      "title": "无法加载动态。",
+      "hint": "系统会自动重试。"
+    },
+    "railAlt": "扭蛋在传送轨道上的等距渲染图。"
+  },
+  "fairness": {
+    "eyebrow": "公平性",
+    "titleLead": "别信任机器。",
+    "titleAccent": "去验证它。",
+    "body": "结果来自 Chainlink VRF，而不是我们。随机数、结算所依据的奖池表、以及奖励发放，全部记录在链上——任何人都能重新算一遍，并得到同样的答案。",
+    "cta": "验证一次转动",
+    "chain": {
+      "spin": {
+        "label": "转动",
+        "detail": "你付款，奖池表锁定。"
+      },
+      "request": {
+        "label": "请求",
+        "detail": "发起一次 VRF 请求。"
+      },
+      "randomness": {
+        "label": "随机数",
+        "detail": "Chainlink 返回随机数。"
+      },
+      "result": {
+        "label": "结果",
+        "detail": "按权重走完奖池表。"
+      },
+      "payout": {
+        "label": "发放",
+        "detail": "奖励进入你的钱包。"
+      }
+    },
+    "artAlt": "将光束分离的验证仪器等距渲染图。",
+    "page": {
+      "title": "每一次转动都有凭证。",
+      "body": "Bacha 不要求你相信标称的概率。奖池表、随机数和结果都有记录，而把前者变成后者的算法只有四行。",
+      "verifyHeading": "验证一次转动",
+      "howHeading": "一个结果是怎么产生的。",
+      "contractsHeading": "合约。",
+      "tablesHeading": "公开的概率。",
+      "tablesBody": "这些就是各机型实际结算所用的奖池表。此处每一个百分比都由合约中相同的权重计算得出——界面没有另一份会与之脱节的概率副本。",
+      "methodHeading": "自己算一遍。",
+      "methodBody": "奖项选择是一次按权重的遍历。给定一个随机数和一张表，答案有且只有一个，且不依赖时间、区块高度、余额或任何运营方可控的因素。",
+      "methodNote": "这与 BachaGame._selectPrize 完全一致。上方的验证器会在你的浏览器里跑同样的遍历，并与链上记录的结果比对。",
+      "steps": {
+        "one": {
+          "title": "你提交一次转动。",
+          "body": "钱包支付该档位的价格。在同一笔交易里，合约记录下你是谁、用的哪台机器，以及那一刻生效的确切奖池表。"
+        },
+        "two": {
+          "title": "奖池表随即锁定。",
+          "body": "这次转动被打上机型版本号和该版本奖池表的哈希。已发布的版本只能新增不能修改——合约里根本不存在编辑它的函数，因此运营方事后调整概率也触及不到你这次转动。"
+        },
+        "three": {
+          "title": "由可验证随机数完成结算。",
+          "body": "合约向 Chainlink VRF 请求一个随机数。随机数返回后，回调函数在已冻结的加权表上遍历，并且只记录一个奖项。它只写存储，别的什么都不做——不转账，不调用外部合约。"
+        },
+        "four": {
+          "title": "结果被永久记录。",
+          "body": "随机数、奖项序号、资产与数量全部被写入事件与存储。任何人都能重放同样的算法并得到同样的答案——本页做的正是这件事。"
+        }
+      },
+      "contracts": {
+        "game": "档位、奖池表、转动、随机性与领取。",
+        "vault": "奖励库存与发放。不能动用任何已被转动占用的资产。",
+        "vrf": "生产环境中随机性的唯一来源。",
+        "network": "网络",
+        "chainId": "链 ID {id}",
+        "testnetNote": "测试网资产没有任何价值。",
+        "notDeployed": "尚未部署",
+        "chainlinkDocs": "Chainlink 文档",
+        "demoNotice": "此版本尚未部署合约，因此机器运行在演示模式：转动由服务端模拟，结果在任何出现的位置都会标注为「模拟」，也不会产生任何交易。演示随机数位于独立模块中，绝不会出现在真实结算的代码路径上。"
+      },
+      "table": {
+        "index": "序号",
+        "asset": "资产",
+        "amount": "数量",
+        "baseUnits": "最小单位",
+        "weight": "权重",
+        "chance": "概率",
+        "rarity": "稀有度",
+        "tierMeta": "档位 {tier} · {price} BNB · 总权重 {weight}",
+        "hash": "奖池表哈希",
+        "localHash": "本地表哈希",
+        "rtp": "按编写时价格估算的参考返还率 {value}"
+      }
+    },
+    "verifier": {
+      "placeholder": "转动 ID — 例如 1024",
+      "label": "转动 ID",
+      "submit": "验证",
+      "checking": "查询中…",
+      "idle": "每次付款转动都会获得一个 ID。把它粘贴到这里，本页会调出它的记录，并独立重新推导一次结果。",
+      "spinTitle": "转动 #{id}",
+      "pending": "这次转动尚未结算。它的奖池表已经锁定，因此结果无法在此之后被影响——只是随机数还没到。",
+      "matched": "独立重算完成——本页得到了相同的结果。",
+      "matchedDetail": "在你的浏览器里，用记录的随机数遍历机型版本 {version} 的奖池表，得到条目 #{index}——与机器记录的资产和数量完全一致。",
+      "mismatched": "重算结果与记录不符。",
+      "mismatchedDetail": "对于该随机数，这张表算出的奖励与记录的奖励不一致。请将此结果视为未通过验证并予以反馈。",
+      "fields": {
+        "wallet": "钱包",
+        "machine": "机型",
+        "version": "机型版本",
+        "tableHash": "奖池表哈希",
+        "paid": "支付",
+        "vrfRequest": "VRF 请求",
+        "randomWord": "随机数",
+        "prizeEntry": "奖项条目",
+        "spinTx": "转动交易",
+        "payoutTx": "发放交易",
+        "reward": "奖励",
+        "notRequested": "尚未请求",
+        "pendingValue": "等待中",
+        "simulated": "模拟 — 无交易",
+        "notClaimed": "尚未领取",
+        "baseUnits": "{units} 最小单位 · {decimals} 位精度"
+      },
+      "notFound": "找不到这次转动。",
+      "unreachable": "无法连接验证服务，请稍后重试。"
+    }
+  },
+  "story": {
+    "eyebrow": "背景",
+    "titleLead": "一个老玩法，",
+    "titleAccent": "搬到了链上。",
+    "body": "五十年来，扭蛋机的原理没变过：你付钱，转盘转动，东西掉出来。Bacha 保留了这套机械，只是把转盘换成了一份你可以自己读的合约。",
+    "stats": {
+      "assets": "奖励资产",
+      "assetsHint": "全部按地址核验",
+      "machines": "机型",
+      "machinesHint": "各有自己的奖池表",
+      "entries": "奖项条目",
+      "entriesHint": "所有奖池表合计",
+      "rarities": "稀有度层级",
+      "raritiesHint": "从普通到史诗"
+    },
+    "sceneAlt": "一台传统扭蛋机逐步变成链上机器的等距场景。",
+    "stages": {
+      "coin": {
+        "label": "投币",
+        "detail": "有人支付一个固定价格。"
+      },
+      "mechanism": {
+        "label": "机构",
+        "detail": "转盘转动，或合约记录。"
+      },
+      "randomness": {
+        "label": "随机",
+        "detail": "靠摩擦，或靠可验证随机数。"
+      },
+      "token": {
+        "label": "代币",
+        "detail": "有东西从出货口掉下来。"
+      }
+    }
+  },
+  "discovery": {
+    "eyebrow": "代币发现",
+    "titleLead": "每一次转动，",
+    "titleAccent": "都是一次 BNB Chain 的发现。",
+    "body": "奖励阵容全部来自 BNB Chain 原生项目——一个 DEX、一个借贷市场、一个发射台、一个钱包，以及几个社区代币。对大多数人来说，转出它，就是认识它的方式。",
+    "cta": "浏览奖励",
+    "orbitAlt": "空置安装位环绕排列的等距渲染图。",
+    "assetsLabel": "奖励资产",
+    "verifiedLabel": "按地址核验",
+    "chainLabel": "全部在 BNB Chain 上"
+  },
+  "cta": {
+    "titleLead": "机器里，",
+    "titleAccent": "有东西。",
+    "body": "连接、转动、看看掉出什么。",
+    "primary": "来转一次",
+    "secondary": "查看奖励",
+    "risk": "奖励价值会变动。一次转动并不保证盈利。",
+    "capsuleAlt": "正在打开的大号 Bacha 扭蛋等距渲染图。"
+  },
+  "footer": {
+    "tagline": "一款用来发现 BNB Chain 代币的链上扭蛋游戏。",
+    "builtOn": "基于 BNB Smart Chain 构建",
+    "columns": {
+      "play": "开始",
+      "explore": "探索",
+      "transparency": "透明度",
+      "about": "关于"
+    },
+    "links": {
+      "play": "开始游戏",
+      "machines": "机型",
+      "me": "我的 Bacha",
+      "rewards": "奖励",
+      "activity": "动态",
+      "tokens": "代币",
+      "fairness": "公平性",
+      "contracts": "合约",
+      "docs": "文档",
+      "about": "关于",
+      "faq": "常见问题",
+      "terms": "条款",
+      "risk": "风险提示",
+      "responsible": "理性游玩"
+    },
+    "disclaimer": "奖励价值会变动，一次转动并不保证盈利。Bacha 是一个独立项目，并非由 BNB Chain、币安或本站提及的任何代币发行方运营或背书。",
+    "contractsNotDeployed": "合约尚未部署"
+  },
+  "wallet": {
+    "connect": "连接钱包",
+    "connecting": "等待中…",
+    "connected": "已连接",
+    "disconnect": "断开连接",
+    "copyAddress": "复制地址",
+    "copied": "已复制",
+    "balance": "余额",
+    "myBacha": "我的 Bacha",
+    "wrongNetwork": "网络不正确",
+    "switchNetwork": "切换到 {network}",
+    "switching": "请在钱包中确认…",
+    "dialogTitle": "连接钱包",
+    "dialogBody": "Bacha 运行在 {network} 上。你的钱包始终属于你——Bacha 从不索要助记词，也不会代你签名。",
+    "connectAction": "连接",
+    "termsNotice": "连接即表示你接受相关条款。奖励价值会变动，一次转动并不保证盈利。",
+    "termsLink": "条款"
+  },
+  "play": {
+    "eyebrow": "机器",
+    "howResults": "结果是怎么产生的",
+    "soundOn": "音效已开",
+    "soundOff": "音效已关",
+    "soundEnable": "开启机器音效",
+    "soundDisable": "关闭机器音效",
+    "yourSpin": "本次转动",
+    "priceNote": "你实际支付 {amount} BNB。美元金额为随行情变动的估算值——合约从不读取价格。",
+    "distribution": "奖池分布",
+    "entries": "{count} 个条目",
+    "facts": {
+      "possibleRewards": "可能的奖励",
+      "network": "网络",
+      "fairness": "公平性",
+      "treasury": "金库",
+      "vrf": "Chainlink VRF",
+      "simulated": "模拟",
+      "funded": "已注资",
+      "notDeployed": "尚未部署"
+    },
+    "actions": {
+      "spinFor": "{price} 转一次",
+      "confirmInWallet": "请在钱包中确认",
+      "submitting": "提交中",
+      "running": "机器运转中",
+      "tryAgain": "重试",
+      "notEnough": "BNB 余额不足",
+      "notEnoughHint": "本次转动需要 {amount} BNB，外加 Gas 费。充值后再来。"
+    },
+    "status": {
+      "machine": "机器",
+      "pool": "奖池",
+      "rewards": "奖励",
+      "lastDrop": "最近掉落",
+      "network": "网络",
+      "none": "暂无",
+      "healthy": "充足",
+      "demo": "演示"
+    },
+    "reveal": {
+      "youPulled": "你转出了",
+      "claim": "领取奖励",
+      "claiming": "领取中…",
+      "viewTx": "查看交易",
+      "verify": "验证",
+      "spinAgain": "再转一次",
+      "spin": "转动",
+      "machineVersion": "机型版本",
+      "randomWord": "随机数",
+      "settlement": "结算方式",
+      "settlementVrf": "Chainlink VRF",
+      "settlementDemo": "模拟（演示）",
+      "demoNote": "这是一次演示转动。没有花费任何费用，也没有代币发生转移。",
+      "unknownAsset": "未知资产",
+      "dialogLabel": "转动结果"
+    },
+    "stage": {
+      "eyebrow": "机器",
+      "live": "运行中",
+      "demo": "演示",
+      "sound": "音效",
+      "fairness": "公平性",
+      "howItWorks": "运作方式",
+      "trayIdle": "等待掉落",
+      "trayArmed": "机器已就绪",
+      "trayRunning": "运转中",
+      "traySettling": "正在读取随机数",
+      "trayResult": "奖励已到出货口"
+    },
+    "selector": {
+      "label": "选择机器",
+      "rewards": "{count} 种奖励",
+      "entries": "{count} 个条目",
+      "select": "选择 {label}"
+    },
+    "console": {
+      "title": "本次转动",
+      "payNote": "你将实际支付 {amount} BNB。美元金额为估算值。",
+      "rewards": "奖励",
+      "network": "网络",
+      "fairness": "公平性",
+      "treasury": "金库",
+      "vrf": "Chainlink VRF",
+      "simulated": "模拟",
+      "healthy": "充足",
+      "demoTreasury": "演示",
+      "notDeployed": "尚未部署",
+      "distribution": "奖池分布",
+      "possibleDrops": "可能掉落",
+      "spinLabel": "转动 {label} — {price}",
+      "connectPrompt": "连接钱包后即可转动。",
+      "switchPrompt": "请切换到 BNB Chain。",
+      "pausedPrompt": "这台机器暂时无法使用。"
+    },
+    "states": {
+      "waitingSignature": "等待签名…",
+      "submitted": "转动已提交。",
+      "waitingRandomness": "等待随机数…",
+      "resultReceived": "已收到结果。",
+      "tx": "交易"
+    },
+    "session": {
+      "title": "本次会话",
+      "spins": "转动次数",
+      "rewards": "获得奖励",
+      "rare": "稀有掉落",
+      "unclaimed": "待领取",
+      "note": "按当前行情估算，仅供参考，并非收益指标。"
+    },
+    "drops": {
+      "title": "刚刚掉落。",
+      "empty": "还没有结算记录。"
+    },
+    "inside": {
+      "title": "{label} 里有什么。",
+      "body": "这台机器可能掉落的每一种资产，含稀有度与当前价值。",
+      "viewAll": "查看全部奖励"
+    },
+    "settles": {
+      "title": "一次转动是怎么结算的。",
+      "body": "五个步骤，每一步都有记录。从你付款到拿到奖励，中间没有任何一步由我们决定。",
+      "verify": "验证一次转动",
+      "simulatedNotice": "此版本的随机数为模拟生成，这里的结果都不是主网结果。"
+    },
+    "demoBanner": {
+      "label": "演示模式",
+      "body": "转动由模拟生成。没有交易，也没有真实代币。",
+      "learnMore": "了解更多"
+    }
+  },
+  "me": {
+    "eyebrow": "我的 Bacha",
+    "title": "你的机器记录。",
+    "connectPrompt": "连接钱包后即可查看你的转动记录。",
+    "totalSpins": "转动次数",
+    "totalRewards": "已转出奖励",
+    "rarePulls": "稀有及以上",
+    "unclaimed": "待领取",
+    "claimAll": "全部领取",
+    "claiming": "领取中…",
+    "viewActivity": "查看动态",
+    "history": "历史记录",
+    "noSpins": "还没有转动记录。",
+    "noSpinsHint": "一旦有转动结算，就会显示在这里。",
+    "valueNote": "价值按当前行情估算，仅供参考，并非收益指标。"
+  },
+  "rarity": {
+    "COMMON": "普通",
+    "UNCOMMON": "少见",
+    "RARE": "稀有",
+    "EPIC": "史诗"
+  },
+  "status": {
+    "PENDING": "等待中",
+    "SETTLED": "已结算",
+    "CLAIMED": "已领取",
+    "REFUNDED": "已退款"
+  },
+  "common": {
+    "loading": "加载中…",
+    "unavailable": "暂不可用",
+    "demo": "演示",
+    "testnet": "测试网",
+    "dev": "开发",
+    "simulated": "模拟",
+    "onchain": "链上",
+    "justNow": "刚刚",
+    "secondsAgo": "{count} 秒前",
+    "minutesAgo": "{count} 分钟前",
+    "hoursAgo": "{count} 小时前",
+    "daysAgo": "{count} 天前"
+  },
+  "environment": {
+    "demo": "演示机器——转动由服务端模拟。无交易、无真实代币、未使用 Chainlink VRF。",
+    "testnet": "BNB Chain 测试网——转动在链上结算，使用的测试资产没有任何价值。",
+    "dev": "开发版本。",
+    "hide": "隐藏"
+  },
+  "ageGate": {
+    "title": "开始之前。",
+    "bodyOne": "Bacha 是一款结果随机的游戏。转动需要付费，而掉出来的东西值多少钱由市场决定——可能低于你支付的金额。",
+    "bodyTwo": "你需要年满 18 周岁。付费随机奖励在不同司法辖区受到的监管并不相同，请自行确认你所在地的规定。",
+    "accept": "我已年满 18 岁并已知悉",
+    "readTerms": "阅读条款"
+  },
+  "errors": {
+    "userRejected": "你在钱包中取消了这次请求。",
+    "insufficientFunds": "此钱包中的 BNB 不足以支付本次转动和 Gas 费。",
+    "priceChanged": "转动价格已变动，请刷新后重试。",
+    "outOfInventory": "这台机器当前奖励库存不足，试试其他档位。",
+    "tierInactive": "该机器目前未开放转动。",
+    "paused": "Bacha 当前已暂停，暂停期间不会产生任何支出。",
+    "notSettled": "这次转动尚未结算，请稍等随机数返回。",
+    "unknownSpin": "找不到这次转动。",
+    "refundTooEarly": "这次转动的退款窗口尚未开启。",
+    "pendingTx": "此钱包上一笔交易仍在处理中，请等待它完成。",
+    "wrongChain": "你的钱包当前网络不正确，请切换到 BNB Chain。",
+    "timeout": "网络响应超时，请稍后重试。",
+    "network": "无法连接网络，请检查网络后重试。",
+    "rateLimit": "请求过于频繁，请稍候几秒再试。",
+    "generic": "这次请求出了点问题。没有产生任何支出，请重试。",
+    "connectFirst": "请先连接钱包。",
+    "switchFirst": "转动前请先切换到 BNB Chain。",
+    "noContracts": "尚未配置合约。",
+    "noRpc": "没有可用的 RPC 连接。",
+    "notFound": "页面不存在",
+    "notFoundBody": "这个页面不存在。机器还在你离开的地方。",
+    "backHome": "回到机器"
+  }
+}

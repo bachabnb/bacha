@@ -1,0 +1,758 @@
+@import "tailwindcss";
+
+/* ============================================================
+   BACHA — semantic design tokens
+
+   Components never reference a hex value. They reference a role:
+   `bg-surface`, `text-foreground-muted`, `border-border`. The two
+   palettes below are the only place raw colour lives, which is what
+   makes a complete light mode possible without touching a component.
+   ============================================================ */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* canvas */
+  --background: #080b0d;
+  --background-secondary: #0b0f12;
+  --background-inset: #050708;
+
+  /* containers */
+  --surface: #11151a;
+  --surface-raised: #151a20;
+  --surface-hover: #1b2028;
+  --surface-sunken: #0a0d10;
+
+  /* type */
+  --foreground: #f5f5f5;
+  --foreground-secondary: #a1a7ae;
+  --foreground-muted: #676e76;
+
+  /* lines */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-inset: rgba(255, 255, 255, 0.04);
+
+  /* brand */
+  --brand: #f0b90b;
+  --brand-hover: #f8ce3c;
+  --brand-pressed: #c99a06;
+  --brand-soft: rgba(240, 185, 11, 0.12);
+  --brand-line: rgba(240, 185, 11, 0.34);
+  --brand-foreground: #0a0a0a;
+
+  /* status — never yellow, so state never reads as brand */
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, 0.12);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.12);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.12);
+
+  /* rarity — one scale, used by bars, chips and capsule finishes */
+  --rarity-common: #58606c;
+  --rarity-uncommon: #9aa4b2;
+  --rarity-rare: #f0b90b;
+  --rarity-epic: #ffe27a;
+
+  /* depth */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 12px 28px -14px rgba(0, 0, 0, 0.9);
+  --shadow-lg: 0 32px 64px -32px rgba(0, 0, 0, 0.95);
+  --shadow-brand: 0 10px 28px -14px rgba(240, 185, 11, 0.6);
+  --inner-lip: inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+
+  /* decorative geometry, kept faint on purpose */
+  --grid-line: rgba(255, 255, 255, 0.03);
+  --grid-mark: rgba(255, 255, 255, 0.07);
+  --atmosphere: rgba(240, 185, 11, 0.1);
+}
+
+/* ------------------------------------------------------------------
+   LIGHT MODE
+
+   Not an inversion. Warm ivory with a faint green undertone, the way a
+   printed hardware catalogue looks — never pure white, which glares and
+   flattens. Pure #FFF is reserved for surfaces that need to lift.
+
+   The hardware stays dark in this theme on purpose: a graphite machine on
+   warm paper is the signature, and a white machine would be a different
+   product.
+   ------------------------------------------------------------------ */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --background: #f3f4ee;
+  --background-secondary: #eceee8;
+  --background-inset: #e6e8e0;
+
+  --surface: #fafaf7;
+  --surface-raised: #ffffff;
+  --surface-hover: #f0f1ea;
+  --surface-sunken: #e9ebe4;
+
+  --foreground: #111412;
+  --foreground-secondary: #515751;
+  --foreground-muted: #7e857e;
+
+  --border: rgba(18, 22, 18, 0.08);
+  --border-strong: rgba(18, 22, 18, 0.17);
+  --border-inset: rgba(18, 22, 18, 0.045);
+
+  --brand: #f0b90b;
+  --brand-hover: #e0aa05;
+  --brand-pressed: #c08f04;
+  --brand-soft: rgba(240, 185, 11, 0.15);
+  --brand-line: rgba(193, 145, 6, 0.42);
+  --brand-foreground: #17140a;
+
+  --success: #076c4e;
+  --success-soft: rgba(7, 108, 78, 0.1);
+  --warning: #92590a;
+  --warning-soft: rgba(146, 89, 10, 0.11);
+  --danger: #a8201f;
+  --danger-soft: rgba(168, 32, 31, 0.09);
+
+  /* Epic goes near-black here: pale yellow would vanish on ivory. */
+  --rarity-common: #a3a9a2;
+  --rarity-uncommon: #5c635b;
+  --rarity-rare: #cf9c07;
+  --rarity-epic: #191b1f;
+
+  /* Layered, warm-tinted, and soft — physical rather than floating. */
+  --shadow-sm: 0 1px 2px rgba(20, 30, 20, 0.05);
+  --shadow-md: 0 12px 40px -18px rgba(20, 30, 20, 0.16), 0 2px 6px -2px rgba(20, 30, 20, 0.06);
+  --shadow-lg: 0 32px 64px -28px rgba(20, 30, 20, 0.2), 0 4px 12px -4px rgba(20, 30, 20, 0.07);
+  --shadow-brand: 0 12px 28px -14px rgba(193, 145, 6, 0.5);
+  --inner-lip: inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+
+  --grid-line: rgba(18, 22, 18, 0.042);
+  --grid-mark: rgba(18, 22, 18, 0.1);
+  --atmosphere: rgba(240, 185, 11, 0.2);
+}
+
+/* ------------------------------------------------------------------
+   SECTION ZONING
+
+   Sections alternate through three closely related tones so the page has
+   rhythm rather than one flat field. The steps are small on purpose —
+   this should read as paper stock changing, not as stripes.
+   ------------------------------------------------------------------ */
+[data-theme="light"] [data-zone="warm"] { background-color: #f6f6f1; }
+[data-theme="light"] [data-zone="cool"] { background-color: #eceee9; }
+[data-theme="light"] [data-zone="pale"] { background-color: #f8f8f4; }
+[data-theme="light"] [data-zone="brand"] {
+  background-color: #f7f4e6;
+  background-image: radial-gradient(120% 80% at 50% 0%, rgba(240, 185, 11, 0.14), transparent 62%);
+}
+
+[data-theme="dark"] [data-zone="warm"] { background-color: var(--background); }
+[data-theme="dark"] [data-zone="cool"] { background-color: var(--background-secondary); }
+[data-theme="dark"] [data-zone="pale"] { background-color: var(--background); }
+[data-theme="dark"] [data-zone="brand"] { background-color: var(--background-inset); }
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-secondary: var(--background-secondary);
+  --color-background-inset: var(--background-inset);
+
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-sunken: var(--surface-sunken);
+
+  --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-muted: var(--foreground-muted);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-pressed: var(--brand-pressed);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-line: var(--brand-line);
+  --color-brand-foreground: var(--brand-foreground);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --font-display: var(--font-display-stack);
+  --font-sans: var(--font-sans-stack);
+  --font-mono: var(--font-mono-stack);
+
+  --radius-tile: 12px;
+  --radius-card: 16px;
+  --radius-panel: 20px;
+
+  --ease-physical: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snap: cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@layer base {
+  :root {
+    /* Latin first, then a CJK stack, so Chinese never falls back to a serif. */
+    --font-sans-stack: var(--font-inter), var(--font-noto-sc), "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+    --font-display-stack: var(--font-inter-tight), var(--font-noto-sc), "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+    --font-mono-stack: var(--font-mono-code), ui-monospace, "SF Mono", monospace;
+
+    --shell-max: 1440px;
+    --shell-gutter: clamp(1rem, 4vw, 3.5rem);
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans-stack);
+    font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  /* Theme change should settle, not animate. Colour only — never layout. */
+  body,
+  body * {
+    transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+    transition-duration: 180ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* Suppress that transition during the switch itself so nothing smears. */
+  :root[data-theme-switching] body,
+  :root[data-theme-switching] body * {
+    transition: none !important;
+  }
+
+  ::selection {
+    background: var(--brand);
+    color: var(--brand-foreground);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display-stack);
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 0.98;
+  }
+
+  /* Chinese needs room: the tight Latin tracking makes CJK illegible. */
+  :lang(zh) h1,
+  :lang(zh) h2,
+  :lang(zh) h3,
+  :lang(zh) h4 {
+    letter-spacing: -0.01em;
+    line-height: 1.22;
+    font-weight: 800;
+  }
+
+  :lang(zh) body {
+    letter-spacing: 0;
+  }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--background-secondary); }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 99px;
+    border: 2px solid var(--background-secondary);
+  }
+}
+
+@layer components {
+  .shell {
+    width: 100%;
+    max-width: var(--shell-max);
+    margin-inline: auto;
+    padding-inline: var(--shell-gutter);
+  }
+
+  .shell-wide {
+    width: 100%;
+    max-width: 1600px;
+    margin-inline: auto;
+    padding-inline: var(--shell-gutter);
+  }
+
+  /* Section rhythm. Density varies by section — see --section-* usage. */
+  .section-y { padding-block: clamp(4rem, 9vw, 9.5rem); }
+  .section-y-tight { padding-block: clamp(3.5rem, 6vw, 6rem); }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--inner-lip), var(--shadow-sm);
+  }
+
+  .panel-raised {
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--inner-lip), var(--shadow-md);
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.28em 0.6em;
+    border: 1px solid var(--brand-line);
+    border-radius: 6px;
+    color: var(--brand);
+    font-family: var(--font-mono-stack);
+    font-size: 0.66rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1;
+  }
+
+  [data-theme="light"] .tag {
+    color: #8a6a04;
+    background: var(--brand-soft);
+  }
+
+  .tag-neutral {
+    border-color: var(--border-strong);
+    color: var(--foreground-muted);
+    background: transparent;
+  }
+
+  [data-theme="light"] .tag-neutral {
+    color: var(--foreground-muted);
+    background: transparent;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono-stack);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--foreground-muted);
+  }
+
+  :lang(zh) .eyebrow { letter-spacing: 0.14em; }
+
+  .num {
+    font-family: var(--font-mono-stack);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  .index-numeral {
+    font-family: var(--font-display-stack);
+    font-weight: 700;
+    letter-spacing: -0.06em;
+    line-height: 0.8;
+    color: transparent;
+    -webkit-text-stroke: 1.25px var(--grid-mark);
+  }
+
+  /* The faint technical grid behind dark and light sections alike. */
+  .grid-field {
+    background-image:
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 72px 72px;
+  }
+
+  .hairline-x {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-strong) 12%, var(--border-strong) 88%, transparent);
+  }
+
+  /* Live status dot. Reads as state in both themes without relying on colour alone. */
+  .live-dot {
+    position: relative;
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 99px;
+    background: var(--success);
+  }
+  .live-dot::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 99px;
+    border: 1px solid var(--success);
+    opacity: 0.45;
+    animation: live-pulse 2.4s var(--ease-physical) infinite;
+  }
+
+  @keyframes live-pulse {
+    0% { transform: scale(0.7); opacity: 0.6; }
+    70% { transform: scale(1.5); opacity: 0; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+
+  .type-mega { font-size: clamp(3rem, 8vw, 8rem); }
+  .type-hero { font-size: clamp(2.5rem, 5.8vw, 5.5rem); }
+  .type-section { font-size: clamp(1.9rem, 3.8vw, 3.4rem); }
+  .type-card { font-size: clamp(1.2rem, 1.8vw, 1.55rem); }
+
+  /* CJK runs wider — pull the display sizes down so lines still fit. */
+  :lang(zh) .type-mega { font-size: clamp(2.6rem, 6.4vw, 6.4rem); }
+  :lang(zh) .type-hero { font-size: clamp(2.1rem, 4.6vw, 4.4rem); }
+  :lang(zh) .type-section { font-size: clamp(1.7rem, 3.2vw, 2.9rem); }
+
+  .atmosphere-glow {
+    background: radial-gradient(circle, var(--atmosphere), transparent 66%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Generated art settles in rather than popping. */
+@layer components {
+  .art-fade {
+    animation: art-in 620ms var(--ease-physical) both;
+  }
+
+  @keyframes art-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.985); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* Light mode gives the isometric objects a ground to sit on; dark mode
+     lets their own internal light do the work. */
+  .art-grounded {
+    position: relative;
+  }
+  .art-grounded::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 2%;
+    width: 62%;
+    height: 8%;
+    translate: -50% 0;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(17, 19, 23, 0.18), transparent 70%);
+    filter: blur(10px);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 180ms var(--ease-physical);
+  }
+  [data-theme="light"] .art-grounded::after { opacity: 1; }
+}
+
+/* ------------------------------------------------------------------
+   Photography treatment.
+
+   Three unrelated licensed photographs are pulled into one palette by
+   desaturating and washing them toward the brand. Light mode keeps them
+   dark — a bright photo would punch a hole in a warm paper page, and the
+   caption sits on the image, so the wash has to stay dense in both themes.
+   ------------------------------------------------------------------ */
+@layer components {
+  .photo-duotone {
+    filter: grayscale(1) contrast(1.12) brightness(0.55);
+  }
+
+  .photo-wash {
+    background:
+      radial-gradient(120% 90% at 30% 8%, rgba(240, 185, 11, 0.2), transparent 58%),
+      linear-gradient(200deg, rgba(240, 185, 11, 0.16), rgba(8, 11, 13, 0.6) 52%, rgba(8, 11, 13, 0.92));
+  }
+
+  [data-theme="light"] .photo-duotone {
+    filter: grayscale(1) contrast(1.06) brightness(0.62);
+  }
+
+  [data-theme="light"] .photo-wash {
+    background:
+      radial-gradient(120% 90% at 30% 8%, rgba(240, 185, 11, 0.24), transparent 58%),
+      linear-gradient(200deg, rgba(240, 185, 11, 0.12), rgba(25, 27, 31, 0.5) 52%, rgba(25, 27, 31, 0.86));
+  }
+}
+
+/* ------------------------------------------------------------------
+   Atmosphere.
+
+   Light mode needs something under the type or it reads as unfinished
+   white space. A very faint warm wash plus construction lines gives the
+   page depth without becoming decoration.
+   ------------------------------------------------------------------ */
+@layer components {
+  .canvas-atmosphere {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .canvas-atmosphere::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(90% 60% at 82% 6%, var(--atmosphere), transparent 62%),
+      radial-gradient(70% 50% at 8% 88%, color-mix(in srgb, var(--atmosphere) 55%, transparent), transparent 66%);
+  }
+
+  /* Construction lines — the technical drawing underneath the product. */
+  .construction-lines {
+    background-image:
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px);
+    background-size: 96px 96px, 96px 96px, 24px 100%;
+    background-position: 0 0, 0 0, 0 0;
+  }
+
+  /* Physical card. Light mode gets a top highlight and a layered shadow so
+     it sits on the page; dark mode leans on border and surface separation. */
+  .card-physical {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--inner-lip), var(--shadow-sm);
+    transition: box-shadow 200ms var(--ease-physical), border-color 200ms var(--ease-physical),
+      transform 200ms var(--ease-physical);
+  }
+
+  [data-theme="light"] .card-physical {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      0 1px 2px rgba(20, 30, 20, 0.04),
+      0 12px 40px -20px rgba(20, 30, 20, 0.14);
+  }
+
+  .card-physical:hover {
+    border-color: var(--border-strong);
+  }
+
+  [data-theme="light"] .card-physical:hover {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      0 2px 4px rgba(20, 30, 20, 0.05),
+      0 18px 48px -20px rgba(20, 30, 20, 0.18);
+  }
+
+  /* An internal yellow wash, for cards that should feel lit from inside. */
+  .card-lit {
+    position: relative;
+    overflow: hidden;
+  }
+  .card-lit::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(120% 70% at 50% 0%, var(--brand-soft), transparent 64%);
+  }
+
+  /* The oversized Bacha B sitting behind a section at 3–5% opacity. */
+  .brand-ghost {
+    position: absolute;
+    pointer-events: none;
+    color: var(--foreground);
+    opacity: 0.035;
+  }
+
+  [data-theme="light"] .brand-ghost { opacity: 0.045; }
+}
+
+/* ------------------------------------------------------------------
+   The floating header shell.
+
+   A translucent panel with a fine border and a soft shadow, so it reads
+   as a physical control surface hovering above the page. Light mode gets
+   warm ivory rather than white, plus a faint yellow ambient wash.
+   ------------------------------------------------------------------ */
+@layer components {
+  .header-shell {
+    background: rgba(12, 15, 17, 0.82);
+    border-color: rgba(255, 255, 255, 0.07);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+      0 1px 0 0 rgba(240, 185, 11, 0.05);
+  }
+
+  .header-shell-raised {
+    background: rgba(12, 15, 17, 0.9);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
+      0 18px 48px -24px rgba(0, 0, 0, 0.9);
+  }
+
+  [data-theme="light"] .header-shell {
+    background: rgba(250, 250, 245, 0.88);
+    border-color: rgba(18, 22, 18, 0.09);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+      0 1px 0 0 rgba(240, 185, 11, 0.1),
+      0 10px 32px -22px rgba(20, 30, 20, 0.2);
+  }
+
+  [data-theme="light"] .header-shell-raised {
+    background: rgba(250, 250, 245, 0.94);
+    border-color: rgba(18, 22, 18, 0.12);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.98),
+      0 20px 52px -26px rgba(20, 30, 20, 0.3);
+  }
+}
+
+/* ------------------------------------------------------------------
+   Viewport rhythm.
+
+   Every major section fills at least one screen and centres its content,
+   so scrolling the page steps through it one composition at a time.
+
+   `min-height` rather than `height` on purpose: a section whose content is
+   genuinely taller than the viewport (a long prize table, a dense token
+   grid, a short laptop screen) grows and scrolls instead of clipping.
+   `svh` keeps mobile browser chrome from causing a jump.
+   ------------------------------------------------------------------ */
+@layer components {
+  .section-viewport {
+    display: flex;
+    min-height: 100svh;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: clamp(3.5rem, 7vh, 6.5rem);
+  }
+
+  /* The hero sits under the floating header, so it owes that space back. */
+  .section-viewport-hero {
+    min-height: 100svh;
+    padding-block: clamp(1rem, 2vh, 2.5rem) clamp(2.5rem, 5vh, 4.5rem);
+  }
+
+  /* Below this height a full screen is too cramped to centre into — let
+     the content set its own height rather than squeezing it. */
+  @media (max-height: 640px) {
+    .section-viewport,
+    .section-viewport-hero {
+      min-height: 0;
+      padding-block: clamp(3rem, 8vh, 4.5rem);
+    }
+  }
+}
+
+/* ------------------------------------------------------------------
+   PLAY STAGE
+
+   Height here is driven by content, not by a fixed hero box. The pieces
+   are sized against the viewport so the whole console — including its
+   call to action — lands above the fold on a normal laptop, without
+   shrinking type to get there.
+   ------------------------------------------------------------------ */
+@layer components {
+  .play-stage {
+    --stage-gap: clamp(1.75rem, 4vw, 4.5rem);
+    --console-pad: 1.15rem;
+    --console-gap: 0.8rem;
+    --selector-h: 5.75rem;
+    --machine-h: clamp(24rem, 52svh, 36rem);
+  }
+
+  .play-grid {
+    display: grid;
+    gap: 2rem;
+  }
+
+  @media (min-width: 1024px) {
+    .play-grid {
+      grid-template-columns: minmax(0, 1.55fr) minmax(22.5rem, 26.875rem);
+      align-items: start;
+      gap: var(--stage-gap);
+    }
+  }
+
+  /* The machine is sized by height so it scales with the window rather
+     than with the column width. Aspect ratio keeps it honest. */
+  .machine-frame {
+    height: var(--machine-h);
+    aspect-ratio: 0.78 / 1;
+    margin-inline: auto;
+    max-width: 100%;
+  }
+
+  /* Shorter laptops: pull ~14% out of the padding, leave type alone. */
+  @media (min-width: 1024px) and (max-height: 900px) {
+    .play-stage {
+      --console-pad: 1rem;
+      --console-gap: 0.7rem;
+      --selector-h: 5.4rem;
+      --machine-h: clamp(22rem, 48svh, 30rem);
+    }
+  }
+
+  /* Unusually short windows: let the console scroll internally rather
+     than pushing its CTA off screen. A fallback, not the normal path. */
+  @media (min-width: 1024px) and (max-height: 720px) {
+    .play-stage {
+      --console-pad: 0.9rem;
+      --console-gap: 0.7rem;
+      --selector-h: 5.25rem;
+    }
+    .play-console {
+      max-height: calc(100svh - 10rem);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+    }
+  }
+
+  /* Roomier monitors get their breathing room back. */
+  @media (min-width: 1024px) and (min-height: 1000px) {
+    .play-stage {
+      --console-pad: 1.4rem;
+      --console-gap: 1.2rem;
+      --selector-h: 7rem;
+    }
+  }
+
+  .play-console {
+    padding: var(--console-pad);
+  }
+
+  .play-console > * + * {
+    margin-top: var(--console-gap);
+  }
+}

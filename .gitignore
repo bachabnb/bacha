@@ -1,0 +1,23 @@
+node_modules/
+.next/
+out/
+build/
+.DS_Store
+*.pem
+.env
+.env*.local
+npm-debug.log*
+.vercel
+*.tsbuildinfo
+next-env.d.ts.timestamp
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
+coverage/
+.bacha-demo-state.json
+.env.local
+
+# Unoptimised generation masters — large, regenerable, never served.
+# Keep locally; exclude from the deploy bundle.
+art-masters/
