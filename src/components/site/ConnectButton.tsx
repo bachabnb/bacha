@@ -25,16 +25,23 @@ import { cn } from '@/lib/cn'
 export function ConnectButton({
   className,
   size = 'md',
+  compact = false,
 }: {
   className?: string
   size?: 'md' | 'lg'
+  /** Icon only — for the mobile header, where the label will not fit. */
+  compact?: boolean
 }) {
   const t = useTranslations('wallet')
   const { address, isConnected } = useAccount()
   const chainId = useChainId()
   const [open, setOpen] = useState(false)
 
-  const height = size === 'lg' ? 'h-[44px] px-4 text-[0.88rem]' : 'h-10 px-3.5 text-[0.84rem]'
+  const height = compact
+    ? 'h-10 w-10 text-[0.84rem]'
+    : size === 'lg'
+      ? 'h-[44px] px-4 text-[0.88rem]'
+      : 'h-10 px-3.5 text-[0.84rem]'
 
   if (!isConnected) {
     return (
@@ -50,7 +57,7 @@ export function ConnectButton({
           )}
         >
           <WalletIcon />
-          {t('connect')}
+          {compact ? <span className="sr-only">{t('connect')}</span> : t('connect')}
         </button>
         <ConnectDialog open={open} onOpenChange={setOpen} />
       </>
@@ -74,7 +81,11 @@ export function ConnectButton({
         )}
       >
         <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand" />
-        <span className="num">{shortAddress(address!)}</span>
+        {compact ? (
+          <span className="sr-only">{shortAddress(address!)}</span>
+        ) : (
+          <span className="num">{shortAddress(address!)}</span>
+        )}
       </button>
       <WalletPanel open={open} onOpenChange={setOpen} />
     </>

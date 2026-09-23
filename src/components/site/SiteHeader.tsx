@@ -72,6 +72,9 @@ export function SiteHeader() {
           <LanguageSelect className="hidden sm:inline-flex" />
           <ThemeToggle className="hidden sm:inline-flex" />
           <ConnectButton className="hidden sm:inline-flex" size="lg" />
+          {/* Mobile keeps the wallet reachable without the label, which will
+              not fit next to the wordmark at 375px. */}
+          <ConnectButton className="sm:hidden" compact />
           <MobileNav />
         </div>
       </header>
