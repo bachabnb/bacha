@@ -99,7 +99,7 @@ export default async function FairnessPage({ params }: { params: Promise<{ local
             </ul>
           </div>
 
-          <div className="relative mx-auto w-full max-w-[17rem] lg:max-w-none">
+          <div className="relative mx-auto w-full max-w-[17rem] lg:max-w-[22rem]">
             <span aria-hidden className="atmosphere-glow pointer-events-none absolute inset-[10%] rounded-full" />
             <ArtImage
               id="fairness-verify"
