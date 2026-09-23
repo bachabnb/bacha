@@ -85,8 +85,8 @@ export default async function DocsPage({ params }: { params: Promise<{ locale: s
           </p>
           <p>
             {zh
-              ? '未部署合约时，站点运行在演示模式：转动由服务端模拟，并在每一处显示位置标注为「模拟」。演示随机数位于独立模块中，与真实结算路径没有任何交集。'
-              : 'With no contracts deployed the site runs in demo mode: spins are simulated server-side and labelled Simulated everywhere they appear. Demo randomness lives in its own module and shares no code path with real settlement.'}
+              ? '在合约部署之前，结算走的是一个独立的本地模块，与生产路径没有任何共享代码——因此 src/lib/onchain 下的代码永远不可能用服务端生成的随机数去结算一次转动。'
+              : 'Until contracts are deployed, settlement runs through a separate local module that shares no code path with the production one — so nothing under src/lib/onchain can ever resolve a spin with a server-generated number.'}
           </p>
           <p>
             <Link href="/fairness" className="text-brand underline decoration-brand-line underline-offset-4">

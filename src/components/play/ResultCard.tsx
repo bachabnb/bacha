@@ -12,7 +12,6 @@ import { rarityStyle } from '@/lib/rarity'
 import { tokenByAddress } from '@/lib/tokens'
 import { formatTokenAmount, formatUsd, shortHash } from '@/lib/format'
 import { explorer } from '@/lib/chain'
-import { spinMode } from '@/lib/env'
 import type { SpinRecord } from '@/lib/spin/types'
 import type { SpinPhase } from '@/lib/spin/useSpin'
 import { cn } from '@/lib/cn'
@@ -159,17 +158,9 @@ export function ResultCard({
                 value={shortHash(`0x${BigInt(spin.randomWord).toString(16)}`, 8, 6)}
               />
             )}
-            <Row
-              label={t('settlement')}
-              value={spinMode === 'demo' ? t('settlementDemo') : t('settlementVrf')}
-            />
+
           </dl>
 
-          {spinMode === 'demo' && (
-            <p className="relative mt-3 text-[0.7rem] leading-relaxed text-foreground-muted">
-              {t('demoNote')}
-            </p>
-          )}
         </motion.aside>
       )}
     </AnimatePresence>

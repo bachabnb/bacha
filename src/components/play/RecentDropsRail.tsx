@@ -30,9 +30,7 @@ export function RecentDropsRail() {
         <h2 id="recent-drops" className="font-display text-[1.3rem] font-bold tracking-[-0.035em] text-foreground">
           {t('title')}
         </h2>
-        {data && (
-          <span className="tag tag-neutral">{data.mode === 'demo' ? a('modeDemo') : a('modeLive')}</span>
-        )}
+        {data?.mode === 'onchain' && <span className="tag tag-neutral">{a('modeLive')}</span>}
       </div>
 
       {spins.length === 0 ? (

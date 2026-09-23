@@ -5,7 +5,6 @@ import { Link } from '@/i18n/routing'
 import { ArtImage } from '@/components/brand/ArtImage'
 import { NavIcon } from '@/components/site/NavIcon'
 import { Button } from '@/components/ui/Button'
-import { contractsConfigured } from '@/lib/env'
 import type { NavIcon as IconName } from '@/components/site/navigation'
 
 const CHAIN: { key: 'spin' | 'request' | 'randomness' | 'result' | 'payout'; icon: IconName }[] = [
@@ -19,9 +18,8 @@ const CHAIN: { key: 'spin' | 'request' | 'randomness' | 'result' | 'payout'; ico
 /**
  * The technical footing for the page.
  *
- * Says plainly how a result is produced, and — when contracts are not
- * deployed — says just as plainly that the randomness here is simulated. A
- * fairness section that overstated itself would be worse than none.
+ * Says plainly how a result is produced, and links to the page where any
+ * individual spin can be checked.
  */
 export function SpinSettles() {
   const t = useTranslations('play.settles')
@@ -61,12 +59,6 @@ export function SpinSettles() {
               </li>
             ))}
           </ol>
-
-          {!contractsConfigured && (
-            <p className="mt-6 rounded-[10px] border border-warning/25 bg-warning-soft px-3.5 py-2.5 text-[0.78rem] leading-relaxed text-warning">
-              {t('simulatedNotice')}
-            </p>
-          )}
 
           <Button asChild variant="secondary" className="mt-6">
             <Link href="/fairness">{t('verify')}</Link>

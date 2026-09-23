@@ -134,9 +134,7 @@ function VerificationReport({ spin }: { spin: SpinRecord }) {
         <div className="flex items-center gap-2">
           {spin.rarity && <RarityChip rarity={spin.rarity} />}
           <span className="tag tag-neutral">{s(spin.status)}</span>
-          <span className={cn('tag', spin.mode === 'demo' && 'tag-neutral')}>
-            {spin.mode === 'demo' ? c('simulated') : c('onchain')}
-          </span>
+          {spin.mode === 'onchain' && <span className="tag">{c('onchain')}</span>}
         </div>
       </div>
 
@@ -199,7 +197,7 @@ function VerificationReport({ spin }: { spin: SpinRecord }) {
               {shortHash(spin.txHash)}
             </a>
           ) : (
-            t('fields.simulated')
+            '—'
           )}
         </Field>
         <Field label={t('fields.payoutTx')}>
@@ -208,7 +206,7 @@ function VerificationReport({ spin }: { spin: SpinRecord }) {
               {shortHash(spin.claimTxHash)}
             </a>
           ) : spin.status === 'CLAIMED' ? (
-            t('fields.simulated')
+            '—'
           ) : (
             t('fields.notClaimed')
           )}

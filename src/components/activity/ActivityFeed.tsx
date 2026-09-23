@@ -62,11 +62,7 @@ export function ActivityFeed({ quotes }: { quotes: Record<string, MarketQuote> }
           ))}
         </div>
 
-        {data && (
-          <span className="tag tag-neutral">
-            {data.mode === 'demo' ? t('modeDemo') : t('modeLive')}
-          </span>
-        )}
+        {data?.mode === 'onchain' && <span className="tag tag-neutral">{t('modeLive')}</span>}
       </div>
 
       <div className="overflow-hidden rounded-[16px] border border-border bg-surface">
@@ -163,7 +159,7 @@ export function ActivityFeed({ quotes }: { quotes: Record<string, MarketQuote> }
                             {shortHash(spin.txHash, 4, 3)}
                           </a>
                         ) : (
-                          <span className="text-foreground-muted">{t('modeDemo')}</span>
+                          <span className="text-foreground-muted">—</span>
                         )}
                       </span>
                     </div>

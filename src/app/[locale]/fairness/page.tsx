@@ -9,7 +9,7 @@ import { ArtImage } from '@/components/brand/ArtImage'
 import { BnbChainMark } from '@/components/brand/BnbChain'
 import { machines, rarityBreakdown } from '@/lib/machine'
 import { tokenByAddress } from '@/lib/tokens'
-import { publicEnv, contractsConfigured, spinMode } from '@/lib/env'
+import { publicEnv, spinMode } from '@/lib/env'
 import { explorer, networkLabel, vrfCoordinators, isTestnet } from '@/lib/chain'
 import { formatPercent, formatTokenAmount, shortAddress, shortHash } from '@/lib/format'
 
@@ -138,11 +138,6 @@ export default async function FairnessPage({ params }: { params: Promise<{ local
           </div>
         </div>
 
-        {!contractsConfigured && (
-          <p className="mt-5 rounded-[10px] border border-warning/25 bg-warning-soft px-4 py-3.5 text-[0.84rem] leading-relaxed text-warning">
-            {t('contracts.demoNotice')}
-          </p>
-        )}
       </section>
 
       {/* ------------------------------------------------------- prize tables */}

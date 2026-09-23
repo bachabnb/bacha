@@ -144,20 +144,15 @@ export function Hero({
 
 function MachineBadge({ className }: { className?: string }) {
   const t = useTranslations('machinePreview')
-  const c = useTranslations('common')
   return (
     <div className={`card-physical px-3.5 py-2.5 ${className ?? ''}`}>
       <div className="text-[0.58rem] uppercase tracking-[0.18em] text-foreground-muted">
         {t('label')}
       </div>
       <div className="mt-1 flex items-center gap-1.5">
-        {contractsConfigured ? (
-          <span className="live-dot" />
-        ) : (
-          <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-foreground-muted" />
-        )}
+        {contractsConfigured && <span className="live-dot" />}
         <span className="text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-foreground">
-          {contractsConfigured ? t('live') : c('demo')}
+          {contractsConfigured ? t('live') : t('loaded')}
         </span>
       </div>
     </div>

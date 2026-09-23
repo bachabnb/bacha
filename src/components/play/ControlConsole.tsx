@@ -9,7 +9,7 @@ import { ConnectButton, SwitchNetworkButton } from '@/components/site/ConnectBut
 import { rarityBreakdown, type Machine } from '@/lib/machine'
 import { rarityStyle, type Rarity } from '@/lib/rarity'
 import { tokenByAddress } from '@/lib/tokens'
-import { publicEnv, spinMode, contractsConfigured } from '@/lib/env'
+import { publicEnv, contractsConfigured } from '@/lib/env'
 import { networkLabel } from '@/lib/chain'
 import { formatBnb, shortHash, formatTokenAmount } from '@/lib/format'
 import { cn } from '@/lib/cn'
@@ -78,21 +78,23 @@ export function ControlConsole({
       </div>
 
       {/* -------------------------------------------------------- facts */}
-      <dl className="grid grid-cols-4 gap-x-3 border-t border-border pt-3.5">
+      {/* Fairness and treasury are only stated once there is a deployed
+          contract to state them about — an unbacked "Healthy" would be worse
+          than saying nothing. */}
+      <dl
+        className={cn(
+          'grid gap-x-3 border-t border-border pt-3.5',
+          contractsConfigured ? 'grid-cols-4' : 'grid-cols-2',
+        )}
+      >
         <Fact label={t('rewards')} value={String(drops.length)} />
         <Fact label={t('network')} value={networkLabel.replace('BNB Chain', 'BNB')} />
-        <Fact
-          label={t('fairness')}
-          value={contractsConfigured ? t('vrf') : t('simulated')}
-          tone={contractsConfigured ? 'brand' : 'muted'}
-        />
-        <Fact
-          label={t('treasury')}
-          value={
-            contractsConfigured ? t('healthy') : spinMode === 'demo' ? t('demoTreasury') : t('notDeployed')
-          }
-          tone={contractsConfigured ? 'brand' : 'muted'}
-        />
+        {contractsConfigured && (
+          <>
+            <Fact label={t('fairness')} value={t('vrf')} tone="brand" />
+            <Fact label={t('treasury')} value={t('healthy')} tone="brand" />
+          </>
+        )}
       </dl>
 
       {/* --------------------------------------------------- distribution */}

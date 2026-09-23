@@ -14,7 +14,6 @@ import { RecentDropsRail } from './RecentDropsRail'
 import { InsideMachine } from './InsideMachine'
 import { SpinSettles } from './SpinSettles'
 import { SessionPanel } from './SessionPanel'
-import { DemoBanner } from './DemoBanner'
 import { SoundToggle } from './SoundToggle'
 import { useSound } from './SoundProvider'
 import { useSpin } from '@/lib/spin/useSpin'
@@ -42,8 +41,7 @@ const PHASE_TO_MACHINE: Record<string, MachineState> = {
  *
  * One machine stage: the object on the left, the console on the right, and the
  * result delivered beside the tray rather than in a modal over the page. Every
- * number on screen is read from the selected machine's real prize table, and
- * the page says out loud whether settlement is live or simulated.
+ * number on screen is read from the selected machine's real prize table.
  */
 export function PlayClient({
   quotes,
@@ -128,10 +126,8 @@ export function PlayClient({
           }}
         />
 
-        <div className="shell-wide play-stage relative pb-8 pt-3 lg:pb-10 lg:pt-4">
-          <DemoBanner />
-
-          <div className="play-grid mt-4">
+        <div className="shell-wide play-stage relative pb-8 pt-5 lg:pb-10 lg:pt-7">
+          <div className="play-grid">
             {/* ------------------------------------------------ machine */}
             <div className="relative min-w-0">
               <div className="min-w-0">
@@ -140,10 +136,12 @@ export function PlayClient({
                   <h1 className="font-display text-[2.4rem] font-extrabold leading-none tracking-[-0.05em] text-foreground lg:text-[2.9rem]">
                     {machine.label}
                   </h1>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[0.66rem] font-medium uppercase tracking-[0.13em] text-foreground-secondary">
-                    {contractsConfigured ? <span className="live-dot" /> : null}
-                    {contractsConfigured ? t('live') : t('demo')}
-                  </span>
+{contractsConfigured && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 text-[0.66rem] font-medium uppercase tracking-[0.13em] text-foreground-secondary">
+                      <span className="live-dot" />
+                      {t('live')}
+                    </span>
+                  )}
                 </div>
                 <p className="mt-1.5 max-w-md text-[0.9rem] text-foreground-secondary">
                   {machine.tagline}
