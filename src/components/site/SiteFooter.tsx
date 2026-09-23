@@ -17,7 +17,7 @@ const COLUMNS = [
 ] as const
 
 const SOCIAL: [string, string][] = [
-  ['X', 'https://x.com'],
+  ['X', 'https://x.com/bachabnb'],
   ['Telegram', 'https://telegram.org'],
 ]
 

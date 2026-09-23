@@ -32,9 +32,12 @@ export const THEME_STORAGE_KEY = 'bacha:theme'
  * theme-dependent is rendered differently on server and client. This provider
  * only reads back what that script decided and handles changes afterwards.
  */
+/** Light is the primary theme; dark is an opt-in. */
+const DEFAULT_PREFERENCE: ThemePreference = 'light'
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [preference, setPreferenceState] = useState<ThemePreference>('dark')
-  const [theme, setTheme] = useState<ResolvedTheme>('dark')
+  const [preference, setPreferenceState] = useState<ThemePreference>(DEFAULT_PREFERENCE)
+  const [theme, setTheme] = useState<ResolvedTheme>('light')
 
   // Adopt whatever the pre-paint script applied. Also *re-applies* it: if that
   // script was ever stripped or blocked, this is what keeps the attribute and
@@ -65,8 +68,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setPreference = useCallback((next: ThemePreference) => {
     setPreferenceState(next)
     try {
-      if (next === 'system') window.localStorage.removeItem(THEME_STORAGE_KEY)
-      else window.localStorage.setItem(THEME_STORAGE_KEY, next)
+      // `system` is stored explicitly rather than cleared: an absent value now
+      // means "never chose", which resolves to light, not to the OS setting.
+      window.localStorage.setItem(THEME_STORAGE_KEY, next)
     } catch {
       // Storage can be blocked; the choice still applies for this session.
     }
@@ -94,15 +98,16 @@ export function useTheme() {
 function readStoredPreference(): ThemePreference {
   try {
     const raw = window.localStorage.getItem(THEME_STORAGE_KEY)
-    return raw === 'light' || raw === 'dark' ? raw : 'system'
+    if (raw === 'light' || raw === 'dark' || raw === 'system') return raw
+    return DEFAULT_PREFERENCE
   } catch {
-    return 'system'
+    return DEFAULT_PREFERENCE
   }
 }
 
 function resolve(preference: ThemePreference): ResolvedTheme {
   if (preference !== 'system') return preference
-  if (typeof window === 'undefined') return 'dark'
+  if (typeof window === 'undefined') return 'light'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 

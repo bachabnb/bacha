@@ -11,7 +11,77 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* ------------------------------------------------------------------
+   LIGHT MODE
+
+   Not an inversion. Warm ivory with a faint green undertone, the way a
+   printed hardware catalogue looks — never pure white, which glares and
+   flattens. Pure #FFF is reserved for surfaces that need to lift.
+
+   The hardware stays dark in this theme on purpose: a graphite machine on
+   warm paper is the signature, and a white machine would be a different
+   product.
+   ------------------------------------------------------------------ */
 :root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --background: #f3f4ee;
+  --background-secondary: #eceee8;
+  --background-inset: #e6e8e0;
+
+  --surface: #fafaf7;
+  --surface-raised: #ffffff;
+  --surface-hover: #f0f1ea;
+  --surface-sunken: #e9ebe4;
+
+  --foreground: #111412;
+  --foreground-secondary: #515751;
+  --foreground-muted: #7e857e;
+
+  --border: rgba(18, 22, 18, 0.08);
+  --border-strong: rgba(18, 22, 18, 0.17);
+  --border-inset: rgba(18, 22, 18, 0.045);
+
+  --brand: #f0b90b;
+  --brand-hover: #e0aa05;
+  --brand-pressed: #c08f04;
+  --brand-soft: rgba(240, 185, 11, 0.15);
+  --brand-line: rgba(193, 145, 6, 0.42);
+  --brand-foreground: #17140a;
+
+  --success: #076c4e;
+  --success-soft: rgba(7, 108, 78, 0.1);
+  --warning: #92590a;
+  --warning-soft: rgba(146, 89, 10, 0.11);
+  --danger: #a8201f;
+  --danger-soft: rgba(168, 32, 31, 0.09);
+
+  /* Epic goes near-black here: pale yellow would vanish on ivory. */
+  --rarity-common: #a3a9a2;
+  --rarity-uncommon: #5c635b;
+  --rarity-rare: #cf9c07;
+  --rarity-epic: #191b1f;
+
+  /* Layered, warm-tinted, and soft — physical rather than floating. */
+  --shadow-sm: 0 1px 2px rgba(20, 30, 20, 0.05);
+  --shadow-md: 0 12px 40px -18px rgba(20, 30, 20, 0.16), 0 2px 6px -2px rgba(20, 30, 20, 0.06);
+  --shadow-lg: 0 32px 64px -28px rgba(20, 30, 20, 0.2), 0 4px 12px -4px rgba(20, 30, 20, 0.07);
+  --shadow-brand: 0 12px 28px -14px rgba(193, 145, 6, 0.5);
+  --inner-lip: inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
+
+  --grid-line: rgba(18, 22, 18, 0.042);
+  --grid-mark: rgba(18, 22, 18, 0.1);
+  --atmosphere: rgba(240, 185, 11, 0.2);
+}
+
+/* ------------------------------------------------------------------
+   DARK MODE
+
+   Declared after the light palette so `[data-theme="dark"]` wins the
+   cascade — both selectors have the same specificity, so order is what
+   decides. `:root` carries light, because light is the default.
+   ------------------------------------------------------------------ */
 [data-theme="dark"] {
   color-scheme: dark;
 
@@ -69,69 +139,6 @@
   --grid-line: rgba(255, 255, 255, 0.03);
   --grid-mark: rgba(255, 255, 255, 0.07);
   --atmosphere: rgba(240, 185, 11, 0.1);
-}
-
-/* ------------------------------------------------------------------
-   LIGHT MODE
-
-   Not an inversion. Warm ivory with a faint green undertone, the way a
-   printed hardware catalogue looks — never pure white, which glares and
-   flattens. Pure #FFF is reserved for surfaces that need to lift.
-
-   The hardware stays dark in this theme on purpose: a graphite machine on
-   warm paper is the signature, and a white machine would be a different
-   product.
-   ------------------------------------------------------------------ */
-[data-theme="light"] {
-  color-scheme: light;
-
-  --background: #f3f4ee;
-  --background-secondary: #eceee8;
-  --background-inset: #e6e8e0;
-
-  --surface: #fafaf7;
-  --surface-raised: #ffffff;
-  --surface-hover: #f0f1ea;
-  --surface-sunken: #e9ebe4;
-
-  --foreground: #111412;
-  --foreground-secondary: #515751;
-  --foreground-muted: #7e857e;
-
-  --border: rgba(18, 22, 18, 0.08);
-  --border-strong: rgba(18, 22, 18, 0.17);
-  --border-inset: rgba(18, 22, 18, 0.045);
-
-  --brand: #f0b90b;
-  --brand-hover: #e0aa05;
-  --brand-pressed: #c08f04;
-  --brand-soft: rgba(240, 185, 11, 0.15);
-  --brand-line: rgba(193, 145, 6, 0.42);
-  --brand-foreground: #17140a;
-
-  --success: #076c4e;
-  --success-soft: rgba(7, 108, 78, 0.1);
-  --warning: #92590a;
-  --warning-soft: rgba(146, 89, 10, 0.11);
-  --danger: #a8201f;
-  --danger-soft: rgba(168, 32, 31, 0.09);
-
-  /* Epic goes near-black here: pale yellow would vanish on ivory. */
-  --rarity-common: #a3a9a2;
-  --rarity-uncommon: #5c635b;
-  --rarity-rare: #cf9c07;
-  --rarity-epic: #191b1f;
-
-  /* Layered, warm-tinted, and soft — physical rather than floating. */
-  --shadow-sm: 0 1px 2px rgba(20, 30, 20, 0.05);
-  --shadow-md: 0 12px 40px -18px rgba(20, 30, 20, 0.16), 0 2px 6px -2px rgba(20, 30, 20, 0.06);
-  --shadow-lg: 0 32px 64px -28px rgba(20, 30, 20, 0.2), 0 4px 12px -4px rgba(20, 30, 20, 0.07);
-  --shadow-brand: 0 12px 28px -14px rgba(193, 145, 6, 0.5);
-  --inner-lip: inset 0 1px 0 0 rgba(255, 255, 255, 0.95);
-
-  --grid-line: rgba(18, 22, 18, 0.042);
-  --grid-mark: rgba(18, 22, 18, 0.1);
-  --atmosphere: rgba(240, 185, 11, 0.2);
 }
 
 /* ------------------------------------------------------------------

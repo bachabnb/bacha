@@ -57,7 +57,7 @@ export function SiteHeader() {
 
         <div className="flex shrink-0 items-center gap-2">
           <a
-            href="https://x.com"
+            href="https://x.com/bachabnb"
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Bacha on X"

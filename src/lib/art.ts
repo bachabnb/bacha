@@ -50,6 +50,7 @@ export type ArtId =
   | 'activity-rail'
   | 'token-orbit'
   | 'gacha-rebuilt'
+  | 'proof-core'
   | 'reward-vault'
 
 const TRANSPARENT_PIXEL =

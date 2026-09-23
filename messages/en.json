@@ -301,90 +301,212 @@
       }
     },
     "artAlt": "An isometric render of a verification instrument splitting a beam of light.",
-    "page": {
+    "hero": {
       "title": "Every spin has receipts.",
-      "body": "Bacha does not ask you to believe the odds on the tin. The table, the randomness and the result are all recorded, and the maths that turns one into the other is four lines long.",
-      "verifyHeading": "Verify a spin",
-      "howHeading": "How a result is produced.",
-      "contractsHeading": "The contracts.",
-      "tablesHeading": "Published odds.",
-      "tablesBody": "These are the tables the machines resolve against. Every percentage here is computed from the same weights the contract holds — the UI has no separate copy of the odds to drift out of sync with.",
-      "methodHeading": "Redo the maths.",
-      "methodBody": "Prize selection is a weighted walk. Given a random word and a table, there is exactly one answer, and it does not depend on time, block number, balances or anything an operator controls.",
-      "methodNote": "This mirrors BachaGame._selectPrize exactly. The verifier above runs the same walk in your browser and compares its answer to the recorded one.",
-      "steps": {
-        "one": {
-          "title": "You submit a spin.",
-          "body": "Your wallet pays the tier price. In the same transaction the contract records who you are, which machine you used, and the exact prize table in force at that instant."
-        },
-        "two": {
-          "title": "Its prize table is locked.",
-          "body": "The spin is stamped with a machine version and the hash of that version's table. Published versions are append-only — there is no function in the contract that can edit one, so an operator changing odds afterwards cannot reach your spin."
-        },
-        "three": {
-          "title": "Verifiable randomness settles it.",
-          "body": "The contract asks Chainlink VRF for a random word. When it arrives, the callback walks the frozen weighted table and records exactly one prize. It writes storage and nothing else — no transfers, no outside calls."
-        },
-        "four": {
-          "title": "The result is permanently recorded.",
-          "body": "Random word, prize index, asset and amount are all emitted and stored. Anyone can replay the same maths and land on the same answer — this page does exactly that."
-        }
-      },
-      "contracts": {
-        "game": "Tiers, prize tables, spins, randomness and claims.",
-        "vault": "Reward inventory and payouts. Cannot release anything a spin has a claim on.",
-        "vrf": "The only source of production randomness.",
-        "network": "Network",
-        "chainId": "Chain ID {id}",
-        "testnetNote": "Test assets carry no value.",
-        "notDeployed": "Not deployed",
-        "chainlinkDocs": "Chainlink docs"
-      },
-      "table": {
-        "index": "#",
-        "asset": "Asset",
-        "amount": "Amount",
-        "baseUnits": "Base units",
-        "weight": "Weight",
-        "chance": "Chance",
-        "rarity": "Rarity",
-        "tierMeta": "Tier {tier} · {price} BNB · total weight {weight}",
-        "hash": "Prize table hash",
-        "localHash": "Local table hash",
-        "rtp": "Reference RTP {value} at authoring-time prices"
-      }
+      "body": "Every spin can be traced from payment to payout. The machine publishes its odds, locks the prize table, records the randomness, and stores the final result onchain.",
+      "primary": "Verify a spin",
+      "secondary": "View contracts"
+    },
+    "proof": {
+      "tableLocked": "Prize table locked",
+      "randomnessRecorded": "Randomness recorded",
+      "resultStored": "Result stored",
+      "payoutTraceable": "Payout traceable",
+      "simulated": "Simulated — contracts not deployed"
+    },
+    "nav": {
+      "verify": "Verify",
+      "how": "How it works",
+      "contracts": "Contracts",
+      "odds": "Odds",
+      "math": "Math"
+    },
+    "view": {
+      "simple": "Simple",
+      "technical": "Technical",
+      "label": "Detail level"
     },
     "verifier": {
-      "placeholder": "Spin ID — e.g. 1024",
-      "label": "Spin ID",
-      "submit": "Verify spin",
+      "title": "Verify a spin",
+      "hint": "Paste a spin ID or a transaction hash. Nothing here needs a wallet.",
+      "placeholder": "Enter spin ID or transaction hash",
+      "submit": "Verify",
       "checking": "Checking…",
-      "idle": "Every spin gets an id when it is paid for. Paste one here and this page will pull its record and re-derive the outcome independently.",
-      "spinTitle": "Spin #{id}",
-      "pending": "This spin has not settled yet. Its prize table is already locked, so the outcome cannot be influenced from here — the randomness simply has not arrived.",
-      "matched": "Independently re-derived — this page reached the same result.",
-      "matchedDetail": "Running the recorded random word through machine version {version}'s prize table in your browser produced entry #{index} — the same asset and amount the machine recorded.",
-      "mismatched": "Re-derivation did not match the recorded result.",
-      "mismatchedDetail": "The recorded reward differs from what this table produces for that random word. Treat this result as unverified and report it.",
+      "useLatest": "Use latest spin",
       "fields": {
-        "wallet": "Wallet",
+        "spin": "Spin",
+        "status": "Status",
+        "player": "Player",
         "machine": "Machine",
         "version": "Machine version",
-        "tableHash": "Prize table hash",
         "paid": "Paid",
-        "vrfRequest": "VRF request",
+        "tableHash": "Prize table hash",
+        "request": "Randomness request",
         "randomWord": "Random word",
-        "prizeEntry": "Prize entry",
-        "spinTx": "Spin transaction",
-        "payoutTx": "Payout transaction",
         "reward": "Reward",
-        "notRequested": "Not yet requested",
-        "pendingValue": "Pending",
-        "notClaimed": "Not claimed yet",
-        "baseUnits": "{units} base units · {decimals} decimals"
+        "rarity": "Rarity",
+        "payout": "Payout",
+        "prizeEntry": "Prize entry"
       },
-      "notFound": "That spin could not be found.",
-      "unreachable": "Could not reach the verifier. Try again in a moment."
+      "actions": {
+        "request": "View request",
+        "result": "View result tx",
+        "payout": "View payout"
+      },
+      "states": {
+        "notFound": "No spin with that ID or hash.",
+        "notFoundHint": "Check the value and try again — spin IDs are numbers, hashes start 0x.",
+        "pending": "Waiting on randomness.",
+        "pendingHint": "The prize table is already locked, so this outcome cannot be influenced from here. The random word simply has not arrived.",
+        "settled": "Settled — reward recorded.",
+        "claimable": "Settled — reward claimable.",
+        "claimed": "Claimed — reward delivered.",
+        "simulated": "Simulated spin. Settled locally, not onchain.",
+        "unreachable": "Could not reach the verifier.",
+        "unreachableHint": "This is a connection problem, not a problem with the spin. Try again shortly."
+      },
+      "recomputed": {
+        "matched": "Independently re-derived.",
+        "matchedDetail": "Running the recorded random word through machine version {version}'s prize table in your browser produced entry #{index} — the same asset and amount the machine recorded.",
+        "mismatched": "Re-derivation did not match.",
+        "mismatchedDetail": "The recorded reward differs from what this table produces for that random word. Treat this result as unverified and report it."
+      },
+      "timeline": {
+        "title": "Timeline",
+        "payment": "Payment",
+        "paymentDetail": "Spin paid for and recorded.",
+        "locked": "Prize table locked",
+        "lockedDetail": "Stamped with machine version {version}.",
+        "requested": "Randomness requested",
+        "requestedDetail": "Request opened with the coordinator.",
+        "returned": "Randomness returned",
+        "returnedDetail": "Random word recorded.",
+        "calculated": "Result calculated",
+        "calculatedDetail": "Weighted table resolved to one entry.",
+        "payout": "Payout",
+        "payoutDetail": "Reward transferred to the recorded wallet.",
+        "done": "Done",
+        "active": "In progress",
+        "waiting": "Waiting"
+      }
+    },
+    "how": {
+      "title": "How a result is produced.",
+      "body": "Five steps. Select one to see which part of the machine it corresponds to.",
+      "technicalDetails": "Technical details",
+      "steps": {
+        "submit": {
+          "title": "You submit a spin",
+          "body": "Your wallet pays the tier price. The contract records who you are, which machine you used, and the prize table in force at that instant.",
+          "technical": "spin(uint8 tierId) is payable and requires msg.value to equal the tier price exactly. It writes player, tier, versionId, prizeTableHash and payment into storage before requesting anything."
+        },
+        "lock": {
+          "title": "Its prize table is locked",
+          "body": "The spin is stamped with a machine version and the hash of that version's table. Published versions are append-only — nothing in the contract can edit one.",
+          "technical": "publishPrizeTable always allocates a new versionId and there is no mutator for an existing one. Repointing a tier changes what future spins are sold, never a spin already in flight."
+        },
+        "randomness": {
+          "title": "Verifiable randomness settles it",
+          "body": "The contract asks Chainlink VRF for a random word. The callback walks the frozen weighted table and records exactly one prize.",
+          "technical": "fulfillRandomWords writes storage and nothing else — no transfers, no external calls, no unbounded work. A second delivery for the same request is ignored rather than reverted."
+        },
+        "record": {
+          "title": "The result is recorded",
+          "body": "Random word, prize index, asset and amount are emitted and stored. Anyone can replay the same maths and reach the same answer.",
+          "technical": "SpinSettled carries spinId, player, rewardToken, rewardAmount, rarity, prizeIndex, randomWord and settledAt. previewPrize(versionId, randomWord) reproduces the selection as a view call."
+        },
+        "payout": {
+          "title": "Payout",
+          "body": "The recorded reward is transferred to the wallet that paid for the spin. The destination was fixed before the random word existed, so nothing can redirect it.",
+          "technical": "claimFor(spinId) is permissionless and reads the recipient from spin state written at request time. A settlement bot can trigger it without taking custody, and the player can always call it themselves."
+        }
+      },
+      "simulatedNote": "On this build, steps three and five are simulated locally. The contract behaviour described is what runs once deployed."
+    },
+    "contracts": {
+      "title": "The contracts.",
+      "role": "Role",
+      "address": "Address",
+      "status": "Status",
+      "network": "Network",
+      "verified": "Verified",
+      "notDeployed": "Not deployed",
+      "bscscan": "BscScan",
+      "source": "Source",
+      "game": {
+        "name": "Bacha Game",
+        "role": "Spin requests, machine versions, randomness and results"
+      },
+      "vault": {
+        "name": "Bacha Vault",
+        "role": "Reward reserves and payouts"
+      },
+      "vrf": {
+        "name": "Chainlink VRF v2.5",
+        "role": "The only source of production randomness"
+      },
+      "strip": {
+        "network": "Network",
+        "chainId": "Chain ID",
+        "game": "Game",
+        "vault": "Vault",
+        "randomness": "Randomness",
+        "source": "Source",
+        "deployed": "Deployed",
+        "notDeployed": "Not deployed",
+        "vrf": "Chainlink VRF",
+        "simulated": "Simulated",
+        "verified": "Verified"
+      },
+      "demoTitle": "Demo environment",
+      "demoBody": "Contracts are not deployed. Randomness is simulated and no real tokens are paid. Everything described on this page is how the deployed system behaves."
+    },
+    "immutable": {
+      "title": "Odds don't change after you spin.",
+      "body": "Each spin records the machine version and prize-table hash active at submission. Later configuration changes cannot alter a spin that is already pending."
+    },
+    "odds": {
+      "title": "Published odds.",
+      "body": "The tables the machines resolve against. Every percentage is computed from the same weights the contract holds.",
+      "spin": "Spin",
+      "version": "Machine version",
+      "assets": "Prize assets",
+      "published": "Published",
+      "tableHash": "Prize table hash",
+      "totalWeight": "Total weight",
+      "estimatedValue": "Estimated reward value",
+      "estimatedNote": "An estimate at authoring-time prices, not a promise of return.",
+      "copyJson": "Copy JSON",
+      "copied": "Copied",
+      "download": "Download table",
+      "filterAll": "All",
+      "columns": {
+        "token": "Token",
+        "amount": "Amount",
+        "rarity": "Rarity",
+        "weight": "Weight",
+        "probability": "Probability",
+        "address": "Token address"
+      },
+      "history": {
+        "title": "Version history",
+        "current": "Current",
+        "onlyVersion": "This is the only published version."
+      }
+    },
+    "math": {
+      "title": "Redo the maths.",
+      "body": "Prize selection is a weighted walk. Given a random word and a table there is exactly one answer, and it depends on nothing an operator controls.",
+      "note": "This mirrors BachaGame._selectPrize. The verifier above runs the same walk in your browser and compares its answer to the recorded one.",
+      "example": "Example",
+      "exampleBody": "Using {machine}'s published table:",
+      "randomWord": "Random word",
+      "totalWeight": "Total weight",
+      "selection": "Selection",
+      "lands": "Lands in",
+      "range": "Range",
+      "entry": "Entry",
+      "artAlt": "An isometric render of a transparent verification core with a randomness cube inside."
     }
   },
   "story": {

@@ -353,6 +353,22 @@ export const CATALOGUE = [
       'unlabelled — no plaques, no markings, no engraving of any kind.',
   },
   {
+    id: 'proof-core',
+    dir: 'fairness',
+    section: 'Fairness — reproduce the result',
+    aspect: '16:9',
+    size: '1536x1024',
+    themes: 'both',
+    subject:
+      'Isometric 3D render of a transparent mechanical verification core: a clear acrylic housing ' +
+      'with machined graphite end caps, containing a single suspended cube of glowing warm yellow ' +
+      'light at its centre. A machined input rail enters the housing from the left and a second ' +
+      'rail exits to the right, both traced by a thin continuous yellow light line that passes ' +
+      'straight through the core. Directly behind the housing, three small chamfered graphite ' +
+      'blocks sit locked in a row on a shared mount, each with a fine yellow seam. ' +
+      'Precise, instrument-like and completely unlabelled — no markings or engraving of any kind.',
+  },
+  {
     id: 'reward-vault',
     dir: 'isometric',
     section: "What's in the machine",
