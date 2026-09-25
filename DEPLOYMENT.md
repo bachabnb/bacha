@@ -81,6 +81,50 @@ The worker tops the queue up automatically and reveals each request once its
 reveal block is mined. If it stops, spins accumulate as pending and become
 refundable after `revealTimeout`; nothing is lost, but the machine stalls.
 
+### Start the treasury worker
+
+This is what makes the float self-funding. Every pass it sweeps spin revenue
+out of the game, buys whatever inventory is below target, and funds the vault.
+
+```bash
+export BACHA_TREASURY_KEY=...      # hot key, game TREASURER_ROLE only
+export BACHA_TARGET_SPINS=3        # concurrent spins to keep stocked
+
+npm run treasury:plan              # dry run — prints what it would do
+node scripts/treasury-worker.mjs --quote   # check routes before going live
+npm run treasury:worker            # then run this as a service
+```
+
+Grant it `TREASURER_ROLE` on the **game** and nothing else:
+
+```bash
+cast send $BACHA_GAME_ADDRESS "grantRole(bytes32,address)" \
+  $(cast keccak "TREASURER_ROLE") $TREASURY_ADDRESS
+```
+
+> Do **not** give it `TREASURER_ROLE` on the vault. `vault.fund()` is
+> permissionless, so restocking needs no vault role. With game-treasurer only,
+> a stolen key can take unreserved spin revenue but cannot touch vault
+> inventory, so recorded player rewards stay payable.
+
+**Sizing the float.** The game reserves the *worst case* of every asset in the
+table for each pending spin — not the expected payout. For the current table
+that is about $27 per spin against a $1.87 expected payout, so roughly:
+
+| Float | Concurrent pending spins |
+|---|---|
+| $100 | 3 |
+| $250 | 9 |
+| $500 | 18 |
+
+That is a throughput limit, not a solvency one. Spins settle in seconds, so
+the cap only bites under bursts, and it lifts on its own as revenue accumulates.
+
+**Routing.** Quotes go across PancakeSwap V2 *and* V3 at every fee tier, direct
+and via USDT, and the best fill wins. This matters: measured against the
+current roster, V2 alone would have bought B2 at roughly twice the market
+price. Re-run `--quote` after any roster change.
+
 ### Approve and fund reward assets
 
 ```bash
