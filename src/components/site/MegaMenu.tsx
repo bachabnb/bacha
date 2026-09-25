@@ -62,9 +62,12 @@ export function MegaMenu({ className }: { className?: string }) {
   const activeGroup = groups.find((g) => g.key === active) ?? null
 
   return (
+    // The panel is anchored to this container's lower edge, so the container
+    // is stretched to the header's full height by the caller. Sized to the
+    // buttons instead, the panel opened partway up inside the header shell.
     <div
       ref={containerRef}
-      className={cn('relative', className)}
+      className={cn('relative flex items-center', className)}
       onMouseLeave={scheduleClose}
     >
       <nav aria-label="Main" className="flex items-center gap-0.5">
@@ -80,8 +83,10 @@ export function MegaMenu({ className }: { className?: string }) {
               onFocus={() => open(group.key)}
               onClick={() => (isOpen ? closeNow() : open(group.key))}
               className={cn(
-                'relative rounded-[8px] px-3.5 py-2 text-[0.86rem] font-medium transition-colors',
-                isOpen ? 'text-foreground' : 'text-foreground-secondary hover:text-foreground',
+                'relative rounded-[9px] px-3.5 py-2 text-[0.86rem] font-medium transition-colors',
+                isOpen
+                  ? 'bg-surface-hover text-foreground'
+                  : 'text-foreground-secondary hover:bg-surface-hover hover:text-foreground',
               )}
             >
               {t(group.key)}
@@ -106,7 +111,7 @@ export function MegaMenu({ className }: { className?: string }) {
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: -6, scale: 0.99 }}
             transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             onMouseEnter={() => open(activeGroup.key)}
-            className="absolute left-0 top-full z-50 pt-3"
+            className="absolute left-0 top-full z-50 pt-2.5"
           >
             <div
               className={cn(

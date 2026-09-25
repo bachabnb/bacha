@@ -43,7 +43,7 @@ export default async function AdminOverview() {
               label="Mode"
               value={spinMode === 'onchain' ? 'Onchain' : 'Demo'}
               tone={spinMode === 'onchain' ? 'brand' : 'default'}
-              hint={spinMode === 'onchain' ? 'Chainlink VRF' : 'Simulated server-side'}
+              hint={spinMode === 'onchain' ? 'Commit–reveal beacon' : 'Simulated server-side'}
             />
             <Metric label="Chain ID" value={publicEnv.chainId} />
             <Metric label="Spins recorded" value={total} hint={spinMode === 'demo' ? 'Demo store' : 'From chain'} />

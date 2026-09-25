@@ -95,6 +95,12 @@ export function Hero({
             <Button asChild variant="secondary" size="hero">
               <Link href="/rewards">{t('secondary')}</Link>
             </Button>
+            <Link
+              href="/whitepaper"
+              className="self-center text-[0.86rem] font-medium text-foreground-secondary underline-offset-4 transition-colors hover:text-foreground hover:underline"
+            >
+              {t('tertiary')}
+            </Link>
           </motion.div>
 
           <motion.ul

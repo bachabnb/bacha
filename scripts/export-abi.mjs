@@ -10,6 +10,7 @@ const root = process.cwd()
 const artifacts = [
   ['bachaGameAbi', 'contracts/out/BachaGame.sol/BachaGame.json'],
   ['bachaVaultAbi', 'contracts/out/BachaVault.sol/BachaVault.json'],
+  ['bachaRandomnessAbi', 'contracts/out/BachaRandomness.sol/BachaRandomness.json'],
 ]
 
 const chunks = [

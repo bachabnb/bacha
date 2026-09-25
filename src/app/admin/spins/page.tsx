@@ -33,7 +33,7 @@ export default async function AdminSpins() {
         title="Spins"
         description={
           spinMode === 'onchain'
-            ? 'Read from contract events. Pending spins are waiting on VRF; settled-unclaimed spins are owed a payout the vault is already holding.'
+            ? 'Read from contract events. Pending spins are waiting on a reveal; settled-unclaimed spins are owed a payout the vault is already holding.'
             : 'Simulated spins from the local demo store. These are not transactions and settle no value.'
         }
       />

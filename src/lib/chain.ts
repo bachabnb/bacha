@@ -19,16 +19,16 @@ export const explorer = {
 export const networkLabel = isTestnet ? 'BNB Chain Testnet' : 'BNB Chain'
 
 /**
- * Chainlink VRF v2.5 coordinators, for the fairness page and deploy docs.
- * Confirm against docs.chain.link before deploying — Chainlink does rotate these.
+ * The randomness beacon.
+ *
+ * Bacha runs its own commit–reveal beacon rather than an external VRF. There
+ * is no third-party coordinator address to look up: the contract is deployed
+ * alongside the game and its address comes from the same configuration.
+ *
+ * Unlike the old coordinator constant, this cannot be hardcoded per chain —
+ * an address that is not deployed must read as not deployed.
  */
-export const vrfCoordinators: Record<number, { address: string; docs: string }> = {
-  56: {
-    address: '0xd691f04bc0C9a24Edb78af9E005Cf85768F694C9',
-    docs: 'https://docs.chain.link/vrf/v2-5/supported-networks#bnb-chain',
-  },
-  97: {
-    address: '0xDA3b641D438362C440Ac5458c57e00a712b66700',
-    docs: 'https://docs.chain.link/vrf/v2-5/supported-networks#bnb-chain-testnet',
-  },
-}
+export const beacon = {
+  address: publicEnv.randomnessAddress,
+  source: 'https://github.com/bachabnb/bacha/blob/main/contracts/src/BachaRandomness.sol',
+} as const

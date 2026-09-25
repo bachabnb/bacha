@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
+import { ViewModeToggle } from './ViewMode'
 import { cn } from '@/lib/cn'
 
 const SECTIONS = ['verify', 'how', 'contracts', 'odds', 'math'] as const
@@ -9,8 +10,13 @@ const SECTIONS = ['verify', 'how', 'contracts', 'odds', 'math'] as const
 /**
  * In-page navigation with scroll-spy.
  *
- * Deliberately a thin rail rather than a second navbar — it sits under the
- * floating header and only exists because this page is long by necessity.
+ * Built as a floating rail rather than a full-bleed bar. The header above it
+ * is an inset floating panel, so an edge-to-edge strip welded to its underside
+ * read as two stacked navbars. This sits in the same gutter, wears the same
+ * shell, and keeps an honest gap below the header.
+ *
+ * The detail-level toggle lives here too. It used to sit in its own row above
+ * the verifier, where this rail passed over and clipped it on scroll.
  */
 export function FairnessNav() {
   const t = useTranslations('fairness.nav')
@@ -24,9 +30,9 @@ export function FairnessNav() {
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
         if (visible) setActive(visible.target.id)
       },
-      // The band sits below the floating header, so "current" means the
-      // section actually under the reader's eye, not one behind the chrome.
-      { rootMargin: '-140px 0px -60% 0px', threshold: 0 },
+      // Offset past the header and this rail, so "current" means the section
+      // under the reader's eye rather than one hidden behind chrome.
+      { rootMargin: '-172px 0px -58% 0px', threshold: 0 },
     )
 
     for (const id of SECTIONS) {
@@ -37,17 +43,19 @@ export function FairnessNav() {
   }, [])
 
   return (
-    <nav
-      aria-label="On this page"
-      className="sticky top-[86px] z-30 -mx-4 hidden border-y border-border bg-background/85 px-4 backdrop-blur-xl md:block"
-    >
-      <ul className="shell-wide flex gap-1 py-2">
-        {SECTIONS.map((id) => (
-          <li key={id}>
+    <div className="pointer-events-none sticky top-[92px] z-30 hidden px-4 py-3 sm:px-6 md:block lg:px-8">
+      <div className="mx-auto flex w-full max-w-[1450px] items-center justify-between gap-4">
+        <nav
+          aria-label="On this page"
+          className="header-shell header-shell-raised pointer-events-auto flex items-center gap-0.5 rounded-[15px] border p-[5px] backdrop-blur-xl"
+        >
+          {SECTIONS.map((id) => (
             <a
+              key={id}
               href={`#${id}`}
+              aria-current={active === id ? 'page' : undefined}
               className={cn(
-                'inline-block rounded-[8px] px-3 py-1.5 text-[0.8rem] font-medium transition-colors',
+                'rounded-[10px] px-3.5 py-[0.45rem] text-[0.82rem] font-medium transition-colors',
                 active === id
                   ? 'bg-brand-soft text-brand'
                   : 'text-foreground-secondary hover:bg-surface-hover hover:text-foreground',
@@ -55,9 +63,11 @@ export function FairnessNav() {
             >
               {t(id)}
             </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
+          ))}
+        </nav>
+
+        <ViewModeToggle className="header-shell header-shell-raised pointer-events-auto hidden rounded-[15px] p-[5px] backdrop-blur-xl lg:inline-flex" />
+      </div>
+    </div>
   )
 }

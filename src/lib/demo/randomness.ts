@@ -11,7 +11,7 @@ import { randomBytes } from 'node:crypto'
  * one place: the demo spin store. Nothing under `src/lib/onchain/` may import
  * it, and no mainnet outcome is ever produced here.
  *
- * Real outcomes come from Chainlink VRF v2.5 via `BachaGame.fulfillRandomWords`.
+ * Real outcomes come from `BachaRandomness` via `BachaGame.rawFulfillRandomWords`.
  * A result produced by this function is always tagged `mode: 'demo'` and is
  * labelled as simulated everywhere it is shown.
  */
@@ -23,4 +23,4 @@ export function demoRandomWord(): bigint {
 }
 
 export const DEMO_RANDOMNESS_NOTICE =
-  'Simulated locally with a server CSPRNG. Not Chainlink VRF, not an onchain result.'
+  'Simulated locally with a server CSPRNG. Not the onchain beacon, not an onchain result.'

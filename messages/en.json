@@ -30,6 +30,14 @@
     "docs": {
       "title": "Docs",
       "description": "How Bacha is built: contracts, randomness, treasury and token configuration."
+    },
+    "whitepaper": {
+      "title": "Whitepaper",
+      "description": "A technical overview of Bacha's machine architecture, reward system, randomness, reserves, published odds and settlement model on BNB Smart Chain."
+    },
+    "about": {
+      "title": "About",
+      "description": "Why Bacha exists, what it holds itself to, what it will never do, and exactly where the project stands."
     }
   },
   "announce": {
@@ -103,6 +111,10 @@
           "title": "Contracts",
           "description": "View on BscScan"
         },
+        "whitepaper": {
+          "title": "Whitepaper",
+          "description": "The full technical paper"
+        },
         "docs": {
           "title": "Docs",
           "description": "Technical documentation"
@@ -141,6 +153,7 @@
     "subcopy": "Spin once. See what drops.",
     "primary": "Spin now",
     "secondary": "What's inside",
+    "tertiary": "Read the whitepaper",
     "trust": "Every result is verifiable onchain.",
     "meta": {
       "network": "BNB Chain",
@@ -152,6 +165,14 @@
     "perSpin": "Per spin",
     "currentOdds": "Current odds",
     "proofOdds": "Odds shown upfront"
+  },
+  "home": {
+    "whitepaper": {
+      "eyebrow": "Whitepaper",
+      "body": "The full technical paper: architecture, the spin lifecycle, how a weight becomes a probability, what the vault will and will not release, the security model and the risks — stated plainly.",
+      "cta": "Read the whitepaper",
+      "meta": "{chapters} chapters · v{version}"
+    }
   },
   "machinePreview": {
     "label": "Machine 01",
@@ -276,7 +297,7 @@
     "eyebrow": "Fairness",
     "titleLead": "Don't trust the machine.",
     "titleAccent": "Verify it.",
-    "body": "Outcomes come from Chainlink VRF, not from us. The random word, the prize table it resolved against and the payout are all recorded onchain — so anyone can redo the maths and get the same answer.",
+    "body": "Outcomes come from seeds committed before you spin, mixed with a block hash nobody could predict. The random word, the prize table it resolved against and the payout are all recorded onchain — so anyone can redo the maths and get the same answer.",
     "cta": "Verify a spin",
     "chain": {
       "spin": {
@@ -285,11 +306,11 @@
       },
       "request": {
         "label": "Request",
-        "detail": "A VRF request is opened."
+        "detail": "The next committed seed is taken."
       },
       "randomness": {
         "label": "Randomness",
-        "detail": "Chainlink returns a word."
+        "detail": "A later block closes the word."
       },
       "result": {
         "label": "Result",
@@ -406,9 +427,9 @@
           "technical": "publishPrizeTable always allocates a new versionId and there is no mutator for an existing one. Repointing a tier changes what future spins are sold, never a spin already in flight."
         },
         "randomness": {
-          "title": "Verifiable randomness settles it",
-          "body": "The contract asks Chainlink VRF for a random word. The callback walks the frozen weighted table and records exactly one prize.",
-          "technical": "fulfillRandomWords writes storage and nothing else — no transfers, no external calls, no unbounded work. A second delivery for the same request is ignored rather than reverted."
+          "title": "The committed seed is opened",
+          "body": "The seed bound to your spin was hashed onchain before you paid. Once the reveal block is mined it is opened, mixed with that block's hash, and the resulting word walks the frozen table to exactly one prize.",
+          "technical": "reveal(requestId, seed) checks keccak256(seed) against the stored commitment, derives word = keccak256(seed, blockhash(revealBlock), requestId, consumer) and delivers it. The game's callback writes storage and nothing else; a second delivery for the same request is ignored rather than reverted."
         },
         "record": {
           "title": "The result is recorded",
@@ -441,9 +462,9 @@
         "name": "Bacha Vault",
         "role": "Reward reserves and payouts"
       },
-      "vrf": {
-        "name": "Chainlink VRF v2.5",
-        "role": "The only source of production randomness"
+      "beacon": {
+        "name": "BachaRandomness",
+        "role": "The commit–reveal beacon every spin resolves against"
       },
       "strip": {
         "network": "Network",
@@ -454,7 +475,7 @@
         "source": "Source",
         "deployed": "Deployed",
         "notDeployed": "Not deployed",
-        "vrf": "Chainlink VRF",
+        "commitReveal": "Commit–reveal",
         "simulated": "Simulated",
         "verified": "Verified"
       },
@@ -509,6 +530,36 @@
       "artAlt": "An isometric render of a transparent verification core with a randomness cube inside."
     }
   },
+  "whitepaper": {
+    "contents": "Contents",
+    "copy": "Copy",
+    "copied": "Copied",
+    "print": "Print / PDF",
+    "version": "Version {version}",
+    "backToTop": "Back to top",
+    "readFairness": "Verify a spin",
+    "eyebrow": "Whitepaper",
+    "callout": {
+      "note": "Note",
+      "important": "Important",
+      "security": "Security",
+      "demo": "Environment",
+      "formula": "Formula",
+      "onchain": "Onchain",
+      "risk": "Risk"
+    },
+    "live": {
+      "machine": "Machine",
+      "price": "Price",
+      "entries": "Entries",
+      "distribution": "Distribution",
+      "commitReveal": "Commit–reveal",
+      "notDeployed": "Not deployed",
+      "tokensNote": "{count} assets currently eligible for a prize table. Identity is the address, not the name.",
+      "oddsTitle": "Published odds, per machine",
+      "oddsBody": "Live tables computed from the same weights the contract holds."
+    }
+  },
   "story": {
     "eyebrow": "Context",
     "titleLead": "An old idea,",
@@ -542,6 +593,101 @@
         "label": "Token",
         "detail": "Something comes out of the tray."
       }
+    }
+  },
+  "about": {
+    "eyebrow": "About",
+    "hero": {
+      "titleLead": "We rebuilt the",
+      "titleAccent": "capsule machine.",
+      "body": "Bacha is a small, deliberate thing: a machine that takes a fixed payment, draws one reward from a table it published beforehand, and leaves a receipt anyone can check. Everything else on this page is about why it is built that way.",
+      "artAlt": "An isometric scene showing a traditional capsule machine becoming an onchain one."
+    },
+    "why": {
+      "index": "01",
+      "title": "Why a capsule machine.",
+      "body": "Most people meet a new token through a chart, a thread, or someone asking them to buy it. None of those are a good introduction. A capsule machine is a better one: you know the price before you pay, you know what is inside before you pull, and you know the odds because they are printed on the front.",
+      "body2": "That shape already solves the problems a token-discovery product usually has. It has no upside to promise, so it does not have to lie about one. It is honest that most pulls are small. And it hands you the thing itself rather than a link to go buy it."
+    },
+    "principles": {
+      "index": "02",
+      "title": "What we hold ourselves to.",
+      "body": "These are not aspirations. Each one is a decision already made in the contracts or the interface, and each one is checkable.",
+      "items": {
+        "published": {
+          "title": "Odds are published first",
+          "body": "Every percentage on this site is computed from the same weights the contract holds. There is no second copy that could drift, and no table that is shown but not used."
+        },
+        "frozen": {
+          "title": "A spin's odds cannot move under it",
+          "body": "Paying stamps your spin with a machine version and the hash of that version's table. No function in the contract can edit a published version. Not an admin one, not a timelocked one."
+        },
+        "outside": {
+          "title": "We cannot choose your result",
+          "body": "The seed that settles your spin was hashed onchain before you paid, and it is mixed with a block hash that did not exist yet. We can see a result before you do. We cannot change it."
+        },
+        "solvent": {
+          "title": "The machine refuses what it cannot pay",
+          "body": "Before accepting a spin the contract checks the vault covers the worst case on top of everything already owed. If it does not, the spin is declined rather than sold."
+        },
+        "plain": {
+          "title": "We say the unflattering part",
+          "body": "The contracts are unaudited. Most spins return less than they cost. There is no Bacha token. Where the honest answer is a bad look, the honest answer is what is written."
+        }
+      }
+    },
+    "never": {
+      "index": "03",
+      "title": "What Bacha will not do.",
+      "body": "A shorter list than the one above, and a more useful one.",
+      "items": {
+        "returns": "Promise a return, project a yield, or present an estimated value as one.",
+        "token": "Launch a token, a presale, or a points programme that implies one.",
+        "fake": "Publish invented volume, fabricated testimonials, or a transaction that did not happen.",
+        "ticker": "Identify a reward by ticker alone. Two contracts can claim a symbol; only the address is the asset.",
+        "custody": "Ask for a seed phrase, sign on your behalf, or hold a key that can move your reward elsewhere.",
+        "darkpattern": "Chase a loss, hide a cost behind a confirmation, or make declining harder than accepting."
+      }
+    },
+    "built": {
+      "index": "04",
+      "title": "How it is built.",
+      "body": "Nothing here is novel, and that is deliberate. The interesting decisions are about what the contracts refuse to do, not what they add.",
+      "artAlt": "An exploded view of the Bacha machine.",
+      "rows": {
+        "chain": {
+          "label": "Chain",
+          "value": "BNB Smart Chain. Rewards are BEP-20 assets from projects native to it — no bridged representations from elsewhere."
+        },
+        "contracts": {
+          "label": "Contracts",
+          "value": "Two: a game that holds spins, versions and results, and a vault that holds inventory and will not release what a spin has a claim on."
+        },
+        "randomness": {
+          "label": "Randomness",
+          "value": "A commit–reveal beacon we run ourselves. Seeds are committed in advance and mixed with a later block hash, and the derivation is a public view function."
+        },
+        "rewards": {
+          "label": "Rewards",
+          "value": "Every asset is verified three ways — a reputable listing, an independent index, and a direct call to the contract — before it can appear in a table."
+        }
+      }
+    },
+    "status": {
+      "index": "05",
+      "title": "Where the project actually is.",
+      "body": "Read from the running application rather than written here, so it cannot fall out of date.",
+      "auditTitle": "Not audited",
+      "auditBody": "No third party has reviewed these contracts. The suite covers 70 cases including invariants over arbitrary action sequences, but tests are written by the same people who wrote the code and are not a substitute for outside review.",
+      "tokenTitle": "No token",
+      "tokenBody": "Bacha has no native token. None is planned, described or implied anywhere on this site, and no part of the system depends on one existing."
+    },
+    "cta": {
+      "title": "Read it, then decide.",
+      "body": "The whitepaper is the long version of this page. The fairness console lets you check a spin rather than take our word for it.",
+      "paper": "Read the whitepaper",
+      "verify": "Verify a spin",
+      "play": "Try a machine"
     }
   },
   "discovery": {
@@ -581,6 +727,7 @@
       "activity": "Activity",
       "tokens": "Tokens",
       "fairness": "Fairness",
+      "whitepaper": "Whitepaper",
       "contracts": "Contracts",
       "docs": "Docs",
       "about": "About",
@@ -626,7 +773,7 @@
       "network": "Network",
       "fairness": "Fairness",
       "treasury": "Treasury",
-      "vrf": "Chainlink VRF",
+      "vrf": "Commit–reveal",
       "funded": "Funded",
       "notDeployed": "Not deployed"
     },
@@ -659,7 +806,7 @@
       "machineVersion": "Machine version",
       "randomWord": "Random word",
       "settlement": "Settlement",
-      "settlementVrf": "Chainlink VRF",
+      "settlementVrf": "Commit–reveal",
       "unknownAsset": "Unknown asset",
       "dialogLabel": "Spin result"
     },
@@ -688,7 +835,7 @@
       "network": "Network",
       "fairness": "Fairness",
       "treasury": "Treasury",
-      "vrf": "Chainlink VRF",
+      "vrf": "Commit–reveal",
       "healthy": "Healthy",
       "notDeployed": "Not deployed",
       "distribution": "Prize distribution",

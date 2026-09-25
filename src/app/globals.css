@@ -763,3 +763,173 @@
     margin-top: var(--console-gap);
   }
 }
+
+/* ------------------------------------------------------------------
+   The whitepaper.
+
+   A reading surface, not a landing page. One measure, a single vertical
+   rhythm applied by `.wp-block` so every block type spaces identically,
+   and a print stylesheet that turns the page into a document rather than
+   a screenshot of one.
+   ------------------------------------------------------------------ */
+@layer components {
+  .wp-prose {
+    /* Long-form measure. Chinese sets wider than Latin at the same size. */
+    --wp-measure: 40rem;
+  }
+
+  :lang(zh) .wp-prose { --wp-measure: 36rem; }
+
+  .wp-chapter {
+    /* Clears the floating header plus a little breathing room. */
+    scroll-margin-top: 7.5rem;
+    padding-block: clamp(2.75rem, 5vw, 4rem);
+    border-top: 1px solid var(--border);
+  }
+
+  .wp-chapter:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .wp-h2 {
+    margin-top: 0.6rem;
+    max-width: var(--wp-measure);
+    font-family: var(--font-display-stack);
+    font-size: clamp(1.55rem, 2.6vw, 2.1rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.12;
+    color: var(--foreground);
+  }
+
+  .wp-lede {
+    margin-top: 0.7rem;
+    max-width: var(--wp-measure);
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--foreground-secondary);
+  }
+
+  /* One rule sets the rhythm for every block type. */
+  .wp-block { margin-top: 1.6rem; }
+
+  .wp-h3 {
+    margin-top: 2.2rem;
+    font-family: var(--font-display-stack);
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+  }
+
+  .wp-p {
+    max-width: var(--wp-measure);
+    font-size: 0.97rem;
+    line-height: 1.75;
+    color: var(--foreground-secondary);
+  }
+
+  .wp-list {
+    max-width: var(--wp-measure);
+    padding-left: 1.15rem;
+    font-size: 0.94rem;
+    line-height: 1.7;
+    color: var(--foreground-secondary);
+    list-style: disc;
+  }
+
+  .wp-list-ordered { list-style: decimal; }
+  .wp-list > li + li { margin-top: 0.5rem; }
+  .wp-list::marker, .wp-list > li::marker { color: var(--foreground-muted); }
+
+  /* A → B → C. Wraps to a column on narrow screens rather than scrolling. */
+  .wp-flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .wp-flow-step {
+    position: relative;
+    flex: 1 1 8.5rem;
+    min-width: 8.5rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 0.7rem 0.85rem;
+  }
+
+  .wp-flow-step + .wp-flow-step::before {
+    content: "";
+    position: absolute;
+    left: -0.5rem;
+    top: 50%;
+    width: 0.5rem;
+    height: 1px;
+    background: var(--border-strong);
+  }
+}
+
+/* ------------------------------------------------------------------
+   Printing the whitepaper.
+
+   Chrome hides every component we colour with a token unless the page asks
+   for exact colour, so the callouts keep their tint. Everything that is
+   navigation rather than content is removed.
+   ------------------------------------------------------------------ */
+@media print {
+  :root {
+    /* Force the light palette: dark mode wastes a cartridge and reads badly. */
+    color-scheme: light;
+  }
+
+  html, body {
+    background: #fff !important;
+    color: #16181a !important;
+  }
+
+  header, footer, nav, aside[aria-label], .brand-ghost { display: none !important; }
+
+  main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .wp-prose { --wp-measure: 100%; }
+
+  .wp-chapter {
+    /* Never split a heading from the text it introduces. */
+    break-inside: auto;
+    break-before: page;
+    padding-block: 0 1.5rem;
+    border-top: 0;
+  }
+
+  .wp-chapter:first-child { break-before: avoid; }
+
+  .wp-h2, .wp-h3 { break-after: avoid; }
+  .wp-block { break-inside: avoid; }
+
+  table, figure, aside, dl, ol, ul { break-inside: avoid; }
+
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.72em;
+    color: #555;
+    word-break: break-all;
+  }
+
+  /* Anchors within the document would print as noise. */
+  a[href^="#"]::after { content: ""; }
+
+  .wp-flow-step, table, figure > div, aside, dl > div {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  @page {
+    margin: 18mm 16mm;
+  }
+}

@@ -72,6 +72,13 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M10.6 2.6v3.2h3.2M6 9.4h6M6 12h4" strokeLinecap="round" />
     </>
   ),
+  paper: (
+    <>
+      <path d="M4.5 2.5h6.2l2.8 2.9v10.1H4.5z" />
+      <path d="M10.5 2.6v3h2.9" />
+      <path d="M6.7 8.6h4.6M6.7 11.2h4.6M6.7 13.4h2.8" />
+    </>
+  ),
   docs: (
     <>
       <path d="M3.4 3.6h5.2a2 2 0 0 1 2 2v9a1.6 1.6 0 0 0-1.6-1.6H3.4V3.6Z" strokeLinejoin="round" />

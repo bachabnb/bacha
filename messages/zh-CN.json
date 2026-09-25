@@ -30,6 +30,14 @@
     "docs": {
       "title": "文档",
       "description": "Bacha 的构建方式：合约、随机性、金库与代币配置。"
+    },
+    "whitepaper": {
+      "title": "白皮书",
+      "description": "关于 Bacha 在 BNB Smart Chain 上的机器架构、奖励体系、随机数、储备金、公开概率与结算模型的技术说明。"
+    },
+    "about": {
+      "title": "关于",
+      "description": "Bacha 为何存在、对自己的要求、绝不会做的事，以及项目当前的确切进展。"
     }
   },
   "announce": {
@@ -103,6 +111,10 @@
           "title": "合约",
           "description": "在 BscScan 上查看"
         },
+        "whitepaper": {
+          "title": "白皮书",
+          "description": "完整技术文档"
+        },
         "docs": {
           "title": "文档",
           "description": "技术文档"
@@ -141,6 +153,7 @@
     "subcopy": "转一次，看看掉出什么。",
     "primary": "立即转动",
     "secondary": "看看里面",
+    "tertiary": "阅读白皮书",
     "trust": "每个结果都可在链上验证。",
     "meta": {
       "network": "BNB Chain",
@@ -152,6 +165,14 @@
     "perSpin": "每次转动",
     "currentOdds": "当前概率",
     "proofOdds": "概率公开透明"
+  },
+  "home": {
+    "whitepaper": {
+      "eyebrow": "白皮书",
+      "body": "完整技术文档：架构、抽取生命周期、权重如何变成概率、金库会与不会释放什么、安全模型与风险——全部直说。",
+      "cta": "阅读白皮书",
+      "meta": "{chapters} 章 · v{version}"
+    }
   },
   "machinePreview": {
     "label": "机器 01",
@@ -276,7 +297,7 @@
     "eyebrow": "公平性",
     "titleLead": "别信任机器。",
     "titleAccent": "去验证它。",
-    "body": "结果来自 Chainlink VRF，而不是我们。随机数、结算所依据的奖池表、以及奖励发放，全部记录在链上——任何人都能重新算一遍，并得到同样的答案。",
+    "body": "结果来自你抽取之前就已承诺的种子，再与一个无人能预测的区块哈希混合。随机数、它所对应的奖品表以及发放全部记录在链上——任何人都能重算一遍，得到同样的答案。",
     "cta": "验证一次转动",
     "chain": {
       "spin": {
@@ -285,11 +306,11 @@
       },
       "request": {
         "label": "请求",
-        "detail": "发起一次 VRF 请求。"
+        "detail": "取用下一个已承诺的种子。"
       },
       "randomness": {
         "label": "随机数",
-        "detail": "Chainlink 返回随机数。"
+        "detail": "由之后的区块封定随机数。"
       },
       "result": {
         "label": "结果",
@@ -406,9 +427,9 @@
           "technical": "publishPrizeTable 总是分配一个新的 versionId，且不存在修改既有版本的函数。重新指向某个档位只会改变之后售出的转动，绝不会影响已经在途的那一次。"
         },
         "randomness": {
-          "title": "由可验证随机数完成结算",
-          "body": "合约向 Chainlink VRF 请求一个随机数。回调函数在已冻结的加权表上遍历，并且只记录一个奖项。",
-          "technical": "fulfillRandomWords 只写存储，别的什么都不做——不转账、不调用外部合约、没有无界运算。同一请求的第二次投递会被忽略，而不是回滚。"
+          "title": "打开已承诺的种子",
+          "body": "绑定到这次抽取的种子，在你付款之前就已在链上留下哈希。揭示区块被挖出后，种子被打开、与该区块的哈希混合，得到的随机数在已冻结的表上行走，落到恰好一个奖品。",
+          "technical": "reveal(requestId, seed) 用 keccak256(seed) 与存储的承诺比对，推导 word = keccak256(seed, blockhash(revealBlock), requestId, consumer) 并送达。游戏合约的回调只写存储；对同一请求的第二次送达会被忽略而非回滚。"
         },
         "record": {
           "title": "结果被记录",
@@ -441,9 +462,9 @@
         "name": "Bacha Vault",
         "role": "奖励储备与发放"
       },
-      "vrf": {
-        "name": "Chainlink VRF v2.5",
-        "role": "生产环境中随机性的唯一来源"
+      "beacon": {
+        "name": "BachaRandomness",
+        "role": "每次抽取所依据的承诺—揭示信标"
       },
       "strip": {
         "network": "网络",
@@ -454,7 +475,7 @@
         "source": "源码",
         "deployed": "已部署",
         "notDeployed": "尚未部署",
-        "vrf": "Chainlink VRF",
+        "commitReveal": "承诺—揭示",
         "simulated": "模拟",
         "verified": "已验证"
       },
@@ -509,6 +530,36 @@
       "artAlt": "内含随机数立方体的透明验证核心等距渲染图。"
     }
   },
+  "whitepaper": {
+    "contents": "目录",
+    "copy": "复制",
+    "copied": "已复制",
+    "print": "打印 / PDF",
+    "version": "版本 {version}",
+    "backToTop": "回到顶部",
+    "readFairness": "验证一次抽取",
+    "eyebrow": "白皮书",
+    "callout": {
+      "note": "说明",
+      "important": "重要",
+      "security": "安全",
+      "demo": "运行环境",
+      "formula": "公式",
+      "onchain": "链上",
+      "risk": "风险"
+    },
+    "live": {
+      "machine": "机器",
+      "price": "价格",
+      "entries": "条目数",
+      "distribution": "分布",
+      "commitReveal": "承诺—揭示",
+      "notDeployed": "未部署",
+      "tokensNote": "当前有 {count} 项资产可进入奖品表。身份由地址决定，而非名称。",
+      "oddsTitle": "各机器的公开概率",
+      "oddsBody": "实时表格，由合约所持的同一组权重计算得出。"
+    }
+  },
   "story": {
     "eyebrow": "背景",
     "titleLead": "一个老玩法，",
@@ -542,6 +593,101 @@
         "label": "代币",
         "detail": "有东西从出货口掉下来。"
       }
+    }
+  },
+  "about": {
+    "eyebrow": "关于",
+    "hero": {
+      "titleLead": "我们重造了",
+      "titleAccent": "那台扭蛋机。",
+      "body": "Bacha 是一件小而刻意的东西：一台收取固定费用的机器，从事先公布的表中抽出一份奖励，并留下任何人都能核对的凭据。本页其余内容，讲的都是它为什么这样做。",
+      "artAlt": "一幅等距场景：传统扭蛋机正在变成链上扭蛋机。"
+    },
+    "why": {
+      "index": "01",
+      "title": "为什么是扭蛋机。",
+      "body": "大多数人认识一个新代币，是通过一张走势图、一条推文，或者某个劝他们买入的人。这些都不是好的开场。扭蛋机是更好的那一个：付款前你知道价格，抽取前你知道里面有什么，而概率就印在机器正面。",
+      "body2": "这个形态本身就解决了代币发现类产品通常会遇到的问题。它没有可承诺的涨幅，所以不必为此撒谎。它坦白大多数抽取金额都很小。而且它把东西直接交到你手上，而不是给你一个去买的链接。"
+    },
+    "principles": {
+      "index": "02",
+      "title": "我们对自己的要求。",
+      "body": "这些不是愿景。每一条都已经落实为合约或界面中的一个决定，并且每一条都可以核对。",
+      "items": {
+        "published": {
+          "title": "概率先公布",
+          "body": "本站每一个百分比，都由合约所持的同一组权重计算得出。不存在可能与之偏离的第二份数据，也不存在「展示了却不使用」的表。"
+        },
+        "frozen": {
+          "title": "抽取之后概率不会改变",
+          "body": "付款会为你的抽取打上机器版本以及该版本表的哈希。合约中没有任何函数可以编辑已公布的版本——不是「仅管理员」，也不是「有时间锁」。"
+        },
+        "outside": {
+          "title": "我们无法挑选你的结果",
+          "body": "结算你这次抽取的种子，在你付款之前就已在链上留下哈希，并且要与一个当时尚不存在的区块哈希混合。我们可能比你更早看到结果，但无法改变它。"
+        },
+        "solvent": {
+          "title": "付不起的，机器就不卖",
+          "body": "接受一次抽取之前，合约会确认金库能在已有全部欠付之上再覆盖最坏情况。若不能，这次抽取会被拒绝，而不是照卖。"
+        },
+        "plain": {
+          "title": "不好听的话我们也说",
+          "body": "合约未经审计。大多数抽取的回报低于成本。Bacha 没有代币。凡是诚实的答案不好看的地方，写下来的就是那个诚实的答案。"
+        }
+      }
+    },
+    "never": {
+      "index": "03",
+      "title": "Bacha 不会做的事。",
+      "body": "比上面那份更短，也更有用。",
+      "items": {
+        "returns": "承诺回报、预测收益，或把估算值当作收益来呈现。",
+        "token": "发行代币、开启预售，或推出任何暗示代币的积分计划。",
+        "fake": "发布编造的交易量、捏造的用户评价，或从未发生过的交易。",
+        "ticker": "仅凭代号标识一项奖励。两个合约可以声称同一个代号，只有地址才是那项资产。",
+        "custody": "索要助记词、代你签名，或持有任何能把你的奖励转往别处的密钥。",
+        "darkpattern": "诱导追加投入、把成本藏在确认步骤之后，或让拒绝比接受更麻烦。"
+      }
+    },
+    "built": {
+      "index": "04",
+      "title": "它是怎么搭起来的。",
+      "body": "这里没有任何新奇的东西，这是刻意的。有意思的决定在于合约拒绝做什么，而不在于它多做了什么。",
+      "artAlt": "Bacha 机器的爆炸视图。",
+      "rows": {
+        "chain": {
+          "label": "链",
+          "value": "BNB Smart Chain。奖励是该链原生项目的 BEP-20 资产——不包含来自其他链的跨链映射资产。"
+        },
+        "contracts": {
+          "label": "合约",
+          "value": "两份：一份游戏合约，持有抽取、版本与结果；一份金库合约，持有库存，并且不会释放任何已被某次抽取占用的资产。"
+        },
+        "randomness": {
+          "label": "随机数",
+          "value": "我们自己运行的承诺—揭示信标。种子提前承诺，再与之后的区块哈希混合，推导过程是一个公开的视图函数。"
+        },
+        "rewards": {
+          "label": "奖励",
+          "value": "每项资产都要经过三重核验——可靠的收录来源、独立的链上索引，以及直接调用合约——才能出现在某张表中。"
+        }
+      }
+    },
+    "status": {
+      "index": "05",
+      "title": "项目实际进展到哪里。",
+      "body": "读自正在运行的应用，而不是写死在此处，因此不会与实际情况脱节。",
+      "auditTitle": "未经审计",
+      "auditBody": "没有第三方审查过这些合约。测试套件覆盖 70 个用例，其中包含跨任意操作序列的不变量，但测试是由写代码的同一批人写的，不能替代外部审查。",
+      "tokenTitle": "没有代币",
+      "tokenBody": "Bacha 没有原生代币。本站任何地方都未规划、描述或暗示代币，系统的任何部分也不依赖于某个代币的存在。"
+    },
+    "cta": {
+      "title": "先读，再决定。",
+      "body": "白皮书是本页的详尽版本。公平性控制台让你亲自核对一次抽取，而不是听我们说。",
+      "paper": "阅读白皮书",
+      "verify": "验证一次抽取",
+      "play": "试一台机器"
     }
   },
   "discovery": {
@@ -581,6 +727,7 @@
       "activity": "动态",
       "tokens": "代币",
       "fairness": "公平性",
+      "whitepaper": "白皮书",
       "contracts": "合约",
       "docs": "文档",
       "about": "关于",
@@ -626,7 +773,7 @@
       "network": "网络",
       "fairness": "公平性",
       "treasury": "金库",
-      "vrf": "Chainlink VRF",
+      "vrf": "承诺—揭示",
       "funded": "已注资",
       "notDeployed": "尚未部署"
     },
@@ -659,7 +806,7 @@
       "machineVersion": "机型版本",
       "randomWord": "随机数",
       "settlement": "结算方式",
-      "settlementVrf": "Chainlink VRF",
+      "settlementVrf": "承诺—揭示",
       "unknownAsset": "未知资产",
       "dialogLabel": "转动结果"
     },
@@ -688,7 +835,7 @@
       "network": "网络",
       "fairness": "公平性",
       "treasury": "金库",
-      "vrf": "Chainlink VRF",
+      "vrf": "承诺—揭示",
       "healthy": "充足",
       "notDeployed": "尚未部署",
       "distribution": "奖池分布",

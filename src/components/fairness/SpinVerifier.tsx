@@ -82,7 +82,7 @@ export function SpinVerifier() {
   }, [params, lookup])
 
   return (
-    <section id="verify" className="scroll-mt-28">
+    <section id="verify" className="scroll-mt-[11rem]">
       <div className="card-physical card-lit overflow-hidden">
         <div className="relative border-b border-border p-6 lg:p-7">
           <div className="flex flex-wrap items-baseline justify-between gap-3">

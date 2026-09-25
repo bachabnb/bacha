@@ -1,7 +1,7 @@
 import { PageHeader, Card, StatusPill } from '@/components/admin/AdminPrimitives'
 import { publicEnv, contractsConfigured, spinMode } from '@/lib/env'
 import { adminWallets } from '@/lib/admin/auth'
-import { vrfCoordinators, networkLabel } from '@/lib/chain'
+import { beacon, networkLabel } from '@/lib/chain'
 import { shortAddress } from '@/lib/format'
 import { tokenRegistryVersion } from '@/lib/tokens'
 import { machineConfigGeneratedAt } from '@/lib/machine'
@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic'
  * with a cookie would be the weakest link in the whole system.
  */
 export default function AdminSettings() {
-  const vrf = vrfCoordinators[publicEnv.chainId]
+  const vrf = beacon
   const wallets = adminWallets()
 
   return (
@@ -33,7 +33,7 @@ export default function AdminSettings() {
             <Row label="Network" value={networkLabel} />
             <Row label="Chain ID" value={String(publicEnv.chainId)} />
             <Row label="RPC" value={publicEnv.rpcUrl} />
-            <Row label="Settlement mode" value={spinMode === 'onchain' ? 'Onchain (VRF)' : 'Demo (simulated)'} />
+            <Row label="Settlement mode" value={spinMode === 'onchain' ? 'Onchain (commit–reveal)' : 'Demo (simulated)'} />
           </dl>
         </Card>
 
@@ -41,7 +41,7 @@ export default function AdminSettings() {
           <dl className="space-y-3 text-[0.82rem]">
             <Row label="BachaGame" value={publicEnv.gameAddress ?? 'Not set'} />
             <Row label="BachaVault" value={publicEnv.vaultAddress ?? 'Not set'} />
-            <Row label="VRF coordinator" value={vrf?.address ?? 'Unknown for this chain'} />
+            <Row label="Randomness beacon" value={vrf.address ?? 'Not deployed'} />
           </dl>
           <div className="mt-4">
             <StatusPill status={contractsConfigured ? 'HEALTHY' : 'UNFUNDED'} />

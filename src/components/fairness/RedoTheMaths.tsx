@@ -64,7 +64,7 @@ for entry in prizes:            # in published order
   }
 
   return (
-    <section id="math" className="scroll-mt-28">
+    <section id="math" className="scroll-mt-[11rem]">
       <SectionLabel index="05" />
       <h2 className="type-section mt-3 font-display font-extrabold text-foreground">{t('title')}</h2>
       <p className="mt-3 max-w-xl text-[0.98rem] leading-relaxed text-foreground-secondary">

@@ -26,6 +26,7 @@ export const publicEnv = {
   walletConnectProjectId: optional(process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID),
   gameAddress: normaliseAddress(process.env.NEXT_PUBLIC_BACHA_GAME_ADDRESS),
   vaultAddress: normaliseAddress(process.env.NEXT_PUBLIC_BACHA_VAULT_ADDRESS),
+  randomnessAddress: normaliseAddress(process.env.NEXT_PUBLIC_BACHA_RANDOMNESS_ADDRESS),
   siteUrl: optional(process.env.NEXT_PUBLIC_SITE_URL) ?? 'http://localhost:3000',
   /** Shows the environment ribbon. Never set in a production deploy. */
   showDevRibbon: process.env.NODE_ENV !== 'production',
@@ -39,12 +40,14 @@ function normaliseAddress(value: string | undefined): `0x${string}` | undefined 
 }
 
 /** True once real contracts are wired up on the configured chain. */
-export const contractsConfigured = Boolean(publicEnv.gameAddress && publicEnv.vaultAddress)
+export const contractsConfigured = Boolean(
+  publicEnv.gameAddress && publicEnv.vaultAddress && publicEnv.randomnessAddress,
+)
 
 /**
  * The machine runs in one of two modes and the UI always says which.
  *
- * `onchain` — spins are real transactions settled by Chainlink VRF.
+ * `onchain` — spins are real transactions settled by the commit–reveal beacon.
  * `demo`    — no contracts are deployed, so spins are simulated server-side
  *             and labelled as such. Demo randomness lives in its own module
  *             and never touches the production settlement path.
