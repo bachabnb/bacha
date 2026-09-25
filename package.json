@@ -20,7 +20,9 @@
     "art:optimize": "node scripts/optimize-art.mjs",
     "logo:process": "node scripts/process-logo.mjs",
     "randomness:worker": "node scripts/randomness-worker.mjs",
-    "randomness:commit": "node scripts/randomness-worker.mjs --commit-only"
+    "randomness:commit": "node scripts/randomness-worker.mjs --commit-only",
+    "treasury:plan": "node scripts/treasury-worker.mjs --once",
+    "treasury:worker": "node scripts/treasury-worker.mjs --live"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",
