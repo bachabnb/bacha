@@ -41,6 +41,9 @@
  *   BACHA_MAX_SPEND_PER_TICK_BNB  cap on one pass (default 0.05)
  *   BACHA_SWEEP_MIN_BNB           only sweep revenue above this (default 0.01)
  *   BACHA_POLL_MS                 loop interval (default 30000)
+ *   BACHA_RESERVE_BNB             hold this much before taking profit (default 0.13)
+ *   BACHA_PROFIT_ADDRESS          cold wallet for surplus. Unset = never take profit
+ *   BACHA_PROFIT_SPLIT_BPS        share of the surplus to take (default 5000 = 50%)
  *
  * Usage:
  *   node scripts/treasury-worker.mjs --quote     # print the best route per asset
@@ -73,12 +76,15 @@ const GAME = process.env.BACHA_GAME_ADDRESS
 const VAULT = process.env.BACHA_VAULT_ADDRESS
 const KEY = process.env.BACHA_TREASURY_KEY
 
-const TARGET_SPINS = BigInt(process.env.BACHA_TARGET_SPINS ?? 3)
+const TARGET_SPINS = BigInt(process.env.BACHA_TARGET_SPINS ?? 5)
 const GAS_FLOOR = parseEther(process.env.BACHA_GAS_FLOOR_BNB ?? '0.02')
 const SLIPPAGE_BPS = BigInt(process.env.BACHA_MAX_SLIPPAGE_BPS ?? 200)
 const MAX_SPEND = parseEther(process.env.BACHA_MAX_SPEND_PER_TICK_BNB ?? '0.05')
 const SWEEP_MIN = parseEther(process.env.BACHA_SWEEP_MIN_BNB ?? '0.01')
 const POLL_MS = Number(process.env.BACHA_POLL_MS ?? 30000)
+const RESERVE = parseEther(process.env.BACHA_RESERVE_BNB ?? '0.13')
+const PROFIT_ADDRESS = process.env.BACHA_PROFIT_ADDRESS
+const PROFIT_SPLIT_BPS = BigInt(process.env.BACHA_PROFIT_SPLIT_BPS ?? 5000)
 
 if (!RPC || !GAME || !VAULT || !KEY) {
   console.error('missing environment: BACHA_RPC_URL, BACHA_GAME_ADDRESS, BACHA_VAULT_ADDRESS and BACHA_TREASURY_KEY are all required')
@@ -295,7 +301,10 @@ async function tick() {
   const remaining = await readGame('remainingFundedSpins', [versionId])
   console.log(`machine can accept ${remaining} more spin(s); ${deficits.length} asset(s) below target`)
 
-  if (deficits.length === 0) return
+  if (deficits.length === 0) {
+    await takeProfit(deficits)
+    return
+  }
 
   // --- 3. budget ----------------------------------------------------------
   const balance = await publicClient.getBalance({ address: account.address })
@@ -361,8 +370,66 @@ async function tick() {
     }
   }
 
+  await takeProfit(await remainingDeficits(versionId))
+
   const bnbAfter = await publicClient.getBalance({ address: account.address })
   console.log(`treasury ${formatEther(bnbBefore)} -> ${formatEther(bnbAfter)} BNB`)
+}
+
+/** Re-checks inventory after buying, so profit is never taken on a stale read. */
+async function remainingDeficits(versionId) {
+  const short = []
+  for (const token of roster) {
+    const address = getAddress(token.address)
+    const [maxPer, liability, held] = await Promise.all([
+      readGame('versionMaxPerToken', [versionId, address]),
+      readGame('pendingLiabilityOf', [address]),
+      readVault('balanceOfAsset', [address]),
+    ])
+    if (maxPer === 0n) continue
+    if (held < maxPer * TARGET_SPINS + liability) short.push(token.symbol)
+  }
+  return short
+}
+
+/**
+ * Take profit, but only from genuine surplus.
+ *
+ * The order matters and is not negotiable: inventory first, then the reserve,
+ * and only what is left over is profit. Taking a cut before the machine is
+ * stocked would be borrowing from the float that keeps it running — the
+ * quickest way to turn a profitable machine into one that stalls.
+ *
+ * Half the surplus is left compounding by default, because the reserve is
+ * also what sets concurrency: a bigger float is a machine that can accept
+ * more simultaneous spins.
+ */
+async function takeProfit(deficits) {
+  if (!PROFIT_ADDRESS) return
+  if (deficits.length > 0) {
+    console.log('inventory still below target — no profit taken this pass')
+    return
+  }
+
+  const balance = await publicClient.getBalance({ address: account.address })
+  const floor = RESERVE + GAS_FLOOR
+  if (balance <= floor) {
+    console.log(`treasury ${formatEther(balance)} BNB is below the ${formatEther(floor)} reserve — compounding, not taking profit`)
+    return
+  }
+
+  const surplus = balance - floor
+  const take = (surplus * PROFIT_SPLIT_BPS) / 10000n
+  if (take === 0n) return
+
+  const to = getAddress(PROFIT_ADDRESS)
+  if (!LIVE) {
+    console.log(`would send ${formatEther(take)} BNB profit to ${to} (surplus ${formatEther(surplus)}, leaving ${formatEther(surplus - take)} compounding)`)
+    return
+  }
+  const hash = await wallet.sendTransaction({ to, value: take })
+  await publicClient.waitForTransactionReceipt({ hash })
+  console.log(`profit ${formatEther(take)} BNB -> ${to}  ${hash}  (left ${formatEther(surplus - take)} compounding)`)
 }
 
 /* ------------------------------------------------------------------- loop */
@@ -373,6 +440,7 @@ console.log(`treasury  ${account.address}`)
 console.log(`chain     ${chainId}`)
 console.log(`mode      ${LIVE ? 'LIVE' : 'DRY RUN (pass --live to transact)'}`)
 console.log(`target    ${TARGET_SPINS} concurrent spins stocked, gas floor ${formatEther(GAS_FLOOR)} BNB`)
+console.log(`profit    ${PROFIT_ADDRESS ? `${Number(PROFIT_SPLIT_BPS) / 100}% of surplus above ${formatEther(RESERVE)} BNB reserve -> ${PROFIT_ADDRESS}` : 'disabled (set BACHA_PROFIT_ADDRESS to enable)'}`)
 console.log('')
 
 /**

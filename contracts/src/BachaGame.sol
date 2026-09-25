@@ -125,6 +125,15 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
 
     /// @notice Unsettled spins per version, used for worst-case liability.
     mapping(uint64 versionId => uint256) public pendingSpins;
+
+    /// @notice Largest amount of `token` any single prize entry may promise.
+    /// @dev    Zero means unbounded. Admin-set, deliberately NOT operator-set:
+    ///         it exists to bound what a compromised operator key can do. Odds
+    ///         are retuned automatically as prices move, which means a hot key
+    ///         holds OPERATOR_ROLE in production, and without a ceiling that
+    ///         key could publish a table whose top prize is the whole vault
+    ///         and then win it. Set one for every approved asset.
+    mapping(address token => uint256) public prizeCeiling;
     EnumerableSet.UintSet private _activeVersions;
 
     /// @notice Settled prizes not yet claimed, per token.
@@ -141,6 +150,7 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
     event TierConfigured(uint8 indexed tierId, string label, uint96 price, uint64 versionId, bool active);
     event RandomnessUpdated(address indexed randomness);
     event RevealTimeoutUpdated(uint64 timeout);
+    event PrizeCeilingUpdated(address indexed token, uint256 ceiling);
 
     event SpinRequested(
         uint256 indexed spinId,
@@ -191,6 +201,7 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
     error NothingToWithdraw();
     error TransferFailed();
     error OnlyRandomness(address caller, address expected);
+    error PrizeExceedsCeiling(address token, uint256 amount, uint256 ceiling);
 
     // -------------------------------------------------------- construction
 
@@ -237,6 +248,11 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
             if (p.amount == 0) revert InvalidAmount();
             if (!vault.approvedAsset(p.token)) revert AssetNotApprovedByVault(p.token);
 
+            uint256 ceiling = prizeCeiling[p.token];
+            if (ceiling != 0 && p.amount > ceiling) {
+                revert PrizeExceedsCeiling(p.token, p.amount, ceiling);
+            }
+
             totalWeight += p.weight;
             stored.push(p);
 
@@ -271,6 +287,18 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         tier.active = active;
 
         emit TierConfigured(tierId, label, price, versionId, active);
+    }
+
+    /// @notice Bound the largest single prize that may ever be published for
+    ///         an asset. Zero removes the bound.
+    /// @dev    Admin-only on purpose. The operator key publishes tables; this
+    ///         is the limit it cannot cross. Existing published versions are
+    ///         untouched — like every other table rule, it applies at publish
+    ///         time and never rewrites a spin that already happened.
+    function setPrizeCeiling(address token, uint256 ceiling) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (token == address(0)) revert ZeroAddress();
+        prizeCeiling[token] = ceiling;
+        emit PrizeCeilingUpdated(token, ceiling);
     }
 
     /// @dev Admin rather than operator: pointing the machine at a different
