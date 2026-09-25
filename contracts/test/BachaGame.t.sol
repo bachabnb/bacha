@@ -199,11 +199,11 @@ contract BachaGameTest is BachaBase {
         uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
         BachaGame.Spin memory pending = game.getSpin(spinId);
 
-        coordinator.fulfill(pending.requestId, 100);
+        _settleRequest(pending.requestId, 100);
         uint256 owedAfterFirst = game.settledOwed(address(usd1));
 
         // A second delivery is ignored: no revert, no double accounting.
-        coordinator.fulfillAgain(pending.requestId, 9999);
+        _settleRequest(pending.requestId, 9999);
 
         BachaGame.Spin memory s = game.getSpin(spinId);
         assertEq(s.randomWord, 100, "outcome was overwritten by a replay");
@@ -229,7 +229,7 @@ contract BachaGameTest is BachaBase {
         uint256[] memory words = new uint256[](1);
         words[0] = 1;
 
-        vm.prank(address(coordinator));
+        vm.prank(address(randomness));
         game.rawFulfillRandomWords(123456, words); // must not revert
         assertEq(game.spinCount(), 0);
     }
@@ -418,12 +418,12 @@ contract BachaGameTest is BachaBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                BachaGame.RefundTooEarly.selector, spinId, uint64(block.timestamp) + game.vrfTimeout()
+                BachaGame.RefundTooEarly.selector, spinId, uint64(block.timestamp) + game.revealTimeout()
             )
         );
         game.refundExpiredSpin(spinId);
 
-        vm.warp(block.timestamp + game.vrfTimeout() + 1);
+        vm.warp(block.timestamp + game.revealTimeout() + 1);
         vm.prank(bob); // permissionless
         game.refundExpiredSpin(spinId);
 
@@ -438,11 +438,11 @@ contract BachaGameTest is BachaBase {
         uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
         BachaGame.Spin memory s = game.getSpin(spinId);
 
-        vm.warp(block.timestamp + game.vrfTimeout() + 1);
+        vm.warp(block.timestamp + game.revealTimeout() + 1);
         game.refundExpiredSpin(spinId);
 
         // A late VRF delivery is a no-op rather than a second payout.
-        coordinator.fulfill(s.requestId, 9950);
+        _settleRequest(s.requestId, 9950);
         assertEq(uint8(game.getSpin(spinId).status), uint8(BachaGame.SpinStatus.Refunded));
         assertEq(game.settledOwed(address(cake)), 0);
     }
@@ -450,7 +450,7 @@ contract BachaGameTest is BachaBase {
     function test_refundCannotBeTakenTwice() public {
         _fundGenerously();
         uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        vm.warp(block.timestamp + game.vrfTimeout() + 1);
+        vm.warp(block.timestamp + game.revealTimeout() + 1);
         game.refundExpiredSpin(spinId);
 
         vm.expectRevert(
@@ -493,7 +493,7 @@ contract BachaGameTest is BachaBase {
 
         vm.prank(alice);
         vm.expectRevert();
-        game.setVrfTimeout(1 hours);
+        game.setRevealTimeout(1 hours);
     }
 
     function test_onlyTreasurerCanWithdrawFees() public {
@@ -513,18 +513,18 @@ contract BachaGameTest is BachaBase {
         vault.payout(address(cake), alice, 1e18);
     }
 
-    function test_vrfTimeoutBounds() public {
+    function test_revealTimeoutBounds() public {
         vm.prank(operator);
         vm.expectRevert(BachaGame.InvalidTimeout.selector);
-        game.setVrfTimeout(1 minutes);
+        game.setRevealTimeout(1 minutes);
 
         vm.prank(operator);
         vm.expectRevert(BachaGame.InvalidTimeout.selector);
-        game.setVrfTimeout(8 days);
+        game.setRevealTimeout(8 days);
 
         vm.prank(operator);
-        game.setVrfTimeout(6 hours);
-        assertEq(game.vrfTimeout(), 6 hours);
+        game.setRevealTimeout(6 hours);
+        assertEq(game.revealTimeout(), 6 hours);
     }
 
     // --------------------------------------------------- unusual ERC20s
@@ -606,7 +606,7 @@ contract BachaGameTest is BachaBase {
 
     // ------------------------------------------------------------- fuzzing
 
-    /// @dev Whatever the coordinator returns, exactly one prize from the frozen
+    /// @dev Whatever the beacon returns, exactly one prize from the frozen
     ///      table comes out, and it is always one the vault can actually pay.
     function testFuzz_anyRandomWordYieldsExactlyOneValidPrize(uint256 word) public {
         _fundGenerously();

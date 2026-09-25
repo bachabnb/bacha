@@ -3,9 +3,9 @@
 An onchain gacha game for discovering BNB Chain tokens.
 
 You pay a fixed price for one spin, the contract picks exactly one reward from
-a prize table that was frozen the moment you paid, and Chainlink VRF decides
-which one. The odds are published, the randomness is verifiable, and the
-result is permanently recorded.
+a prize table that was frozen the moment you paid, and a commit–reveal beacon
+decides which one. The odds are published, the result can be recomputed by
+anyone from public inputs, and it is permanently recorded.
 
 **Built on BNB Smart Chain.** Bacha is an independent project and is not
 operated, endorsed or sponsored by BNB Chain, Binance, or any token issuer
@@ -57,7 +57,7 @@ forge build
 | **Wallet** | wagmi + viem, injected + WalletConnect |
 | **i18n** | next-intl, locale-prefixed routes (`/en`, `/zh-CN`) |
 | **Contracts** | Solidity 0.8.28, OpenZeppelin v5, Foundry |
-| **Randomness** | Chainlink VRF v2.5 |
+| **Randomness** | `BachaRandomness` — first-party commit–reveal beacon |
 | **Art** | OpenAI Images, generated once at build time |
 
 ### Layout
@@ -103,9 +103,9 @@ entry at once. When inventory falls short the machine refuses new spins and
 leaves pending obligations untouched. This is enforced by an invariant, not
 just a unit test.
 
-### The VRF callback cannot fail
+### The randomness callback cannot fail
 
-`fulfillRandomWords` writes storage and nothing else: no transfers, no external
+`rawFulfillRandomWords` writes storage and nothing else: no transfers, no external
 calls, no unbounded loops. Moving the prize is a separate, permissionless
 `claimFor(spinId)` whose destination was fixed before randomness existed — so a
 settlement bot can trigger it on a player's behalf without taking custody or
