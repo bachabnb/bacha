@@ -38,6 +38,23 @@ const R = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3 }
  * is what funds inventory. GIGGLE is deliberately a small amount despite its
  * unit price: its 24h turnover is thin, and a reward that cannot be sold near
  * the shown price is not worth what it appears to be.
+ *
+ * The epic entries are sized against working capital, not just against
+ * expected value. The contract reserves the largest entry for *every* asset
+ * on *every* pending spin, so the rarest prizes set the capital floor far
+ * more than they set the payout: at 1% weight they were ~4% of expected
+ * payout but ~64% of the reservation. Halving them buys two-thirds more
+ * concurrent spins from the same float for ~1 point of RTP.
+ *
+ * Halving also moved GIGGLE out of the epic band. At 0.075 it is worth about
+ * $3, which is less than the 9.5 B2 rare — an "epic" that pays less than a
+ * rare is a lie told by a label, so it sits in the band its value actually
+ * belongs to and ASTER carries the epic alone. Weights are redistributed so
+ * the published 68/23/8/1 split is unchanged.
+ *
+ * Bands must stay ordered: every epic amount is worth more than every rare,
+ * every rare more than every uncommon, and so on. Reference prices move, so
+ * check this after any amount change.
  */
 const machines = [
   {
@@ -51,11 +68,11 @@ const machines = [
       ['b2', 4.5, 1400, R.UNCOMMON],
       ['lobster', 20, 900, R.UNCOMMON],
 
-      ['aster', 5.5, 500, R.RARE],
-      ['b2', 9.5, 300, R.RARE],
+      ['aster', 5.5, 450, R.RARE],
+      ['b2', 9.5, 280, R.RARE],
+      ['giggle', 0.075, 70, R.RARE],
 
-      ['giggle', 0.15, 70, R.EPIC],
-      ['aster', 16, 30, R.EPIC],
+      ['aster', 8, 100, R.EPIC],
     ],
   },
 ]

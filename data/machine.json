@@ -11,15 +11,15 @@
       "priceWei": "3900000000000000",
       "referencePriceUsd": 2.99,
       "totalWeight": 10000,
-      "localTableHash": "0x1e911cea41ec13caabf14298fc12d463f1cdaa6b14a5431eb4c49afb099a07f7",
+      "localTableHash": "0x5e4dac4b5c056f8f8fc9d6cffa18174ba65a5c11257e487f6ac13b95784d1a8f",
       "rarityShare": [
         0.68,
         0.23,
         0.08,
         0.01
       ],
-      "expectedValueUsd": 1.8686,
-      "referenceReturnToPlayer": 0.6258,
+      "expectedValueUsd": 1.8412,
+      "referenceReturnToPlayer": 0.6166,
       "prizes": [
         {
           "tokenId": "mubarak",
@@ -83,7 +83,7 @@
           "decimals": 18,
           "amount": 5.5,
           "amountUnits": "5500000000000000000",
-          "weight": 500,
+          "weight": 450,
           "rarity": 2,
           "valueUsd": 3.9122
         },
@@ -94,7 +94,7 @@
           "decimals": 18,
           "amount": 9.5,
           "amountUnits": "9500000000000000000",
-          "weight": 300,
+          "weight": 280,
           "rarity": 2,
           "valueUsd": 4.6806
         },
@@ -103,22 +103,22 @@
           "token": "0x20d6015660b3fe52e6690a889b5C51F69902cE0e",
           "symbol": "GIGGLE",
           "decimals": 18,
-          "amount": 0.15,
-          "amountUnits": "150000000000000000",
+          "amount": 0.075,
+          "amountUnits": "75000000000000000",
           "weight": 70,
-          "rarity": 3,
-          "valueUsd": 6.0795
+          "rarity": 2,
+          "valueUsd": 3.0398
         },
         {
           "tokenId": "aster",
           "token": "0x000Ae314E2A2172a039B26378814C252734f556A",
           "symbol": "ASTER",
           "decimals": 18,
-          "amount": 16,
-          "amountUnits": "16000000000000000000",
-          "weight": 30,
+          "amount": 8,
+          "amountUnits": "8000000000000000000",
+          "weight": 100,
           "rarity": 3,
-          "valueUsd": 11.3808
+          "valueUsd": 5.6904
         }
       ]
     }

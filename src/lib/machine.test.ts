@@ -168,6 +168,27 @@ describe('machine configuration', () => {
     }
   })
 
+  it('keeps rarity bands strictly ordered by value', () => {
+    // A label is a promise about relative worth. Halving the epics once left
+    // an EPIC paying less than a RARE, which no player would forgive and no
+    // amount of small print excuses. Every entry in a band must be worth more
+    // than every entry in the band below it.
+    for (const machine of machines) {
+      const byRarity = new Map<number, number[]>()
+      machine.prizes.forEach((prize) => {
+        const index = RARITIES.indexOf(prize.rarity)
+        byRarity.set(index, [...(byRarity.get(index) ?? []), prize.referenceValueUsd])
+      })
+
+      const bands = [...byRarity.entries()].sort((a, b) => a[0] - b[0])
+      for (let i = 1; i < bands.length; i++) {
+        const below = Math.max(...bands[i - 1][1])
+        const here = Math.min(...bands[i][1])
+        expect(here, `${machine.id}: ${RARITIES[bands[i][0]]} floor vs ${RARITIES[bands[i - 1][0]]} ceiling`).toBeGreaterThan(below)
+      }
+    }
+  })
+
   it('is a single machine', () => {
     // A product decision, not an accident of configuration: with one unit
     // there is no "better deal" to imply and nothing for a player to weigh up.
