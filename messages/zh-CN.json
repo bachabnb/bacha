@@ -65,19 +65,7 @@
       "play": {
         "bacha": {
           "title": "开始游戏",
-          "description": "转动一次"
-        },
-        "quick": {
-          "title": "Quick",
-          "description": "{price} 机型"
-        },
-        "boost": {
-          "title": "Boost",
-          "description": "{price} 机型"
-        },
-        "max": {
-          "title": "Max",
-          "description": "{price} 机型"
+          "description": "每次抽取 {price}"
         },
         "me": {
           "title": "我的 Bacha",
@@ -239,23 +227,17 @@
     }
   },
   "tiers": {
-    "eyebrow": "机型",
-    "title": "选择你的机器。",
-    "body": "三种机型，同一套奖励阵容。档位越高，单次费用越高，奖池表也越向稀有端倾斜——下方概率直接来自各机型的奖池表。",
-    "quick": {
-      "note": "日常的一次转动。"
-    },
-    "boost": {
-      "note": "稀有端权重更高。"
-    },
-    "max": {
-      "note": "阵容里的每一种稀有资产。"
-    },
+    "eyebrow": "这台机器",
+    "title": "一台机器，一张表。",
+    "body": "没有档位需要权衡，也没有加价推荐。名单上的每一项资产都在这一张奖品表里，下面的概率直接来自它。",
     "possibleRewards": "可能的奖励",
     "prizeEntries": "奖项条目",
     "tokens": "{count} 种代币",
-    "spinTier": "转动 {tier}",
-    "priceNote": "以 BNB 计价。美元金额为估算值，会随行情变动。"
+    "spinTier": "抽取 {tier}",
+    "priceNote": "以 BNB 计价。美元金额为估算值，会随行情变动。",
+    "bacha": {
+      "note": "名单上的每一项资产。"
+    }
   },
   "activity": {
     "eyebrow": "来自链上",
@@ -721,7 +703,7 @@
     },
     "links": {
       "play": "开始游戏",
-      "machines": "机型",
+      "machines": "这台机器",
       "me": "我的 Bacha",
       "rewards": "奖励",
       "activity": "动态",

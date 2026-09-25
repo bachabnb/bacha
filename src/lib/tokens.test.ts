@@ -31,9 +31,28 @@ describe('token registry', () => {
     }
   })
 
-  it('keeps BABYDOGE at 9 decimals, which is what the contract declares', () => {
-    // Worth pinning: assuming 18 here would overstate a reward by a billion.
-    expect(tokenById('babydoge')?.decimals).toBe(9)
+  it('pins every roster address and its decimals to what was verified onchain', () => {
+    // The roster is a deliberate selection, and decimals are read from the
+    // contract, never assumed — getting either wrong pays out the wrong asset
+    // or the wrong amount by orders of magnitude. Changing this table should
+    // require the same verification that produced it.
+    const verified: Record<string, [`0x${string}`, number]> = {
+      b2: ['0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2', 18],
+      lobster: ['0xeCCBb861c0dda7eFd964010085488B69317e4444', 18],
+      marscoin: ['0xFe189E97832DA1573e4e4Ff034F4fFC3a15c7777', 18],
+      mubarak: ['0x5C85D6C6825aB4032337F11Ee92a72DF936b46F6', 18],
+      aster: ['0x000Ae314E2A2172a039B26378814C252734f556A', 18],
+      giggle: ['0x20d6015660b3fe52e6690a889b5C51F69902cE0e', 18],
+    }
+
+    expect(allTokens.map((t) => t.id).sort()).toEqual(Object.keys(verified).sort())
+
+    for (const [id, [address, decimals]] of Object.entries(verified)) {
+      const token = tokenById(id)
+      expect(token, id).toBeDefined()
+      expect(token!.address.toLowerCase(), id).toBe(address.toLowerCase())
+      expect(token!.decimals, id).toBe(decimals)
+    }
   })
 
   it('carries a verification date and independent sources for every entry', () => {

@@ -158,7 +158,7 @@ export const en: WhitepaperContent = {
             {
               n: '01',
               title: 'Player selects a machine',
-              body: 'Each machine is a tier with its own price and its own prize table.',
+              body: 'The machine is a tier with its own price and its own prize table. Only one is configured.',
               technical: 'Tiers are stored as { exists, active, price, versionId, label } and read with getTier(uint8).',
             },
             {
@@ -211,14 +211,14 @@ export const en: WhitepaperContent = {
     {
       id: 'machine-tiers',
       index: '05',
-      title: 'Machine tiers',
-      lede: 'Three machines, one roster.',
+      title: 'The machine',
+      lede: 'One machine, one table.',
       blocks: [
         { t: 'live', kind: 'machines' },
         {
           t: 'callout',
           kind: 'important',
-          text: 'A higher tier costs more and weights its table further toward the rare end. It is a different distribution, not a better deal, and it carries no implication of profitability.',
+          text: 'There is one machine and one prize table. The contract supports several tiers and the interface will render them, but none are configured — so there is no tier to weigh up, no upsell, and nothing that could imply one machine is a better deal than another.',
         },
       ],
     },
@@ -729,7 +729,7 @@ for entry in prizes:            # in published order
           items: [
             { label: 'BNB Smart Chain', value: 'The EVM chain Bacha runs on. Chain ID 56 for mainnet, 97 for testnet.' },
             { label: 'BEP-20', value: 'The token standard rewards use. Equivalent in shape to ERC-20.' },
-            { label: 'Machine', value: 'A tier with its own price and prize table. Quick, Boost and Max.' },
+            { label: 'Machine', value: 'A tier with its own price and prize table. One is configured.' },
             { label: 'Machine version', value: 'An immutable snapshot of a prize table. Spins are stamped with one.' },
             { label: 'Prize table', value: 'The list of entries a spin can resolve to, each with an amount, weight and rarity.' },
             { label: 'Weight', value: 'An entry’s share of the total. Probability is weight divided by total weight.' },

@@ -161,7 +161,7 @@ export const zhCN: WhitepaperContent = {
             {
               n: '01',
               title: '玩家选择机器',
-              body: '每台机器是一个档位，拥有各自的价格与各自的奖品表。',
+              body: '这台机器就是一个档位，拥有自己的价格与奖品表。当前只配置了一个。',
               technical: '档位以 { exists, active, price, versionId, label } 存储，通过 getTier(uint8) 读取。',
             },
             {
@@ -214,14 +214,14 @@ export const zhCN: WhitepaperContent = {
     {
       id: 'machine-tiers',
       index: '05',
-      title: '机器档位',
-      lede: '三台机器，同一份资产名单。',
+      title: '这台机器',
+      lede: '一台机器，一张表。',
       blocks: [
         { t: 'live', kind: 'machines' },
         {
           t: 'callout',
           kind: 'important',
-          text: '更高的档位价格更高，其奖品表也更偏向稀有一端。那是一条不同的分布曲线，而不是更划算的买卖，更不意味着能够盈利。',
+          text: '只有一台机器、一张奖品表。合约支持多个档位，界面也能渲染它们，但目前没有配置任何其他档位——因此没有档位需要权衡，没有加价推荐，也不存在「哪台更划算」的暗示。',
         },
       ],
     },
@@ -732,7 +732,7 @@ for entry in prizes:            # in published order
           items: [
             { label: 'BNB Smart Chain', value: 'Bacha 运行其上的 EVM 链。主网链 ID 为 56，测试网为 97。' },
             { label: 'BEP-20', value: '奖励所使用的代币标准，形态上等同于 ERC-20。' },
-            { label: '机器', value: '一个拥有自身价格与奖品表的档位。共有 Quick、Boost 与 Max。' },
+            { label: '机器', value: '一个拥有自身价格与奖品表的档位。当前配置了一个。' },
             { label: '机器版本', value: '一张奖品表的不可变快照。每次抽取都会被打上其中之一。' },
             { label: '奖品表', value: '一次抽取可能落到的条目列表，每条带有数量、权重与稀有度。' },
             { label: '权重', value: '某个条目在总权重中所占的份额。概率即权重除以总权重。' },

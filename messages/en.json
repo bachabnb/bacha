@@ -65,19 +65,7 @@
       "play": {
         "bacha": {
           "title": "Play Bacha",
-          "description": "Start a spin"
-        },
-        "quick": {
-          "title": "Quick",
-          "description": "{price} machine"
-        },
-        "boost": {
-          "title": "Boost",
-          "description": "{price} machine"
-        },
-        "max": {
-          "title": "Max",
-          "description": "{price} machine"
+          "description": "{price} a spin"
         },
         "me": {
           "title": "My Bacha",
@@ -239,23 +227,17 @@
     }
   },
   "tiers": {
-    "eyebrow": "Machines",
-    "title": "Pick your machine.",
-    "body": "Three tiers, one roster. Higher tiers cost more per pull and weight the table further toward the rare end — the odds below come straight from each machine's prize table.",
-    "quick": {
-      "note": "The everyday pull."
-    },
-    "boost": {
-      "note": "More weight on the deep end."
-    },
-    "max": {
-      "note": "Every rare on the roster."
-    },
+    "eyebrow": "The machine",
+    "title": "One machine, one table.",
+    "body": "There is no tier to weigh up and no upsell. Every asset on the roster sits in this one prize table, and the odds below come straight from it.",
     "possibleRewards": "Possible rewards",
     "prizeEntries": "Prize entries",
     "tokens": "{count} tokens",
     "spinTier": "Spin {tier}",
-    "priceNote": "Priced in BNB. The dollar figure is an estimate that moves with the market."
+    "priceNote": "Priced in BNB. The dollar figure is an estimate that moves with the market.",
+    "bacha": {
+      "note": "Every asset on the roster."
+    }
   },
   "activity": {
     "eyebrow": "Live from the chain",
@@ -721,7 +703,7 @@
     },
     "links": {
       "play": "Play",
-      "machines": "Machines",
+      "machines": "The machine",
       "me": "My Bacha",
       "rewards": "Rewards",
       "activity": "Activity",

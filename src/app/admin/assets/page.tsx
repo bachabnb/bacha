@@ -92,10 +92,11 @@ export default function AdminAssets() {
       </Card>
 
       <p className="mt-4 max-w-3xl text-[0.78rem] leading-relaxed text-foreground-muted">
-        Assets flagged with transfer notes need care: BABYDOGE uses 9 decimals and has a
-        fee-on-transfer history, which is why the vault credits the measured balance delta rather
-        than the requested amount. LISTA has thin on-DEX liquidity, so its prize amounts are kept
-        small.
+        Assets flagged with transfer notes need care. Decimals are read from the contract and never
+        assumed, and the vault credits the measured balance delta rather than the requested amount,
+        so a fee-on-transfer asset cannot leave the accounting short. Thin on-DEX liquidity keeps
+        prize amounts small — a reward that cannot be sold near the shown price is not worth what
+        it appears to be.
       </p>
     </>
   )
