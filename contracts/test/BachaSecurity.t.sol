@@ -41,7 +41,7 @@ contract BachaSecurityTest is BachaBase {
         vm.deal(address(attacker), 1 ether);
 
         attacker.startSpin(TIER_QUICK, QUICK_PRICE);
-        vm.warp(block.timestamp + game.vrfTimeout() + 1);
+        vm.warp(block.timestamp + game.revealTimeout() + 1);
 
         uint256 gameBalanceBefore = address(game).balance;
         attacker.triggerRefund();
@@ -122,11 +122,11 @@ contract BachaSecurityTest is BachaBase {
         uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
         BachaGame.Spin memory s = game.getSpin(spinId);
 
-        // Even the coordinator address cannot rewrite the outcome after the fact.
+        // Even the beacon itself cannot rewrite the outcome after the fact.
         _settle(spinId, 100);
         uint256[] memory words = new uint256[](1);
         words[0] = 9999;
-        vm.prank(address(coordinator));
+        vm.prank(address(randomness));
         game.rawFulfillRandomWords(s.requestId, words);
 
         assertEq(game.getSpin(spinId).rewardToken, address(usd1));

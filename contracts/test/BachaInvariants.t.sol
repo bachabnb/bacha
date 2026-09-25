@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {BachaGame} from "../src/BachaGame.sol";
 import {BachaVault} from "../src/BachaVault.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
-import {MockVRFCoordinator} from "../src/mocks/MockVRFCoordinator.sol";
+import {BachaRandomness} from "../src/BachaRandomness.sol";
 
 /// @notice Drives the machine through arbitrary sequences of player and
 ///         operator actions so the invariants below are checked against states
@@ -13,7 +13,8 @@ import {MockVRFCoordinator} from "../src/mocks/MockVRFCoordinator.sol";
 contract BachaHandler is Test {
     BachaGame public game;
     BachaVault public vault;
-    MockVRFCoordinator public coordinator;
+    BachaRandomness public randomness;
+    address public committer;
     MockERC20[3] public tokens;
     address public operator;
     address public treasurer;
@@ -32,17 +33,36 @@ contract BachaHandler is Test {
     constructor(
         BachaGame game_,
         BachaVault vault_,
-        MockVRFCoordinator coordinator_,
+        BachaRandomness randomness_,
         MockERC20[3] memory tokens_,
         address operator_,
-        address treasurer_
+        address treasurer_,
+        address committer_
     ) {
         game = game_;
         vault = vault_;
-        coordinator = coordinator_;
+        randomness = randomness_;
+        committer = committer_;
         tokens = tokens_;
         operator = operator_;
         treasurer = treasurer_;
+    }
+
+    /// @dev Mirrors the fixture's seed derivation so a reveal can be produced.
+    function _seed(uint256 i) internal pure returns (bytes32) {
+        return keccak256(abi.encode("bacha-invariant-seed", i));
+    }
+
+    /// @dev The beacon runs dry as spins consume it, exactly as in production.
+    function _topUpCommitments() internal {
+        if (randomness.availableCommitments() > 4) return;
+        uint256 start = randomness.commitmentCount();
+        bytes32[] memory hashes = new bytes32[](32);
+        for (uint256 i; i < 32; ++i) {
+            hashes[i] = keccak256(abi.encode(_seed(start + i)));
+        }
+        vm.prank(committer);
+        randomness.commit(hashes);
     }
 
     function _player(uint256 seed) internal returns (address who) {
@@ -60,6 +80,8 @@ contract BachaHandler is Test {
         }
         if (!t.active) return;
 
+        _topUpCommitments();
+
         address who = _player(seed);
         vm.prank(who);
         try game.spin{value: t.price}(tier) returns (uint256 spinId) {
@@ -73,7 +95,11 @@ contract BachaHandler is Test {
         }
     }
 
-    function settle(uint256 index, uint256 word) external {
+    /// @param blocksAhead fuzzed. Small values settle; large ones can push a
+    ///        request past the 256-block blockhash window, which is a real
+    ///        production state — those spins stay pending and fall through to
+    ///        the refund path, and the invariants must hold either way.
+    function settle(uint256 index, uint256 blocksAhead) external {
         if (pendingSpinIds.length == 0) return;
         index = index % pendingSpinIds.length;
         uint256 spinId = pendingSpinIds[index];
@@ -83,7 +109,15 @@ contract BachaHandler is Test {
             _removePending(index);
             return;
         }
-        coordinator.fulfill(s.requestId, word);
+
+        BachaRandomness.Request memory req = randomness.getRequest(s.requestId);
+        vm.roll(block.number + (blocksAhead % 8) + randomness.revealDelay() + 1);
+        if (!randomness.revealable(s.requestId)) return;
+
+        vm.prank(committer);
+        randomness.reveal(s.requestId, _seed(req.commitmentIndex));
+
+        if (game.getSpin(spinId).status != BachaGame.SpinStatus.Settled) return;
         _removePending(index);
         settledSpinIds.push(spinId);
     }
@@ -202,34 +236,27 @@ contract BachaHandler is Test {
 contract BachaInvariantTest is Test {
     BachaGame internal game;
     BachaVault internal vault;
-    MockVRFCoordinator internal coordinator;
+    BachaRandomness internal randomness;
     BachaHandler internal handler;
     MockERC20[3] internal tokens;
 
     address internal admin = makeAddr("admin");
     address internal operator = makeAddr("operator");
     address internal treasurer = makeAddr("treasurer");
+    address internal committer = makeAddr("committer");
 
     function setUp() public {
-        coordinator = new MockVRFCoordinator();
+        vm.prank(admin);
+        randomness = new BachaRandomness(admin, committer);
+        vm.roll(100);
         tokens[0] = new MockERC20("Alpha", "ALPHA", 18);
         tokens[1] = new MockERC20("Beta", "BETA", 6);
         tokens[2] = new MockERC20("Gamma", "GAMMA", 9);
 
         vm.startPrank(admin);
         vault = new BachaVault(admin);
-        game = new BachaGame(
-            admin,
-            address(vault),
-            address(coordinator),
-            BachaGame.VrfConfig({
-                keyHash: bytes32(uint256(1)),
-                subId: 1,
-                requestConfirmations: 3,
-                callbackGasLimit: 500_000,
-                nativePayment: false
-            })
-        );
+        game = new BachaGame(admin, address(vault), address(randomness));
+        randomness.grantRole(randomness.CONSUMER_ROLE(), address(game));
         vault.setGame(address(game));
         for (uint256 i; i < 3; ++i) {
             vault.setAssetApproved(address(tokens[i]), true);
@@ -253,7 +280,7 @@ contract BachaInvariantTest is Test {
         game.configureTier(2, "MAX", 0.0065 ether, v, true);
         vm.stopPrank();
 
-        handler = new BachaHandler(game, vault, coordinator, tokens, operator, treasurer);
+        handler = new BachaHandler(game, vault, randomness, tokens, operator, treasurer, committer);
 
         // Seed inventory so the machine can actually run.
         for (uint256 i; i < 3; ++i) {

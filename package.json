@@ -2,7 +2,7 @@
   "name": "bacha",
   "version": "0.1.0",
   "private": true,
-  "description": "Bacha — an onchain gacha game for discovering BNB Chain tokens.",
+  "description": "Bacha \u2014 an onchain gacha game for discovering BNB Chain tokens.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -18,7 +18,9 @@
     "contracts:test": "cd contracts && forge test -vv",
     "art:list": "node scripts/generate-bacha-art.mjs --list",
     "art:optimize": "node scripts/optimize-art.mjs",
-    "logo:process": "node scripts/process-logo.mjs"
+    "logo:process": "node scripts/process-logo.mjs",
+    "randomness:worker": "node scripts/randomness-worker.mjs",
+    "randomness:commit": "node scripts/randomness-worker.mjs --commit-only"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",

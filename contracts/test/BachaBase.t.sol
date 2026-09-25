@@ -5,15 +5,23 @@ import {Test} from "forge-std/Test.sol";
 import {BachaGame} from "../src/BachaGame.sol";
 import {BachaVault} from "../src/BachaVault.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
-import {MockVRFCoordinator} from "../src/mocks/MockVRFCoordinator.sol";
+import {BachaRandomness} from "../src/BachaRandomness.sol";
 
-/// @notice Shared fixture: a vault, a game, a coordinator and a small roster
-///         of reward assets that mirrors the shape of the real one (including
-///         a 9-decimal token, because BABYDOGE is 9 decimals in production).
+/// @notice Shared fixture: a vault, a game, a randomness beacon and a small
+///         roster of reward assets that mirrors the shape of the real one
+///         (including a 9-decimal token, because BABYDOGE is 9 in production).
+///
+/// @dev    Most tests need to land a spin on a *specific* prize, which a
+///         commit–reveal word cannot be steered to. `_settle` therefore
+///         impersonates the beacon and delivers a chosen word straight to the
+///         game's callback — the access check is still real, only the source
+///         of the number is substituted. The beacon's own mechanics (commit,
+///         reveal, blockhash window, replay, retry) are covered end to end in
+///         BachaRandomness.t.sol against the real contract.
 abstract contract BachaBase is Test {
     BachaVault internal vault;
     BachaGame internal game;
-    MockVRFCoordinator internal coordinator;
+    BachaRandomness internal randomness;
 
     MockERC20 internal cake;
     MockERC20 internal usd1;
@@ -25,6 +33,7 @@ abstract contract BachaBase is Test {
     address internal alice = makeAddr("alice");
     address internal bob = makeAddr("bob");
     address internal bot = makeAddr("settlement-bot");
+    address internal committer = makeAddr("committer");
 
     uint8 internal constant TIER_QUICK = 0;
     uint8 internal constant TIER_BOOST = 1;
@@ -37,7 +46,12 @@ abstract contract BachaBase is Test {
     uint64 internal v1;
 
     function setUp() public virtual {
-        coordinator = new MockVRFCoordinator();
+        vm.prank(admin);
+        randomness = new BachaRandomness(admin, committer);
+        _commitSeeds(256);
+
+        // blockhash(0) is zero, and a reveal needs a real hash to mix in.
+        vm.roll(100);
 
         cake = new MockERC20("PancakeSwap", "CAKE", 18);
         usd1 = new MockERC20("USD1", "USD1", 18);
@@ -45,18 +59,8 @@ abstract contract BachaBase is Test {
 
         vm.startPrank(admin);
         vault = new BachaVault(admin);
-        game = new BachaGame(
-            admin,
-            address(vault),
-            address(coordinator),
-            BachaGame.VrfConfig({
-                keyHash: bytes32(uint256(0xbeef)),
-                subId: 1,
-                requestConfirmations: 3,
-                callbackGasLimit: 500_000,
-                nativePayment: false
-            })
-        );
+        game = new BachaGame(admin, address(vault), address(randomness));
+        randomness.grantRole(randomness.CONSUMER_ROLE(), address(game));
         vault.setGame(address(game));
         vault.setAssetApproved(address(cake), true);
         vault.setAssetApproved(address(usd1), true);
@@ -132,8 +136,36 @@ abstract contract BachaBase is Test {
         spinId = game.spin{value: price}(tier);
     }
 
+    /// @dev The seed for commitment `i`, deterministic so a test can reveal it.
+    function _seed(uint256 i) internal pure returns (bytes32) {
+        return keccak256(abi.encode("bacha-test-seed", i));
+    }
+
+    function _commitSeeds(uint256 count) internal {
+        bytes32[] memory hashes = new bytes32[](count);
+        uint256 start = randomness.commitmentCount();
+        for (uint256 i; i < count; ++i) {
+            hashes[i] = keccak256(abi.encode(_seed(start + i)));
+        }
+        vm.prank(committer);
+        randomness.commit(hashes);
+    }
+
+    /// @dev Deliver a chosen word as the beacon would. See the note above.
     function _settle(uint256 spinId, uint256 word) internal {
         BachaGame.Spin memory s = game.getSpin(spinId);
-        coordinator.fulfill(s.requestId, word);
+        uint256[] memory words = new uint256[](1);
+        words[0] = word;
+        vm.prank(address(randomness));
+        game.rawFulfillRandomWords(s.requestId, words);
+    }
+
+    /// @dev Deliver a word against a raw request id (for duplicate-delivery
+    ///      and unknown-request assertions).
+    function _settleRequest(uint256 requestId, uint256 word) internal {
+        uint256[] memory words = new uint256[](1);
+        words[0] = word;
+        vm.prank(address(randomness));
+        game.rawFulfillRandomWords(requestId, words);
     }
 }

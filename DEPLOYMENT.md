@@ -11,7 +11,7 @@ and nothing is ever broken in between.
 You need:
 
 - a **multisig** for admin authority on mainnet — not an EOA
-- a funded **Chainlink VRF v2.5 subscription** on the target chain
+- a **committer key** for the randomness worker — a hot EOA holding gas only
 - reward-token inventory to fund the vault with
 - a deployer key holding only gas
 
@@ -29,16 +29,14 @@ You need:
 ```bash
 cd contracts
 cp ../.env.example .env        # fill in the contract section
-forge test                     # 51 tests must pass
+forge test                     # 70 tests must pass
 ```
 
-Chainlink VRF v2.5 coordinators — **confirm against docs.chain.link**, these
-do get rotated:
-
-| Chain | Coordinator |
-|---|---|
-| BNB mainnet (56) | `0xd691f04bc0C9a24Edb78af9E005Cf85768F694C9` |
-| BNB testnet (97) | `0xDA3b641D438362C440Ac5458c57e00a712b66700` |
+Randomness is first-party: `BachaRandomness` is deployed alongside the game by
+the same script, so there is no third-party coordinator to look up or fund.
+What it does need is `BACHA_COMMITTER` — the address the reveal worker signs
+with. Keep it separate from `BACHA_ADMIN`: it is a hot key, and the worst it
+can do is refuse to reveal.
 
 ### Deploy
 
@@ -53,17 +51,35 @@ forge script script/Deploy.s.sol:Deploy \
   -vvvv
 ```
 
-The script prints `BACHA_VAULT_ADDRESS` and `BACHA_GAME_ADDRESS`. It
-deliberately stops short of publishing a prize table or activating tiers —
+The script prints `BACHA_VAULT_ADDRESS`, `BACHA_GAME_ADDRESS` and
+`BACHA_RANDOMNESS_ADDRESS`. It deliberately stops short of publishing a prize
+table, activating tiers or committing seeds —
 odds and inventory are an operational decision made against a funded vault,
 not a deploy-time constant.
 
-### Register the VRF consumer
+### Start the randomness worker
 
-Add `BACHA_GAME_ADDRESS` as a consumer on your subscription at
-[vrf.chain.link](https://vrf.chain.link), and fund it. **Spins will accept
-payment and then never settle if you skip this** — players would have to wait
-out `vrfTimeout` and refund. Verify before activating any tier.
+The beacon must hold committed seeds before anyone can spin. Until it does,
+`spin()` reverts with `NoCommitmentAvailable` — the machine refuses to sell a
+spin it cannot settle, which is the safe failure.
+
+```bash
+export BACHA_RPC_URL=...
+export BACHA_RANDOMNESS_ADDRESS=...   # printed by the deploy script
+export BACHA_COMMITTER_KEY=...        # the hot key, gas only
+export BACHA_SEED_STORE=/var/lib/bacha/seeds.json
+
+npm run randomness:commit   # one batch, to prove the wiring
+npm run randomness:worker   # then run this as a service
+```
+
+> **Back up the seed store.** A commitment whose seed is lost can never be
+> opened, and every spin bound to it must be refunded through the timeout.
+> It is also secret until revealed — whoever holds it knows outcomes early.
+
+The worker tops the queue up automatically and reveals each request once its
+reveal block is mined. If it stops, spins accumulate as pending and become
+refundable after `revealTimeout`; nothing is lost, but the machine stalls.
 
 ### Approve and fund reward assets
 
@@ -124,8 +140,7 @@ forge verify-contract $BACHA_GAME_ADDRESS src/BachaGame.sol:BachaGame \
   --etherscan-api-key $BSCSCAN_API_KEY \
   --constructor-args $(cast abi-encode \
     "constructor(address,address,address,(bytes32,uint256,uint16,uint32,bool))" \
-    $BACHA_ADMIN $BACHA_VAULT_ADDRESS $VRF_COORDINATOR \
-    "($VRF_KEY_HASH,$VRF_SUBSCRIPTION_ID,3,500000,false)")
+    $BACHA_ADMIN $BACHA_VAULT_ADDRESS $BACHA_RANDOMNESS_ADDRESS)
 ```
 
 Verified source is not optional here. The fairness page links people to the
@@ -190,7 +205,7 @@ do not deploy the app as a purely static export.
 ## 3. Before you announce
 
 - [ ] `remainingFundedSpins` is comfortably above zero for every active tier
-- [ ] VRF subscription is funded and the game is a registered consumer
+- [ ] randomness worker is running, the beacon has committed seeds, and the seed store is backed up
 - [ ] a test spin on mainnet settled and claimed end to end
 - [ ] both contracts verified on BscScan
 - [ ] admin roles held by the multisig; deployer roles renounced
@@ -216,7 +231,7 @@ action, not a session cookie.
 settled-unclaimed prizes plus the worst case for every pending spin — before
 releasing anything. You cannot withdraw a player's reward, by construction.
 
-**If randomness stalls.** After `vrfTimeout` (default 3h) anyone can call
+**If randomness stalls.** After `revealTimeout` (default 3h) anyone can call
 `refundExpiredSpin(spinId)` and the price returns to the wallet that paid it.
 A refunded spin can never settle afterwards.
 

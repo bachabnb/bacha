@@ -21,3 +21,6 @@ coverage/
 # Unoptimised generation masters — large, regenerable, never served.
 # Keep locally; exclude from the deploy bundle.
 art-masters/
+
+# Randomness seed store. Losing this orphans commitments; leaking it leaks outcomes.
+.secrets/

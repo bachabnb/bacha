@@ -7,14 +7,12 @@ import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/Reentrancy
 import {EnumerableSet} from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
 
 import {BachaVault} from "./BachaVault.sol";
-import {IVRFCoordinatorV2Plus} from "./interfaces/IVRFCoordinatorV2Plus.sol";
-import {VRFV2PlusClient} from "./vendor/VRFV2PlusClient.sol";
-import {BachaVRFConsumerBase} from "./vendor/BachaVRFConsumerBase.sol";
+import {BachaRandomness} from "./BachaRandomness.sol";
 
 /// @title BachaGame
-/// @notice The Bacha machine: take payment for a spin, ask Chainlink VRF for a
-///         random word, and turn that word into exactly one reward from a prize
-///         table that was frozen the moment the player paid.
+/// @notice The Bacha machine: take payment for a spin, ask BachaRandomness for
+///         a random word, and turn that word into exactly one reward from a
+///         prize table that was frozen the moment the player paid.
 ///
 /// @dev    Three invariants shape the whole design.
 ///
@@ -29,11 +27,11 @@ import {BachaVRFConsumerBase} from "./vendor/BachaVRFConsumerBase.sol";
 ///            table to cover the worst case for this spin on top of everything
 ///            already owed.
 ///
-///         3. The VRF callback cannot be made to fail. It writes storage and
+///         3. The randomness callback cannot be made to fail. It writes storage and
 ///            nothing else — no transfers, no external calls, no loops over
 ///            untrusted input. Moving the prize is a separate, permissionless
 ///            `claimFor` whose destination was fixed before randomness existed.
-contract BachaGame is AccessControl, Pausable, ReentrancyGuard, BachaVRFConsumerBase {
+contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.UintSet;
 
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -41,8 +39,8 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard, BachaVRFConsumer
 
     uint256 public constant MAX_PRIZES_PER_TABLE = 64;
     uint256 public constant MAX_ACTIVE_VERSIONS = 32;
-    uint64 public constant MIN_VRF_TIMEOUT = 30 minutes;
-    uint64 public constant MAX_VRF_TIMEOUT = 7 days;
+    uint64 public constant MIN_REVEAL_TIMEOUT = 30 minutes;
+    uint64 public constant MAX_REVEAL_TIMEOUT = 7 days;
 
     enum Rarity {
         Common,
@@ -97,20 +95,19 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard, BachaVRFConsumer
         bytes32 prizeTableHash;
     }
 
-    struct VrfConfig {
-        bytes32 keyHash;
-        uint256 subId;
-        uint16 requestConfirmations;
-        uint32 callbackGasLimit;
-        bool nativePayment;
-    }
-
     // ------------------------------------------------------------ storage
 
     BachaVault public immutable vault;
 
-    VrfConfig public vrfConfig;
-    uint64 public vrfTimeout = 3 hours;
+    /// @notice The commit–reveal beacon this machine draws from.
+    /// @dev    Mutable so a provider can be replaced without redeploying the
+    ///         game. Spins already in flight keep the request ids they were
+    ///         issued, so a swap must only happen with the machine paused and
+    ///         the queue drained.
+    BachaRandomness public randomness;
+
+    /// @notice How long a pending spin waits before anyone may refund it.
+    uint64 public revealTimeout = 3 hours;
 
     uint64 public versionCount;
     mapping(uint64 versionId => Version) private _versions;
@@ -142,8 +139,8 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard, BachaVRFConsumer
         uint64 indexed versionId, bytes32 indexed prizeTableHash, uint32 totalWeight, uint256 prizeCount
     );
     event TierConfigured(uint8 indexed tierId, string label, uint96 price, uint64 versionId, bool active);
-    event VrfConfigUpdated(bytes32 keyHash, uint256 subId, uint16 requestConfirmations, uint32 callbackGasLimit, bool nativePayment);
-    event VrfTimeoutUpdated(uint64 timeout);
+    event RandomnessUpdated(address indexed randomness);
+    event RevealTimeoutUpdated(uint64 timeout);
 
     event SpinRequested(
         uint256 indexed spinId,
@@ -193,25 +190,22 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard, BachaVRFConsumer
     error InvalidTimeout();
     error NothingToWithdraw();
     error TransferFailed();
+    error OnlyRandomness(address caller, address expected);
 
     // -------------------------------------------------------- construction
 
-    constructor(address admin, address vaultAddress, address coordinator, VrfConfig memory config)
-        BachaVRFConsumerBase(coordinator)
-    {
-        if (admin == address(0) || vaultAddress == address(0) || coordinator == address(0)) {
+    constructor(address admin, address vaultAddress, address randomnessAddress) {
+        if (admin == address(0) || vaultAddress == address(0) || randomnessAddress == address(0)) {
             revert ZeroAddress();
         }
         vault = BachaVault(vaultAddress);
-        vrfConfig = config;
+        randomness = BachaRandomness(randomnessAddress);
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(OPERATOR_ROLE, admin);
         _grantRole(TREASURER_ROLE, admin);
 
-        emit VrfConfigUpdated(
-            config.keyHash, config.subId, config.requestConfirmations, config.callbackGasLimit, config.nativePayment
-        );
+        emit RandomnessUpdated(randomnessAddress);
     }
 
     // ---------------------------------------------------- prize table admin
@@ -279,17 +273,18 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard, BachaVRFConsumer
         emit TierConfigured(tierId, label, price, versionId, active);
     }
 
-    function setVrfConfig(VrfConfig calldata config) external onlyRole(OPERATOR_ROLE) {
-        vrfConfig = config;
-        emit VrfConfigUpdated(
-            config.keyHash, config.subId, config.requestConfirmations, config.callbackGasLimit, config.nativePayment
-        );
+    /// @dev Admin rather than operator: pointing the machine at a different
+    ///      beacon is a trust decision, not a tuning knob.
+    function setRandomness(address randomnessAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (randomnessAddress == address(0)) revert ZeroAddress();
+        randomness = BachaRandomness(randomnessAddress);
+        emit RandomnessUpdated(randomnessAddress);
     }
 
-    function setVrfTimeout(uint64 timeout) external onlyRole(OPERATOR_ROLE) {
-        if (timeout < MIN_VRF_TIMEOUT || timeout > MAX_VRF_TIMEOUT) revert InvalidTimeout();
-        vrfTimeout = timeout;
-        emit VrfTimeoutUpdated(timeout);
+    function setRevealTimeout(uint64 timeout) external onlyRole(OPERATOR_ROLE) {
+        if (timeout < MIN_REVEAL_TIMEOUT || timeout > MAX_REVEAL_TIMEOUT) revert InvalidTimeout();
+        revealTimeout = timeout;
+        emit RevealTimeoutUpdated(timeout);
     }
 
     function pause() external onlyRole(OPERATOR_ROLE) {
@@ -326,18 +321,10 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard, BachaVRFConsumer
         _activeVersions.add(versionId);
         refundablePayments += msg.value;
 
-        uint256 requestId = IVRFCoordinatorV2Plus(vrfCoordinator()).requestRandomWords(
-            VRFV2PlusClient.RandomWordsRequest({
-                keyHash: vrfConfig.keyHash,
-                subId: vrfConfig.subId,
-                requestConfirmations: vrfConfig.requestConfirmations,
-                callbackGasLimit: vrfConfig.callbackGasLimit,
-                numWords: 1,
-                extraArgs: VRFV2PlusClient._argsToBytes(
-                    VRFV2PlusClient.ExtraArgsV1({nativePayment: vrfConfig.nativePayment})
-                )
-            })
-        );
+        // Consumes the next committed seed. Reverts if the beacon has run
+        // dry, which refuses the spin rather than selling one that cannot
+        // settle.
+        uint256 requestId = randomness.requestRandomWords(1);
 
         _spins[spinId] = Spin({
             player: msg.sender,
@@ -362,9 +349,16 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard, BachaVRFConsumer
         );
     }
 
+    /// @notice Delivery point for a revealed word.
+    /// @dev    Only the configured beacon may call it.
+    function rawFulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) external {
+        if (msg.sender != address(randomness)) revert OnlyRandomness(msg.sender, address(randomness));
+        _fulfillRandomWords(requestId, randomWords);
+    }
+
     /// @dev Storage-only. No transfers, no calls into other contracts, no
     ///      unbounded work — the callback must never be the thing that fails.
-    function fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal override {
+    function _fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal {
         uint256 spinId = spinIdByRequest[requestId];
         if (spinId == 0) {
             emit UnknownRequestFulfilled(requestId);
@@ -373,7 +367,7 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard, BachaVRFConsumer
 
         Spin storage s = _spins[spinId];
         // A second delivery for the same request is ignored rather than
-        // reverted, so a retry can never brick the coordinator's queue.
+        // reverted, so a retry can never brick the beacon.
         if (s.status != SpinStatus.Pending) return;
 
         uint256 word = randomWords.length > 0 ? randomWords[0] : 0;
@@ -452,7 +446,7 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard, BachaVRFConsumer
         if (s.status == SpinStatus.None) revert UnknownSpin(spinId);
         if (s.status != SpinStatus.Pending) revert SpinNotPending(spinId, s.status);
 
-        uint64 claimableAt = s.requestedAt + vrfTimeout;
+        uint64 claimableAt = s.requestedAt + revealTimeout;
         if (block.timestamp < claimableAt) revert RefundTooEarly(spinId, claimableAt);
 
         uint96 amount = s.payment;
