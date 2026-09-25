@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link } from '@/i18n/routing'
-import { ViewModeProvider, ViewModeToggle } from '@/components/fairness/ViewMode'
+import { ViewModeProvider } from '@/components/fairness/ViewMode'
 import { FairnessNav } from '@/components/fairness/FairnessNav'
 import { SpinVerifier } from '@/components/fairness/SpinVerifier'
 import { HowProduced } from '@/components/fairness/HowProduced'
@@ -37,6 +37,7 @@ export default async function FairnessPage({ params }: { params: Promise<{ local
   setRequestLocale(locale)
 
   const t = await getTranslations({ locale, namespace: 'fairness' })
+  const w = await getTranslations({ locale, namespace: 'home.whitepaper' })
 
   const chips = [
     t('proof.tableLocked'),
@@ -116,11 +117,7 @@ export default async function FairnessPage({ params }: { params: Promise<{ local
 
       {/* -------------------------------------------------------- content */}
       <div data-zone="pale" className="canvas-atmosphere">
-        <div className="shell-wide space-y-20 py-14 lg:space-y-24 lg:py-16">
-          <div className="flex justify-end">
-            <ViewModeToggle />
-          </div>
-
+        <div className="shell-wide space-y-20 pb-14 pt-6 lg:space-y-24 lg:pb-16">
           <Suspense fallback={<div className="card-physical p-8 text-foreground-secondary">…</div>}>
             <SpinVerifier />
           </Suspense>
@@ -148,7 +145,7 @@ export default async function FairnessPage({ params }: { params: Promise<{ local
               <Link href="/play">{t('cta')}</Link>
             </Button>
             <Button asChild variant="secondary">
-              <Link href="/docs">{t('nav.how')}</Link>
+              <Link href="/whitepaper">{w('cta')}</Link>
             </Button>
           </div>
         </div>

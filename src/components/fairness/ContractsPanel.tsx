@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl'
 import { SectionLabel } from './HowProduced'
 import { BnbChainMark } from '@/components/brand/BnbChain'
 import { publicEnv, contractsConfigured } from '@/lib/env'
-import { explorer, networkLabel, vrfCoordinators } from '@/lib/chain'
+import { explorer, networkLabel, beacon } from '@/lib/chain'
 import { shortAddress } from '@/lib/format'
 import { cn } from '@/lib/cn'
 
@@ -18,8 +18,6 @@ import { cn } from '@/lib/cn'
  */
 export function ContractsPanel() {
   const t = useTranslations('fairness.contracts')
-  const vrf = vrfCoordinators[publicEnv.chainId]
-
   const strip = [
     { label: t('strip.network'), value: networkLabel, chain: true },
     { label: t('strip.chainId'), value: String(publicEnv.chainId) },
@@ -35,7 +33,7 @@ export function ContractsPanel() {
     },
     {
       label: t('strip.randomness'),
-      value: contractsConfigured ? t('strip.vrf') : t('strip.simulated'),
+      value: contractsConfigured ? t('strip.commitReveal') : t('strip.simulated'),
       ok: contractsConfigured,
     },
     {
@@ -46,7 +44,7 @@ export function ContractsPanel() {
   ]
 
   return (
-    <section id="contracts" className="scroll-mt-28">
+    <section id="contracts" className="scroll-mt-[11rem]">
       <SectionLabel index="03" />
       <h2 className="type-section mt-3 font-display font-extrabold text-foreground">{t('title')}</h2>
 
@@ -98,11 +96,10 @@ export function ContractsPanel() {
           source="https://github.com/bachabnb/bacha/blob/main/contracts/src/BachaVault.sol"
         />
         <ContractCard
-          name={t('vrf.name')}
-          role={t('vrf.role')}
-          address={vrf?.address}
-          source={vrf?.docs}
-          external
+          name={t('beacon.name')}
+          role={t('beacon.role')}
+          address={beacon.address}
+          source={beacon.source}
         />
       </div>
     </section>
@@ -114,13 +111,11 @@ function ContractCard({
   role,
   address,
   source,
-  external,
 }: {
   name: string
   role: string
   address?: string
   source?: string
-  external?: boolean
 }) {
   const t = useTranslations('fairness.contracts')
   const deployed = Boolean(address)
@@ -176,7 +171,7 @@ function ContractCard({
             rel="noopener noreferrer"
             className="inline-flex h-8 items-center rounded-[9px] border border-border bg-background px-3 text-[0.76rem] font-medium text-foreground transition-colors hover:bg-surface-hover"
           >
-            {external ? t('vrf.name').split(' ')[0] : t('source')}
+            {t('source')}
           </a>
         )}
       </div>

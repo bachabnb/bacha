@@ -56,6 +56,15 @@ export default async function DocsPage({ params }: { params: Promise<{ locale: s
               ? 'Bacha 把实体扭蛋机的机制原样搬到链上：投币、转盘转动、掉出一个东西。不同之处在于，转盘被换成了一份任何人都能读、也能验证的合约。'
               : 'Bacha takes the mechanism of a physical capsule machine and moves it onchain: pay, the drum turns, something comes out. The difference is that the drum is a contract anyone can read and check.'}
           </p>
+          <p>
+            {/* This page is the short answer; the paper is the long one. */}
+            <Link
+              href="/whitepaper"
+              className="text-brand underline decoration-brand-line underline-offset-4"
+            >
+              {zh ? '阅读白皮书 →' : 'Read the whitepaper →'}
+            </Link>
+          </p>
         </Section>
 
         <Section id="contracts" title={zh ? '合约' : 'Contracts'}>
@@ -73,7 +82,7 @@ export default async function DocsPage({ params }: { params: Promise<{ locale: s
           </p>
           <p>
             {zh
-              ? 'VRF 回调只写存储——不转账、不调用外部合约、不做无界循环。发放是一个独立的、任何人都能触发的 '
+              ? '随机数回调只写存储——不转账、不调用外部合约、不做无界循环。发放是一个独立的、任何人都能触发的 '
               : 'The VRF callback writes storage and nothing else — no transfers, no external calls, no unbounded loops. Moving the prize is a separate, permissionless '}
             <Code>claimFor(spinId)</Code>
             {zh
@@ -85,8 +94,8 @@ export default async function DocsPage({ params }: { params: Promise<{ locale: s
         <Section id="randomness" title={zh ? '随机性' : 'Randomness'}>
           <p>
             {zh
-              ? '生产环境的结果全部来自 Chainlink VRF v2.5。不使用 '
-              : 'Production outcomes come from Chainlink VRF v2.5. Never from '}
+              ? '生产环境的结果来自 Bacha 自己的承诺—揭示信标：运营方先公布种子的哈希，抽取发生之后才揭示。不使用 '
+              : "Production outcomes come from Bacha's own commit–reveal beacon: the operator publishes a seed's hash first and only opens it after the spin exists. Never from "}
             <Code>block.timestamp</Code>, <Code>blockhash</Code>, <Code>Math.random()</Code>
             {zh ? '，也不使用任何服务端生成的随机数。' : ', or any server-generated value.'}
           </p>

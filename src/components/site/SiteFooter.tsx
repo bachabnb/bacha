@@ -12,14 +12,11 @@ import { BnbChainLockup, BnbChainMark } from '@/components/brand/BnbChain'
 const COLUMNS = [
   { key: 'play', links: [['play', '/play'], ['machines', '/#machines'], ['me', '/me']] },
   { key: 'explore', links: [['rewards', '/rewards'], ['activity', '/activity'], ['tokens', '/rewards#roster']] },
-  { key: 'transparency', links: [['fairness', '/fairness'], ['contracts', '/fairness#contracts'], ['docs', '/docs']] },
-  { key: 'about', links: [['about', '/docs#about'], ['faq', '/docs#faq'], ['terms', '/terms']] },
+  { key: 'transparency', links: [['fairness', '/fairness'], ['whitepaper', '/whitepaper'], ['contracts', '/fairness#contracts'], ['docs', '/docs']] },
+  { key: 'about', links: [['about', '/about'], ['faq', '/docs#faq'], ['terms', '/terms']] },
 ] as const
 
-const SOCIAL: [string, string][] = [
-  ['X', 'https://x.com/bachabnb'],
-  ['Telegram', 'https://telegram.org'],
-]
+const SOCIAL: [string, string][] = [['X', 'https://x.com/bachabnb']]
 
 export function SiteFooter() {
   const t = useTranslations('footer')

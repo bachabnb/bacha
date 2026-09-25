@@ -47,7 +47,7 @@ export async function generateMetadata({
     title: { default: t('title'), template: t('titleTemplate', { page: '%s' }) },
     description: t('description'),
     applicationName: 'Bacha',
-    keywords: ['BNB Chain', 'BEP-20', 'gacha', 'onchain game', 'Chainlink VRF', 'token discovery'],
+    keywords: ['BNB Chain', 'BEP-20', 'gacha', 'onchain game', 'commit-reveal randomness', 'token discovery'],
     alternates: {
       canonical: `${base}/${locale}`,
       languages: Object.fromEntries([

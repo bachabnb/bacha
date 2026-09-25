@@ -8,6 +8,7 @@ import { LiveDrops } from '@/components/home/LiveDrops'
 import { FairnessSection } from '@/components/home/FairnessSection'
 import { Discovery } from '@/components/home/Discovery'
 import { GachaRebuilt } from '@/components/home/GachaRebuilt'
+import { WhitepaperSection } from '@/components/home/WhitepaperSection'
 import { FinalCta } from '@/components/home/FinalCta'
 import { getMarketSnapshot, quoteFor } from '@/lib/market'
 import { rosterTokens, machines, oddsOf, defaultMachine } from '@/lib/machine'
@@ -54,6 +55,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <FairnessSection />
       <Discovery tokens={roster} />
       <GachaRebuilt stats={stats} />
+      <WhitepaperSection locale={locale} />
       <FinalCta />
     </>
   )

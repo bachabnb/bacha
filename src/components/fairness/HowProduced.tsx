@@ -32,7 +32,7 @@ export function HowProduced() {
   const band = STEPS.find((s) => s.key === active)?.band ?? [0, 1]
 
   return (
-    <section id="how" className="scroll-mt-28">
+    <section id="how" className="scroll-mt-[11rem]">
       <SectionLabel index="02" />
       <h2 className="type-section mt-3 font-display font-extrabold text-foreground">{t('title')}</h2>
       <p className="mt-3 max-w-xl text-[0.98rem] leading-relaxed text-foreground-secondary">
@@ -44,7 +44,7 @@ export function HowProduced() {
         {/* The exploded machine is nearly three times taller than it is wide,
             so it is sized by height. Left to fill its column it would run far
             past the steps it is meant to annotate. */}
-        <div className="relative mx-auto lg:sticky lg:top-28">
+        <div className="relative mx-auto lg:sticky lg:top-[11rem]">
           <span aria-hidden className="atmosphere-glow pointer-events-none absolute inset-[8%] rounded-full" />
           <div className="relative mx-auto h-[clamp(19rem,46vh,30rem)]">
             <ArtImage

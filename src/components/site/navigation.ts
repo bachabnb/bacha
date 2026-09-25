@@ -22,6 +22,7 @@ export type NavIcon =
   | 'shield'
   | 'steps'
   | 'contract'
+  | 'paper'
   | 'docs'
   | 'info'
   | 'chain'
@@ -74,15 +75,16 @@ export function buildNavigation(machines: Machine[]): NavGroup[] {
       key: 'transparency',
       items: [
         { key: 'fairness', href: '/fairness', icon: 'shield' },
-        { key: 'howItWorks', href: '/fairness#randomness', icon: 'steps' },
+        { key: 'howItWorks', href: '/fairness#how', icon: 'steps' },
         { key: 'contracts', href: '/fairness#contracts', icon: 'contract' },
+        { key: 'whitepaper', href: '/whitepaper', icon: 'paper' },
         { key: 'docs', href: '/docs', icon: 'docs' },
       ],
     },
     {
       key: 'about',
       items: [
-        { key: 'bacha', href: '/docs#about', icon: 'info' },
+        { key: 'bacha', href: '/about', icon: 'info' },
         { key: 'bnb', href: 'https://www.bnbchain.org', external: true, icon: 'chain' },
         { key: 'faq', href: '/docs#faq', icon: 'faq' },
         { key: 'community', href: 'https://x.com/bachabnb', external: true, icon: 'community' },

@@ -107,7 +107,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           {zh ? (
             <>
               <p>
-                结果由 Chainlink VRF 提供的可验证随机数决定。你付款的那一刻，本次转动就被打上
+                结果由 Bacha 的承诺—揭示信标产生的随机数决定。你付款的那一刻，本次转动就被打上
                 机型版本号与奖池表哈希；已发布的版本不可修改，运营方事后调整概率也影响不到
                 已经在途的转动。
               </p>
@@ -116,7 +116,7 @@ export default async function TermsPage({ params }: { params: Promise<{ locale: 
           ) : (
             <>
               <p>
-                Outcomes come from verifiable randomness supplied by Chainlink VRF. The moment you
+                Outcomes come from Bacha&apos;s own commit–reveal randomness beacon. The moment you
                 pay, your spin is stamped with a machine version and the hash of that version&apos;s
                 prize table. Published versions cannot be edited, so an operator changing odds
                 afterwards cannot reach a spin already in flight.

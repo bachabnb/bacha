@@ -76,7 +76,7 @@ export function PublishedOdds() {
   }
 
   return (
-    <section id="odds" className="scroll-mt-28">
+    <section id="odds" className="scroll-mt-[11rem]">
       <SectionLabel index="04" />
       <h2 className="type-section mt-3 font-display font-extrabold text-foreground">{t('title')}</h2>
       <p className="mt-3 max-w-xl text-[0.98rem] leading-relaxed text-foreground-secondary">
