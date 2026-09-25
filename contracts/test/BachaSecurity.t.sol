@@ -165,4 +165,63 @@ contract BachaSecurityTest is BachaBase {
         game.pause();
         assertTrue(game.paused());
     }
+
+    // ------------------------------------------------- prize ceiling
+
+    /// @dev The governor retunes odds automatically as prices move, so a hot
+    ///      key holds OPERATOR_ROLE in production. The ceiling is what stops
+    ///      that key publishing a table whose top prize is the whole vault.
+    function test_prizeCeilingBoundsWhatAnOperatorCanPublish() public {
+        vm.prank(admin);
+        game.setPrizeCeiling(address(cake), 5e18);
+
+        BachaGame.Prize[] memory prizes = new BachaGame.Prize[](1);
+        prizes[0] =
+            BachaGame.Prize({token: address(cake), amount: 5_000e18, weight: 10000, rarity: BachaGame.Rarity.Epic});
+
+        vm.expectRevert(
+            abi.encodeWithSelector(BachaGame.PrizeExceedsCeiling.selector, address(cake), 5_000e18, 5e18)
+        );
+        vm.prank(operator);
+        game.publishPrizeTable(prizes);
+    }
+
+    function test_prizeCeilingAllowsAnythingAtOrBelowIt() public {
+        vm.prank(admin);
+        game.setPrizeCeiling(address(cake), 5e18);
+
+        BachaGame.Prize[] memory prizes = new BachaGame.Prize[](1);
+        prizes[0] =
+            BachaGame.Prize({token: address(cake), amount: 5e18, weight: 10000, rarity: BachaGame.Rarity.Epic});
+
+        vm.prank(operator);
+        uint64 versionId = game.publishPrizeTable(prizes);
+        assertGt(versionId, 0);
+    }
+
+    function test_operatorCannotRaiseItsOwnCeiling() public {
+        vm.prank(admin);
+        game.setPrizeCeiling(address(cake), 5e18);
+
+        vm.expectRevert();
+        vm.prank(operator);
+        game.setPrizeCeiling(address(cake), type(uint256).max);
+
+        assertEq(game.prizeCeiling(address(cake)), 5e18);
+    }
+
+    /// @dev A ceiling set today must not rewrite a table published yesterday.
+    function test_ceilingDoesNotDisturbAlreadyPublishedTables() public {
+        _fundGenerously();
+        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
+
+        vm.prank(admin);
+        game.setPrizeCeiling(address(cake), 1);
+
+        _settle(spinId, 9950); // the 12 CAKE epic, far above the new ceiling
+        BachaGame.Spin memory s = game.getSpin(spinId);
+        assertEq(uint8(s.status), uint8(BachaGame.SpinStatus.Settled));
+        assertEq(s.rewardToken, address(cake));
+        assertEq(s.rewardAmount, 12e18);
+    }
 }

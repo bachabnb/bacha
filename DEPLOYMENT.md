@@ -129,6 +129,57 @@ and via USDT, and the best fill wins. This matters: measured against the
 current roster, V2 alone would have bought B2 at roughly twice the market
 price. Re-run `--quote` after any roster change.
 
+### Set prize ceilings, then start the governor
+
+A prize is a fixed number of tokens; a spin costs a fixed amount of BNB. RTP is
+therefore not a constant — it is the ratio of two baskets that move apart. On
+the current table, **if the reward roster gains 62% against BNB, RTP reaches
+100%** and the machine stops making money on every spin.
+
+The governor measures the RTP the published table is actually paying and, when
+it leaves the band, republishes the same table with every amount scaled by one
+factor. Weights, rarity split and band ordering are untouched; only size moves.
+Spins already in flight keep the version they were stamped with.
+
+It needs `OPERATOR_ROLE`, which is a larger privilege than the treasury
+worker's. **Set a ceiling for every asset first** — it is the limit that key
+cannot cross:
+
+```bash
+# Roughly 10x the largest intended prize, in token units.
+cast send $BACHA_GAME_ADDRESS "setPrizeCeiling(address,uint256)" $TOKEN $MAX_UNITS
+```
+
+`setPrizeCeiling` is admin-only, so the operator key cannot raise its own
+limit. The governor refuses to run against an asset with no ceiling set.
+
+```bash
+npm run governor:check    # dry run — prints measured RTP and the verdict
+npm run governor          # then run this as a service
+```
+
+### Taking profit
+
+The treasury worker takes profit **only** from surplus above the inventory
+target and the BNB reserve, in that order. Set `BACHA_PROFIT_ADDRESS` to a cold
+wallet to enable it; leave it unset to compound everything.
+
+> **Do not take profit without the governor running.** Over 10k simulated spins
+> with memecoin-grade volatility, profit-taking alone stalled the machine in
+> **8.5%** of runs, because the buffer that would have absorbed RTP drift had
+> been paid out. With the governor, the same policy stalled in **0.00%**.
+> The governor is what makes profit-taking safe, not an optional extra.
+
+| Configuration | Stalled | Median profit over 10k spins |
+|---|---|---|
+| No governor, no profit-taking | 1.0% | — |
+| No governor, profit-taking | **8.5%** | $10,765 |
+| Governor, no profit-taking | 0.0% | — |
+| **Governor + profit-taking** | **0.0%** | **$10,528** |
+
+Numbers are a model, not a forecast: they assume the spin volume stated, that
+prices follow the modelled volatility, and that both workers stay running.
+
 ### Approve and fund reward assets
 
 ```bash
