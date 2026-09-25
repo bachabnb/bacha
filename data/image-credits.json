@@ -2,75 +2,47 @@
   "$comment": "Provenance for every third-party image shipped in this repo. Anything added to public/ that Bacha did not generate itself must be recorded here.",
   "tokenLogos": {
     "usage": "Project logos are used nominatively, to identify the token a reward consists of. Each remains the trademark of its respective project. Bacha is not affiliated with, endorsed by or operated by any of them.",
-    "retrievedVia": "CoinGecko public coin API (api.coingecko.com/api/v3/coins/{id}), image.large field",
-    "retrievedAt": "2026-09-24",
+    "retrievedVia": "DexScreener token metadata (api.dexscreener.com/latest/dex/tokens/{address}, info.imageUrl), normalised to a 128px square PNG. mubarak and ASTER predate this and came from the CoinGecko coin API.",
+    "retrievedAt": "2026-09-25",
     "script": "scripts/fetch-token-logos.mjs",
     "files": [
       {
-        "file": "public/tokens/bnb.png",
-        "token": "BNB",
-        "address": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
-        "coingeckoId": "binancecoin"
+        "file": "public/tokens/b2.png",
+        "token": "B2",
+        "address": "0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2"
+      },
+      {
+        "file": "public/tokens/lobster.png",
+        "token": "龙虾",
+        "address": "0xeCCBb861c0dda7eFd964010085488B69317e4444"
+      },
+      {
+        "file": "public/tokens/marscoin.png",
+        "token": "MarsCoin",
+        "address": "0xFe189E97832DA1573e4e4Ff034F4fFC3a15c7777"
+      },
+      {
+        "file": "public/tokens/mubarak.jpg",
+        "token": "mubarak",
+        "address": "0x5C85D6C6825aB4032337F11Ee92a72DF936b46F6",
+        "coingeckoId": "mubarak"
       },
       {
         "file": "public/tokens/aster.png",
         "token": "ASTER",
-        "address": "0x000aE314E2A2172a039b26378814c252734f556A",
+        "address": "0x000Ae314E2A2172a039B26378814C252734f556A",
         "coingeckoId": "aster-2"
       },
       {
-        "file": "public/tokens/cake.png",
-        "token": "CAKE",
-        "address": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
-        "coingeckoId": "pancakeswap-token"
-      },
-      {
-        "file": "public/tokens/mubarak.jpg",
-        "token": "MUBARAK",
-        "address": "0x5c85D6C6825aB4032337F11Ee92a72DF936b46F6",
-        "coingeckoId": "mubarak"
-      },
-      {
-        "file": "public/tokens/form.jpg",
-        "token": "FORM",
-        "address": "0x5B73A93b4e5E4F1Fd27d8B3F8c97d69908B5E284",
-        "coingeckoId": "four"
-      },
-      {
-        "file": "public/tokens/twt.png",
-        "token": "TWT",
-        "address": "0x4B0F1812e5Df2A09796481Ff14017e6005508003",
-        "coingeckoId": "trust-wallet-token"
-      },
-      {
-        "file": "public/tokens/babydoge.jpg",
-        "token": "BABYDOGE",
-        "address": "0xc748673057861a797275CD8A068AbB95A902e8de",
-        "coingeckoId": "baby-doge-coin"
-      },
-      {
-        "file": "public/tokens/lista.png",
-        "token": "LISTA",
-        "address": "0xFceB31A79F71AC9CBDCF853519c1b12D379EdC46",
-        "coingeckoId": "lista"
-      },
-      {
-        "file": "public/tokens/xvs.jpg",
-        "token": "XVS",
-        "address": "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63",
-        "coingeckoId": "venus"
-      },
-      {
-        "file": "public/tokens/usd1.png",
-        "token": "USD1",
-        "address": "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
-        "coingeckoId": "usd1-wlfi"
+        "file": "public/tokens/giggle.png",
+        "token": "GIGGLE",
+        "address": "0x20d6015660b3fe52e6690a889b5C51F69902cE0e"
       }
     ]
   },
   "photography": {
     "status": "removed",
-    "note": "All stock photography was removed from the product. A photograph, however well licensed, broke the premise that every object on the page belongs to one hardware universe \u2014 so every photographic asset was replaced with generated isometric artwork in the Bacha art language. No third-party photography ships.",
+    "note": "All stock photography was removed from the product. A photograph, however well licensed, broke the premise that every object on the page belongs to one hardware universe — so every photographic asset was replaced with generated isometric artwork in the Bacha art language. No third-party photography ships.",
     "files": []
   },
   "generatedArt": {
@@ -81,7 +53,7 @@
   },
   "chainBranding": {
     "usage": "The BNB Chain mark and wordmark are used nominatively, to identify the chain Bacha runs on and to attribute it in the footer. BNB Chain is a trademark of its owners. Bacha is an independent project and is not operated, endorsed or sponsored by BNB Chain or Binance, and the site never states or implies otherwise.",
-    "source": "https://www.bnbchain.org \u2014 official site header artwork",
+    "source": "https://www.bnbchain.org — official site header artwork",
     "retrievedAt": "2026-09-24",
     "files": [
       {

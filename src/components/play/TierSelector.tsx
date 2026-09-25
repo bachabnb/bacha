@@ -8,15 +8,19 @@ import { machines, rarityBreakdown, type Machine } from '@/lib/machine'
 import type { ArtId } from '@/lib/art'
 import { cn } from '@/lib/cn'
 
-const ART: Record<string, ArtId> = { quick: 'tier-quick', boost: 'tier-boost', max: 'tier-max' }
+const ART: Record<string, ArtId> = { bacha: 'tier-boost', quick: 'tier-quick', boost: 'tier-boost', max: 'tier-max' }
 
 /**
- * Machine selection as three physical modules rather than tabs.
+ * Machine selection as physical modules rather than tabs.
  *
  * Each one carries its own machine, its price and a miniature of its rarity
  * profile — so choosing is a comparison between products, not a filter. The
  * selected module depresses slightly and lights up, the way a real selector
  * would.
+ *
+ * With a single machine there is no choice to present, so this renders
+ * nothing rather than a one-option radio group. The console reclaims the
+ * height, which is why `--selector-h` is only spent here.
  */
 export function TierSelector({
   active,
@@ -30,8 +34,14 @@ export function TierSelector({
   const t = useTranslations('play.selector')
   const reduce = useReducedMotion()
 
+  if (machines.length < 2) return null
+
   return (
-    <div role="radiogroup" aria-label={t('label')} className="grid grid-cols-3 gap-2">
+    <div
+      role="radiogroup"
+      aria-label={t('label')}
+      className={cn('grid gap-2', machines.length === 2 ? 'grid-cols-2' : 'grid-cols-3')}
+    >
       {machines.map((machine) => {
         const selected = machine.id === active
         return (

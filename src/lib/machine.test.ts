@@ -48,7 +48,7 @@ describe('prize selection', () => {
   })
 
   it('is deterministic — the same word always yields the same prize', () => {
-    const machine = machines[1]
+    const machine = machines[0]
     const word = 123456789012345678901234567890n
     const first = selectPrize(machine, word)
     const second = selectPrize(machine, word)
@@ -168,7 +168,17 @@ describe('machine configuration', () => {
     }
   })
 
-  it('weights rarer outcomes more heavily as the tier rises', () => {
+  it('is a single machine', () => {
+    // A product decision, not an accident of configuration: with one unit
+    // there is no "better deal" to imply and nothing for a player to weigh up.
+    // Anything that reintroduces a tier should have to change this line.
+    expect(machines).toHaveLength(1)
+    expect(machines[0].tierId).toBe(0)
+  })
+
+  it('still weights rarer outcomes more heavily as the tier rises', () => {
+    // Vacuous while there is one machine. Kept so that reintroducing tiers
+    // cannot quietly ship a higher tier with worse odds than a lower one.
     const sorted = [...machines].sort((a, b) => a.tierId - b.tierId)
     for (let i = 1; i < sorted.length; i++) {
       const prevRare = sorted[i - 1].rarityShare[2] + sorted[i - 1].rarityShare[3]

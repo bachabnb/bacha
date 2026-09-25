@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Builds data/machine.json — the prize tables the demo machine runs on and the
+ * Builds data/machine.json — the prize table the machine runs on and the
  * starting point an operator would publish onchain.
  *
  * Amounts are authored in whole token units here and converted to exact base
@@ -16,43 +16,46 @@ import { createHash } from 'node:crypto'
 const tokens = JSON.parse(await readFile('data/tokens.json', 'utf8')).tokens
 const byId = Object.fromEntries(tokens.map((t) => [t.id, t]))
 
-// Snapshot taken 2026-09-24 alongside the address verification.
+// Snapshot taken 2026-09-25 alongside the address verification, from the same
+// DexScreener pairs the roster was selected from. Used only to print expected
+// value while tuning — the contract never sees a price.
 const refPrice = {
-  bnb: 765.59, aster: 0.6904, cake: 2.55, mubarak: 0.05391, form: 0.2833,
-  twt: 0.5354, babydoge: 3.95242e-10, lista: 0.07858, xvs: 3.2, usd1: 0.9995,
+  bnb: 765.59,
+  b2: 0.4927, lobster: 0.125, marscoin: 0.1085,
+  mubarak: 0.04324, aster: 0.7113, giggle: 40.53,
 }
 
 const R = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3 }
 
+/**
+ * One machine.
+ *
+ * There were three tiers; there is now a single unit, so there is no "better
+ * deal" to imply and no reason for a player to wonder which one to pick. Every
+ * asset on the roster appears in this one table.
+ *
+ * Amounts are tuned so expected payout sits below the spin price — that margin
+ * is what funds inventory. GIGGLE is deliberately a small amount despite its
+ * unit price: its 24h turnover is thin, and a reward that cannot be sold near
+ * the shown price is not worth what it appears to be.
+ */
 const machines = [
   {
-    id: 'quick', tierId: 0, label: 'QUICK', priceBnb: 0.0026,
-    tagline: 'One pull, low stakes.',
+    id: 'bacha', tierId: 0, label: 'BACHA', priceBnb: 0.0039,
+    tagline: 'One machine. Six assets. One pull.',
     prizes: [
-      ['usd1', 1.2, 2600, R.COMMON], ['mubarak', 20, 2200, R.COMMON], ['babydoge', 2_500_000_000, 2000, R.COMMON],
-      ['cake', 0.8, 900, R.UNCOMMON], ['twt', 3.6, 800, R.UNCOMMON], ['form', 7, 600, R.UNCOMMON],
-      ['aster', 7, 500, R.RARE], ['xvs', 1.5, 300, R.RARE],
-      ['bnb', 0.03, 100, R.EPIC],
-    ],
-  },
-  {
-    id: 'boost', tierId: 1, label: 'BOOST', priceBnb: 0.0039,
-    tagline: 'Better odds on the deep end.',
-    prizes: [
-      ['usd1', 1.6, 2400, R.COMMON], ['mubarak', 29, 2000, R.COMMON], ['babydoge', 3_400_000_000, 1900, R.COMMON],
-      ['cake', 1.12, 1000, R.UNCOMMON], ['twt', 5, 850, R.UNCOMMON], ['form', 10, 650, R.UNCOMMON],
-      ['aster', 10, 600, R.RARE], ['xvs', 2.15, 400, R.RARE], ['lista', 63, 100, R.RARE],
-      ['bnb', 0.045, 100, R.EPIC],
-    ],
-  },
-  {
-    id: 'max', tierId: 2, label: 'MAX', priceBnb: 0.0065,
-    tagline: 'Every rare on the roster, at the best weight.',
-    prizes: [
-      ['usd1', 2.4, 2200, R.COMMON], ['mubarak', 44, 1900, R.COMMON], ['babydoge', 5_200_000_000, 1700, R.COMMON],
-      ['cake', 1.7, 1100, R.UNCOMMON], ['twt', 7.6, 900, R.UNCOMMON], ['form', 15, 700, R.UNCOMMON],
-      ['aster', 15.4, 700, R.RARE], ['xvs', 3.3, 450, R.RARE], ['lista', 101, 200, R.RARE],
-      ['bnb', 0.069, 120, R.EPIC], ['cake', 9.7, 30, R.EPIC],
+      ['mubarak', 32, 2600, R.COMMON],
+      ['marscoin', 12, 2300, R.COMMON],
+      ['lobster', 11, 1900, R.COMMON],
+
+      ['b2', 4.5, 1400, R.UNCOMMON],
+      ['lobster', 20, 900, R.UNCOMMON],
+
+      ['aster', 5.5, 500, R.RARE],
+      ['b2', 9.5, 300, R.RARE],
+
+      ['giggle', 0.15, 70, R.EPIC],
+      ['aster', 16, 30, R.EPIC],
     ],
   },
 ]

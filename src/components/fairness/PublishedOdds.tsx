@@ -84,7 +84,14 @@ export function PublishedOdds() {
       </p>
 
       {/* ------------------------------------------------ machine selector */}
-      <div className="mt-8 inline-flex rounded-[11px] border border-border bg-surface p-1">
+      {/* One machine means nothing to switch between; a single latched button
+          would read as a control that does not work. */}
+      <div
+        className={cn(
+          'mt-8 rounded-[11px] border border-border bg-surface p-1',
+          machines.length > 1 ? 'inline-flex' : 'hidden',
+        )}
+      >
         {machines.map((m) => (
           <button
             key={m.id}

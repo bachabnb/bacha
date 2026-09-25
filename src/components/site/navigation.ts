@@ -46,7 +46,7 @@ export interface NavGroup {
  * configured price rather than a hardcoded one.
  */
 export function buildNavigation(machines: Machine[]): NavGroup[] {
-  const price = (id: string) => {
+  const price = (id: string | undefined) => {
     const machine = machines.find((m) => m.id === id)
     return machine ? `$${machine.referencePriceUsd.toFixed(0)}` : '—'
   }
@@ -56,10 +56,8 @@ export function buildNavigation(machines: Machine[]): NavGroup[] {
       key: 'play',
       showcase: true,
       items: [
-        { key: 'bacha', href: '/play', icon: 'machine' },
-        { key: 'quick', href: '/play?machine=quick', icon: 'quick', values: { price: price('quick') } },
-        { key: 'boost', href: '/play?machine=boost', icon: 'boost', values: { price: price('boost') } },
-        { key: 'max', href: '/play?machine=max', icon: 'max', values: { price: price('max') } },
+        // One machine, so there are no per-tier shortcuts to link to.
+        { key: 'bacha', href: '/play', icon: 'machine', values: { price: price(machines[0]?.id) } },
         { key: 'me', href: '/me', icon: 'wallet' },
       ],
     },

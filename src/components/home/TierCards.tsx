@@ -12,33 +12,39 @@ import type { ArtId } from '@/lib/art'
 import { cn } from '@/lib/cn'
 
 const ART: Record<string, ArtId> = {
+  bacha: 'tier-boost',
   quick: 'tier-quick',
   boost: 'tier-boost',
   max: 'tier-max',
 }
 
 /**
- * Machine tiers.
+ * The machine.
  *
- * Each card leads with the machine module itself, so the three read as a
- * product family that escalates. Only the prize-table differences are stated —
- * a higher tier is a different distribution, not a better deal, and the copy
- * never implies otherwise.
+ * Each card leads with the machine module itself. With a single machine the
+ * grid collapses to one centred card at a readable width rather than leaving
+ * two empty columns — and the card is the whole section's subject, so it is
+ * always the featured treatment.
  */
 export function TierCards() {
   const t = useTranslations('tiers')
   const reduce = useReducedMotion()
 
   return (
-    <section data-zone="warm" className="canvas-atmosphere section-viewport">
+    <section id="machines" data-zone="warm" className="canvas-atmosphere section-viewport scroll-mt-24">
       <div className="shell-wide">
       <SectionHeader index="05" eyebrow={t('eyebrow')} title={t('title')}>
         {t('body')}
       </SectionHeader>
 
-      <div className="mt-10 grid gap-5 lg:grid-cols-3">
+      <div
+        className={cn(
+          'mt-10 grid gap-5',
+          machines.length > 1 ? 'lg:grid-cols-3' : 'mx-auto max-w-lg',
+        )}
+      >
         {machines.map((machine, i) => {
-          const featured = machine.id === 'max'
+          const featured = machines.length === 1 || machine.id === 'max'
           const distinctAssets = new Set(machine.prizes.map((p) => p.token.toLowerCase())).size
 
           return (

@@ -1,397 +1,124 @@
 {
   "$generatedBy": "scripts/build-machine-config.mjs",
-  "generatedAt": "2026-09-23",
+  "generatedAt": "2026-09-25",
   "machines": [
     {
-      "id": "quick",
+      "id": "bacha",
       "tierId": 0,
-      "label": "QUICK",
-      "tagline": "One pull, low stakes.",
-      "priceBnb": 0.0026,
-      "priceWei": "2600000000000000",
-      "referencePriceUsd": 1.99,
+      "label": "BACHA",
+      "tagline": "One machine. Six assets. One pull.",
+      "priceBnb": 0.0039,
+      "priceWei": "3900000000000000",
+      "referencePriceUsd": 2.99,
       "totalWeight": 10000,
-      "localTableHash": "0x7dd4a6e3d2ec28f811154a748d7deb16a4294a89bc31a8dfd30e286f4b818277",
+      "localTableHash": "0x1e911cea41ec13caabf14298fc12d463f1cdaa6b14a5431eb4c49afb099a07f7",
       "rarityShare": [
         0.68,
         0.23,
         0.08,
         0.01
       ],
-      "expectedValueUsd": 1.8188,
-      "referenceReturnToPlayer": 0.9137,
+      "expectedValueUsd": 1.8686,
+      "referenceReturnToPlayer": 0.6258,
       "prizes": [
         {
-          "tokenId": "usd1",
-          "token": "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
-          "symbol": "USD1",
+          "tokenId": "mubarak",
+          "token": "0x5C85D6C6825aB4032337F11Ee92a72DF936b46F6",
+          "symbol": "mubarak",
           "decimals": 18,
-          "amount": 1.2,
-          "amountUnits": "1200000000000000000",
+          "amount": 32,
+          "amountUnits": "32000000000000000000",
           "weight": 2600,
           "rarity": 0,
-          "valueUsd": 1.1994
+          "valueUsd": 1.3837
         },
         {
-          "tokenId": "mubarak",
-          "token": "0x5c85D6C6825aB4032337F11Ee92a72DF936b46F6",
-          "symbol": "MUBARAK",
+          "tokenId": "marscoin",
+          "token": "0xFe189E97832DA1573e4e4Ff034F4fFC3a15c7777",
+          "symbol": "MarsCoin",
+          "decimals": 18,
+          "amount": 12,
+          "amountUnits": "12000000000000000000",
+          "weight": 2300,
+          "rarity": 0,
+          "valueUsd": 1.302
+        },
+        {
+          "tokenId": "lobster",
+          "token": "0xeCCBb861c0dda7eFd964010085488B69317e4444",
+          "symbol": "龙虾",
+          "decimals": 18,
+          "amount": 11,
+          "amountUnits": "11000000000000000000",
+          "weight": 1900,
+          "rarity": 0,
+          "valueUsd": 1.375
+        },
+        {
+          "tokenId": "b2",
+          "token": "0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2",
+          "symbol": "B2",
+          "decimals": 18,
+          "amount": 4.5,
+          "amountUnits": "4500000000000000000",
+          "weight": 1400,
+          "rarity": 1,
+          "valueUsd": 2.2172
+        },
+        {
+          "tokenId": "lobster",
+          "token": "0xeCCBb861c0dda7eFd964010085488B69317e4444",
+          "symbol": "龙虾",
           "decimals": 18,
           "amount": 20,
           "amountUnits": "20000000000000000000",
-          "weight": 2200,
-          "rarity": 0,
-          "valueUsd": 1.0782
-        },
-        {
-          "tokenId": "babydoge",
-          "token": "0xc748673057861a797275CD8A068AbB95A902e8de",
-          "symbol": "BABYDOGE",
-          "decimals": 9,
-          "amount": 2500000000,
-          "amountUnits": "2500000000000000000",
-          "weight": 2000,
-          "rarity": 0,
-          "valueUsd": 0.9881
-        },
-        {
-          "tokenId": "cake",
-          "token": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
-          "symbol": "CAKE",
-          "decimals": 18,
-          "amount": 0.8,
-          "amountUnits": "800000000000000000",
           "weight": 900,
           "rarity": 1,
-          "valueUsd": 2.04
-        },
-        {
-          "tokenId": "twt",
-          "token": "0x4B0F1812e5Df2A09796481Ff14017e6005508003",
-          "symbol": "TWT",
-          "decimals": 18,
-          "amount": 3.6,
-          "amountUnits": "3600000000000000000",
-          "weight": 800,
-          "rarity": 1,
-          "valueUsd": 1.9274
-        },
-        {
-          "tokenId": "form",
-          "token": "0x5B73A93b4e5E4F1Fd27d8B3F8c97d69908B5E284",
-          "symbol": "FORM",
-          "decimals": 18,
-          "amount": 7,
-          "amountUnits": "7000000000000000000",
-          "weight": 600,
-          "rarity": 1,
-          "valueUsd": 1.9831
+          "valueUsd": 2.5
         },
         {
           "tokenId": "aster",
-          "token": "0x000aE314E2A2172a039b26378814c252734f556A",
+          "token": "0x000Ae314E2A2172a039B26378814C252734f556A",
           "symbol": "ASTER",
           "decimals": 18,
-          "amount": 7,
-          "amountUnits": "7000000000000000000",
+          "amount": 5.5,
+          "amountUnits": "5500000000000000000",
           "weight": 500,
           "rarity": 2,
-          "valueUsd": 4.8328
+          "valueUsd": 3.9122
         },
         {
-          "tokenId": "xvs",
-          "token": "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63",
-          "symbol": "XVS",
+          "tokenId": "b2",
+          "token": "0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2",
+          "symbol": "B2",
           "decimals": 18,
-          "amount": 1.5,
-          "amountUnits": "1500000000000000000",
+          "amount": 9.5,
+          "amountUnits": "9500000000000000000",
           "weight": 300,
           "rarity": 2,
-          "valueUsd": 4.8
+          "valueUsd": 4.6806
         },
         {
-          "tokenId": "bnb",
-          "token": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
-          "symbol": "BNB",
+          "tokenId": "giggle",
+          "token": "0x20d6015660b3fe52e6690a889b5C51F69902cE0e",
+          "symbol": "GIGGLE",
           "decimals": 18,
-          "amount": 0.03,
-          "amountUnits": "30000000000000000",
-          "weight": 100,
+          "amount": 0.15,
+          "amountUnits": "150000000000000000",
+          "weight": 70,
           "rarity": 3,
-          "valueUsd": 22.9677
-        }
-      ]
-    },
-    {
-      "id": "boost",
-      "tierId": 1,
-      "label": "BOOST",
-      "tagline": "Better odds on the deep end.",
-      "priceBnb": 0.0039,
-      "priceWei": "3900000000000000",
-      "referencePriceUsd": 2.99,
-      "totalWeight": 10000,
-      "localTableHash": "0x79f55064f6d7d18eb2eb002b5d8584310dc2621a17984b12042b428dca6f5bfb",
-      "rarityShare": [
-        0.63,
-        0.25,
-        0.11,
-        0.01
-      ],
-      "expectedValueUsd": 2.7326,
-      "referenceReturnToPlayer": 0.9152,
-      "prizes": [
-        {
-          "tokenId": "usd1",
-          "token": "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
-          "symbol": "USD1",
-          "decimals": 18,
-          "amount": 1.6,
-          "amountUnits": "1600000000000000000",
-          "weight": 2400,
-          "rarity": 0,
-          "valueUsd": 1.5992
-        },
-        {
-          "tokenId": "mubarak",
-          "token": "0x5c85D6C6825aB4032337F11Ee92a72DF936b46F6",
-          "symbol": "MUBARAK",
-          "decimals": 18,
-          "amount": 29,
-          "amountUnits": "29000000000000000000",
-          "weight": 2000,
-          "rarity": 0,
-          "valueUsd": 1.5634
-        },
-        {
-          "tokenId": "babydoge",
-          "token": "0xc748673057861a797275CD8A068AbB95A902e8de",
-          "symbol": "BABYDOGE",
-          "decimals": 9,
-          "amount": 3400000000,
-          "amountUnits": "3400000000000000000",
-          "weight": 1900,
-          "rarity": 0,
-          "valueUsd": 1.3438
-        },
-        {
-          "tokenId": "cake",
-          "token": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
-          "symbol": "CAKE",
-          "decimals": 18,
-          "amount": 1.12,
-          "amountUnits": "1120000000000000000",
-          "weight": 1000,
-          "rarity": 1,
-          "valueUsd": 2.856
-        },
-        {
-          "tokenId": "twt",
-          "token": "0x4B0F1812e5Df2A09796481Ff14017e6005508003",
-          "symbol": "TWT",
-          "decimals": 18,
-          "amount": 5,
-          "amountUnits": "5000000000000000000",
-          "weight": 850,
-          "rarity": 1,
-          "valueUsd": 2.677
-        },
-        {
-          "tokenId": "form",
-          "token": "0x5B73A93b4e5E4F1Fd27d8B3F8c97d69908B5E284",
-          "symbol": "FORM",
-          "decimals": 18,
-          "amount": 10,
-          "amountUnits": "10000000000000000000",
-          "weight": 650,
-          "rarity": 1,
-          "valueUsd": 2.833
+          "valueUsd": 6.0795
         },
         {
           "tokenId": "aster",
-          "token": "0x000aE314E2A2172a039b26378814c252734f556A",
+          "token": "0x000Ae314E2A2172a039B26378814C252734f556A",
           "symbol": "ASTER",
           "decimals": 18,
-          "amount": 10,
-          "amountUnits": "10000000000000000000",
-          "weight": 600,
-          "rarity": 2,
-          "valueUsd": 6.904
-        },
-        {
-          "tokenId": "xvs",
-          "token": "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63",
-          "symbol": "XVS",
-          "decimals": 18,
-          "amount": 2.15,
-          "amountUnits": "2150000000000000000",
-          "weight": 400,
-          "rarity": 2,
-          "valueUsd": 6.88
-        },
-        {
-          "tokenId": "lista",
-          "token": "0xFceB31A79F71AC9CBDCF853519c1b12D379EdC46",
-          "symbol": "LISTA",
-          "decimals": 18,
-          "amount": 63,
-          "amountUnits": "63000000000000000000",
-          "weight": 100,
-          "rarity": 2,
-          "valueUsd": 4.9505
-        },
-        {
-          "tokenId": "bnb",
-          "token": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
-          "symbol": "BNB",
-          "decimals": 18,
-          "amount": 0.045,
-          "amountUnits": "45000000000000000",
-          "weight": 100,
-          "rarity": 3,
-          "valueUsd": 34.4515
-        }
-      ]
-    },
-    {
-      "id": "max",
-      "tierId": 2,
-      "label": "MAX",
-      "tagline": "Every rare on the roster, at the best weight.",
-      "priceBnb": 0.0065,
-      "priceWei": "6500000000000000",
-      "referencePriceUsd": 4.98,
-      "totalWeight": 10000,
-      "localTableHash": "0x2970300ccd55d2ed3ef07608f8762dc798ea3a564fe02f1c96a069d486c1c7e8",
-      "rarityShare": [
-        0.58,
-        0.27,
-        0.135,
-        0.015
-      ],
-      "expectedValueUsd": 4.5546,
-      "referenceReturnToPlayer": 0.9153,
-      "prizes": [
-        {
-          "tokenId": "usd1",
-          "token": "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
-          "symbol": "USD1",
-          "decimals": 18,
-          "amount": 2.4,
-          "amountUnits": "2400000000000000000",
-          "weight": 2200,
-          "rarity": 0,
-          "valueUsd": 2.3988
-        },
-        {
-          "tokenId": "mubarak",
-          "token": "0x5c85D6C6825aB4032337F11Ee92a72DF936b46F6",
-          "symbol": "MUBARAK",
-          "decimals": 18,
-          "amount": 44,
-          "amountUnits": "44000000000000000000",
-          "weight": 1900,
-          "rarity": 0,
-          "valueUsd": 2.372
-        },
-        {
-          "tokenId": "babydoge",
-          "token": "0xc748673057861a797275CD8A068AbB95A902e8de",
-          "symbol": "BABYDOGE",
-          "decimals": 9,
-          "amount": 5200000000,
-          "amountUnits": "5200000000000000000",
-          "weight": 1700,
-          "rarity": 0,
-          "valueUsd": 2.0553
-        },
-        {
-          "tokenId": "cake",
-          "token": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
-          "symbol": "CAKE",
-          "decimals": 18,
-          "amount": 1.7,
-          "amountUnits": "1700000000000000000",
-          "weight": 1100,
-          "rarity": 1,
-          "valueUsd": 4.335
-        },
-        {
-          "tokenId": "twt",
-          "token": "0x4B0F1812e5Df2A09796481Ff14017e6005508003",
-          "symbol": "TWT",
-          "decimals": 18,
-          "amount": 7.6,
-          "amountUnits": "7600000000000000000",
-          "weight": 900,
-          "rarity": 1,
-          "valueUsd": 4.069
-        },
-        {
-          "tokenId": "form",
-          "token": "0x5B73A93b4e5E4F1Fd27d8B3F8c97d69908B5E284",
-          "symbol": "FORM",
-          "decimals": 18,
-          "amount": 15,
-          "amountUnits": "15000000000000000000",
-          "weight": 700,
-          "rarity": 1,
-          "valueUsd": 4.2495
-        },
-        {
-          "tokenId": "aster",
-          "token": "0x000aE314E2A2172a039b26378814c252734f556A",
-          "symbol": "ASTER",
-          "decimals": 18,
-          "amount": 15.4,
-          "amountUnits": "15400000000000000000",
-          "weight": 700,
-          "rarity": 2,
-          "valueUsd": 10.6322
-        },
-        {
-          "tokenId": "xvs",
-          "token": "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63",
-          "symbol": "XVS",
-          "decimals": 18,
-          "amount": 3.3,
-          "amountUnits": "3300000000000000000",
-          "weight": 450,
-          "rarity": 2,
-          "valueUsd": 10.56
-        },
-        {
-          "tokenId": "lista",
-          "token": "0xFceB31A79F71AC9CBDCF853519c1b12D379EdC46",
-          "symbol": "LISTA",
-          "decimals": 18,
-          "amount": 101,
-          "amountUnits": "101000000000000000000",
-          "weight": 200,
-          "rarity": 2,
-          "valueUsd": 7.9366
-        },
-        {
-          "tokenId": "bnb",
-          "token": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
-          "symbol": "BNB",
-          "decimals": 18,
-          "amount": 0.069,
-          "amountUnits": "69000000000000000",
-          "weight": 120,
-          "rarity": 3,
-          "valueUsd": 52.8257
-        },
-        {
-          "tokenId": "cake",
-          "token": "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
-          "symbol": "CAKE",
-          "decimals": 18,
-          "amount": 9.7,
-          "amountUnits": "9700000000000000000",
+          "amount": 16,
+          "amountUnits": "16000000000000000000",
           "weight": 30,
           "rarity": 3,
-          "valueUsd": 24.735
+          "valueUsd": 11.3808
         }
       ]
     }

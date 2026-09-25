@@ -12,7 +12,8 @@ export function shortHash(hash: string, lead = 6, tail = 4): string {
 
 /**
  * Formats a token amount with a precision that suits its magnitude — a
- * BABYDOGE reward and a BNB reward should not be shown the same way.
+ * A reward measured in billions and one measured in fractions should not be shown
+ * the same way.
  */
 export function formatTokenAmount(amount: number, symbol?: string): string {
   if (!Number.isFinite(amount)) return '—'
