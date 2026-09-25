@@ -109,13 +109,17 @@ cast send $BACHA_GAME_ADDRESS "grantRole(bytes32,address)" \
 
 **Sizing the float.** The game reserves the *worst case* of every asset in the
 table for each pending spin — not the expected payout. For the current table
-that is about $27 per spin against a $1.87 expected payout, so roughly:
+that is about $18.60 per spin against a $1.83 expected payout, so roughly:
 
 | Float | Concurrent pending spins |
 |---|---|
-| $100 | 3 |
-| $250 | 9 |
-| $500 | 18 |
+| $100 | 5 |
+| $250 | 13 |
+| $500 | 26 |
+
+The largest entry for each asset is what sets this, so the rarest prizes drive
+working capital far more than they drive payout. Raising an epic amount costs
+concurrency across the whole machine; check this table before doing it.
 
 That is a throughput limit, not a solvency one. Spins settle in seconds, so
 the cap only bites under bursts, and it lifts on its own as revenue accumulates.
