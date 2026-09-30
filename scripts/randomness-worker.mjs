@@ -112,8 +112,18 @@ const read = (functionName, args = []) => publicClient.readContract({ address, a
 async function send(functionName, args) {
   const { request } = await publicClient.simulateContract({ address, abi, functionName, args, account })
   const hash = await wallet.writeContract(request)
-  await publicClient.waitForTransactionReceipt({ hash })
+  const receipt = await publicClient.waitForTransactionReceipt({ hash })
+  if (receipt.status !== 'success') throw new Error(`${functionName} reverted in ${hash}`)
   return hash
+}
+
+/** True while a transaction from the committer key is still unmined. */
+async function hasInFlight() {
+  const [latest, pending] = await Promise.all([
+    publicClient.getTransactionCount({ address: account.address, blockTag: 'latest' }),
+    publicClient.getTransactionCount({ address: account.address, blockTag: 'pending' }),
+  ])
+  return pending > latest
 }
 
 /* ----------------------------------------------------------- seed store */
@@ -149,11 +159,22 @@ async function topUp(store) {
   const available = await read('availableCommitments')
   if (available >= BigInt(LOW_WATER)) return false
 
+  // A commit still in the mempool has not moved commitmentCount yet. Writing
+  // a fresh batch now would land on the same indices and overwrite seeds that
+  // are about to be committed — orphaning them. Wait for it instead.
+  if (await hasInFlight()) {
+    console.log('commit skipped: a transaction from the committer is still pending')
+    return false
+  }
+
   const startIndex = Number(await read('commitmentCount'))
   const seeds = []
   const hashes = []
   for (let i = 0; i < BATCH; i++) {
-    const seed = `0x${randomBytes(32).toString('hex')}`
+    // Reuse a seed already stored for this index (a batch whose commit never
+    // mined) rather than replace it: if that commit does land later, its
+    // preimage must still be here.
+    const seed = store.seeds[startIndex + i] ?? `0x${randomBytes(32).toString('hex')}`
     seeds.push(seed)
     hashes.push(commitmentOf(seed))
   }
@@ -237,9 +258,14 @@ async function tick() {
   }
 }
 
+// Ticks run back to back, never overlapping: two ticks racing through
+// topUp would read the same commitmentCount and write the same seed indices.
 await tick()
 if (!ONCE && !COMMIT_ONLY) {
-  setInterval(tick, POLL_MS)
+  for (;;) {
+    await new Promise((r) => setTimeout(r, POLL_MS))
+    await tick()
+  }
 } else {
   process.exit(0)
 }
