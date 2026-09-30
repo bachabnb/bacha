@@ -29,7 +29,7 @@ You need:
 ```bash
 cd contracts
 cp ../.env.example .env        # fill in the contract section
-forge test                     # 70 tests must pass
+forge test                     # 81 tests must pass
 ```
 
 Randomness is first-party: `BachaRandomness` is deployed alongside the game by
@@ -88,7 +88,7 @@ out of the game, buys whatever inventory is below target, and funds the vault.
 
 ```bash
 export BACHA_TREASURY_KEY=...      # hot key, game TREASURER_ROLE only
-export BACHA_TARGET_SPINS=3        # concurrent spins to keep stocked
+export BACHA_TARGET_SPINS=5        # concurrent spins to keep stocked
 
 npm run treasury:plan              # dry run — prints what it would do
 node scripts/treasury-worker.mjs --quote   # check routes before going live
@@ -215,8 +215,16 @@ Author the table as JSON — amounts in **exact base units**, never decimals:
 
 Rarity: `0` common, `1` uncommon, `2` rare, `3` epic.
 
+`npm run table:export` writes `contracts/tables/bacha.json` from
+`data/machine.json` in exactly this shape.
+
+`PRIVATE_KEY` here must hold vault admin and game `OPERATOR_ROLE` — with a
+multisig admin, that means the multisig runs this step, not the deployer.
+
 ```bash
-BACHA_TABLE_FILE=./tables/quick.json \
+npm run table:export
+cd contracts
+BACHA_TABLE_FILE=./tables/bacha.json \
 forge script script/PublishTable.s.sol:PublishTable \
   --rpc-url $BSC_RPC_URL --broadcast -vvvv
 ```
@@ -233,12 +241,24 @@ against real vault balances.
 
 `--verify` during deploy usually handles it. If not:
 
+The vault and beacon are constructed with the **deployer** address (the
+deploy script hands their roles to `BACHA_ADMIN` afterwards); the game is
+constructed with `BACHA_ADMIN` directly.
+
 ```bash
+DEPLOYER=$(cast wallet address $PRIVATE_KEY)
+
+forge verify-contract $BACHA_VAULT_ADDRESS src/BachaVault.sol:BachaVault \
+  --chain 56 --etherscan-api-key $BSCSCAN_API_KEY \
+  --constructor-args $(cast abi-encode "constructor(address)" $DEPLOYER)
+
+forge verify-contract $BACHA_RANDOMNESS_ADDRESS src/BachaRandomness.sol:BachaRandomness \
+  --chain 56 --etherscan-api-key $BSCSCAN_API_KEY \
+  --constructor-args $(cast abi-encode "constructor(address,address)" $DEPLOYER $BACHA_COMMITTER)
+
 forge verify-contract $BACHA_GAME_ADDRESS src/BachaGame.sol:BachaGame \
-  --chain 56 \
-  --etherscan-api-key $BSCSCAN_API_KEY \
-  --constructor-args $(cast abi-encode \
-    "constructor(address,address,address,(bytes32,uint256,uint16,uint32,bool))" \
+  --chain 56 --etherscan-api-key $BSCSCAN_API_KEY \
+  --constructor-args $(cast abi-encode "constructor(address,address,address)" \
     $BACHA_ADMIN $BACHA_VAULT_ADDRESS $BACHA_RANDOMNESS_ADDRESS)
 ```
 
@@ -248,12 +268,18 @@ claim hollow.
 
 ### Hand over authority
 
-```bash
-# From the deployer, grant to the multisig:
-cast send $BACHA_GAME_ADDRESS "grantRole(bytes32,address)" \
-  $(cast keccak "OPERATOR_ROLE") $MULTISIG ...
+The deploy script already does this when `BACHA_ADMIN` is not the deployer:
+the game is constructed with `BACHA_ADMIN` as its only role holder, and the
+deployer renounces its vault and beacon roles before the broadcast ends. The
+deployer key holds nothing afterwards. Confirm it before walking away:
 
-# Then renounce the deployer's roles. Confirm with hasRole() before walking away.
+```bash
+ADMIN_ROLE=0x0000000000000000000000000000000000000000000000000000000000000000
+for c in $BACHA_GAME_ADDRESS $BACHA_VAULT_ADDRESS $BACHA_RANDOMNESS_ADDRESS; do
+  echo "$c admin=$(cast call $c 'hasRole(bytes32,address)(bool)' $ADMIN_ROLE $BACHA_ADMIN) \
+deployer=$(cast call $c 'hasRole(bytes32,address)(bool)' $ADMIN_ROLE $DEPLOYER)"
+done
+# expect admin=true deployer=false on all three
 ```
 
 ---

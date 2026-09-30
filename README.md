@@ -43,7 +43,7 @@ and no transaction is made. Demo randomness lives in its own module
 
 ```bash
 cd contracts
-forge test        # 51 tests, including 6 invariants
+forge test        # 81 tests, including 6 invariants
 forge build
 ```
 
@@ -136,8 +136,8 @@ Chain showcase.
 | `npm run build` | production build |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
-| `npm test` | frontend tests (61) |
-| `npm run contracts:test` | Foundry tests (51) |
+| `npm test` | frontend tests (84) |
+| `npm run contracts:test` | Foundry tests (81) |
 | `npm run art:generate` | generate the art pack (needs `OPENAI_API_KEY`) |
 | `npm run art:optimize` | trim, resize and convert to WebP |
 | `npm run logo:process` | prepare `public/brand/bacha-logo.png` for the web |
