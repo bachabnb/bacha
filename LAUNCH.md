@@ -56,10 +56,10 @@ down (`cast balance` below).
 
 - [ ] Paid random prizes are regulated differently across jurisdictions. Check
       where you can operate, and set `BACHA_BLOCKED_COUNTRIES` for the rest.
-- [ ] An always-on machine for the three workers (a small VPS, or a computer
-      that never sleeps). If the randomness worker is down for more than ~3
-      minutes, spins in flight can't settle and are refunded after 3 hours —
-      no money is lost, but players wait.
+- [ ] A small always-on Linux server for the three workers (Step 6). If the
+      randomness worker is down for more than ~3 minutes, spins in flight
+      can't settle and are refunded after 3 hours — no money is lost, but
+      players wait.
 - [ ] An RPC endpoint for BNB Chain. The public `https://bsc-dataseed.bnbchain.org`
       is fine for deploying; the workers poll, so give them a free-tier key
       from a provider.
@@ -95,7 +95,10 @@ Write the five **addresses** down (addresses are public; that's fine). Back
 up `~/.foundry/keystores` and the passwords somewhere offline. Lose the admin
 keystore and nobody can ever change the machine again.
 
-Create `contracts/.env.launch` (gitignored) with the public values only:
+Create `contracts/.env.launch` (gitignored) with the public values only —
+`scripts/create-wallets.sh` writes it for you. Load it with
+`set -a && source .env.launch && set +a`: a plain `source` does not export the
+values, and forge would stop with "environment variable not found".
 
 ```bash
 # contracts/.env.launch — public values only, never a private key
@@ -119,7 +122,7 @@ the amounts from the table above to each wallet (MetaMask is fine for this).
 Check before continuing:
 
 ```bash
-cd contracts && source .env.launch
+cd contracts && set -a && source .env.launch && set +a
 for a in $DEPLOYER $BACHA_ADMIN $BACHA_COMMITTER $BACHA_OPERATOR $BACHA_TREASURY; do
   echo "$a $(cast balance $a --ether --rpc-url $BSC_RPC_URL)"
 done
@@ -132,7 +135,7 @@ done
 Dry run first — this simulates against mainnet and sends nothing:
 
 ```bash
-cd contracts && source .env.launch
+cd contracts && set -a && source .env.launch && set +a
 forge script script/Deploy.s.sol:Deploy --rpc-url $BSC_RPC_URL \
   --account bacha-deployer --sender $DEPLOYER
 ```
@@ -157,7 +160,7 @@ BACHA_RANDOMNESS_ADDRESS=0x...
 Confirm the deployer kept nothing and the admin holds everything:
 
 ```bash
-source .env.launch
+set -a && source .env.launch && set +a
 ADMIN_ROLE=0x0000000000000000000000000000000000000000000000000000000000000000
 for c in $BACHA_GAME_ADDRESS $BACHA_VAULT_ADDRESS $BACHA_RANDOMNESS_ADDRESS; do
   echo "$c admin=$(cast call $c 'hasRole(bytes32,address)(bool)' $ADMIN_ROLE $BACHA_ADMIN --rpc-url $BSC_RPC_URL) \
@@ -196,81 +199,92 @@ refused until Step 7.
 
 ---
 
-## Step 6 — Start the randomness worker
+## Step 6 — Set up the worker server
 
-On the worker machine. The committer's raw key goes into that machine's
-environment only:
+The three workers run on a small always-on Linux server (about $4–6 a month:
+any provider's smallest Ubuntu 24.04 machine with 1–2 GB of memory). Only the
+**committer, treasury and operator** wallets ever go there — never the admin
+or deployer, and never your password.
 
-```bash
-cast wallet decrypt-keystore bacha-committer      # prints the key — keep it off screen-shares
-```
+1. Create an **Ubuntu 24.04** server with your provider, choosing SSH-key
+   login and pasting your Mac's public key (`cat ~/.ssh/id_ed25519.pub`).
+   Note its IP address.
 
-```bash
-export BACHA_RPC_URL=<your worker RPC>
-export BACHA_RANDOMNESS_ADDRESS=0x...
-export BACHA_COMMITTER_KEY=<from decrypt-keystore>
-export BACHA_SEED_STORE=/absolute/path/bacha-seeds.json   # back this file up
-export BACHA_COMMIT_BATCH=64 BACHA_COMMIT_LOW_WATER=16
+2. On the server (`ssh root@<SERVER_IP>`), run the setup. It installs Node and
+   Foundry, creates a `bacha` system user, downloads the code to `/opt/bacha`
+   and installs the three services without starting them:
 
-npm run randomness:commit     # one batch, proves the wiring
-npm run randomness:worker     # then keep this running
-```
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/bachabnb/bacha/deploy-readiness/scripts/server/setup.sh | bash
+   ```
 
-**Back up the seed store.** A lost seed can never be revealed; its spins
-fall back to refunds.
+3. From your **Mac**, in the `BACHA` folder, copy the three worker wallets
+   and the public launch settings across:
+
+   ```bash
+   ssh root@<SERVER_IP> 'install -d -m 700 /root/keystores'
+   scp ~/.foundry/keystores/bacha-{committer,treasury,operator} root@<SERVER_IP>:/root/keystores/
+   scp contracts/.env.launch root@<SERVER_IP>:/etc/bacha/launch.env
+   ```
+
+4. Back on the **server**, unlock them once. It asks for your wallet
+   password, checks each key matches its address, stores the keys where only
+   root can read them, and deletes the copied wallet files:
+
+   ```bash
+   bash /opt/bacha/scripts/server/install-keys.sh
+   ```
+
+Worker settings live in `/etc/bacha/worker.env` (sized for the $100 float).
+Replace `BACHA_RPC_URL` there with a provider endpoint when you have one.
 
 ---
 
-## Step 7 — Stock the vault (treasury worker)
-
-The worker spends the treasury wallet's BNB on the six reward tokens through
-PancakeSwap and deposits them into the vault, until five spins are covered.
-
-Read-only checks first:
+## Step 7 — Start the randomness worker
 
 ```bash
-export BACHA_RPC_URL=<your worker RPC>
-export BACHA_GAME_ADDRESS=0x... BACHA_VAULT_ADDRESS=0x...
-export BACHA_TREASURY_KEY=<cast wallet decrypt-keystore bacha-treasury>
-export BACHA_TARGET_SPINS=5 BACHA_GAS_FLOOR_BNB=0.003 BACHA_RESERVE_BNB=0.005 \
-       BACHA_MAX_SPEND_PER_TICK_BNB=0.02 BACHA_SWEEP_MIN_BNB=0.002 BACHA_MAX_SLIPPAGE_BPS=200
-
-node scripts/treasury-worker.mjs --quote   # best route and price per token — no transactions
-npm run treasury:plan                      # what it would buy — no transactions
+systemctl enable --now bacha-randomness
+journalctl -u bacha-randomness -f       # Ctrl+C to stop watching
 ```
 
-Then one real pass, capped at 0.02 BNB, and look at it on BscScan before
-going further:
+Expect `committed 64 seeds from index 0`. It keeps the queue topped up and
+reveals every spin from then on, and restarts itself after a crash or reboot.
+
+**Back up the seed store** from your Mac, now and regularly — a lost seed can
+never be revealed, and until it is revealed it predicts that spin:
 
 ```bash
-node scripts/treasury-worker.mjs --live --once
-```
-
-When that pass looks right, leave it running — it buys 0.02 BNB at a time
-until the vault is stocked, then keeps restocking from spin revenue:
-
-```bash
-npm run treasury:worker
-```
-
-Stocked when this reads 5 or more:
-
-```bash
-cast call $BACHA_GAME_ADDRESS 'remainingFundedSpins(uint64)(uint256)' 1 --rpc-url $BSC_RPC_URL
+scp root@<SERVER_IP>:/var/lib/bacha/seeds.json ~/bacha-seeds-backup.json
 ```
 
 ---
 
-## Step 8 — Start the solvency governor
+## Step 8 — Stock the vault, then start the treasury and governor
 
-Keeps the payout between 55% and 70% as token prices move, by rescaling
-prize amounts (never the odds).
+Read-only first — best route and price per stock, and what it would buy:
 
 ```bash
-export BACHA_OPERATOR_KEY=<cast wallet decrypt-keystore bacha-operator>
-npm run governor:check    # dry run: prints measured RTP
-npm run governor          # keep running
+bash /opt/bacha/scripts/server/run.sh treasury --quote
+bash /opt/bacha/scripts/server/run.sh treasury --once
 ```
+
+One real purchase pass, capped at 0.02 BNB. Check the transactions on
+BscScan before going further:
+
+```bash
+bash /opt/bacha/scripts/server/run.sh treasury --live --once
+```
+
+Then leave both running. The treasury buys 0.02 BNB at a time until five
+spins are covered, then restocks from spin revenue; the governor keeps the
+payout between 55% and 70%:
+
+```bash
+systemctl enable --now bacha-treasury bacha-governor
+bash /opt/bacha/scripts/server/status.sh
+```
+
+Stocked when `funded spins` reads 5 or more.
 
 ---
 
@@ -302,6 +316,19 @@ BscScan's web form (*Verify & Publish → Standard JSON*) is free.
 ---
 
 ## Keeping it running
+
+On the server:
+
+```bash
+bash /opt/bacha/scripts/server/status.sh          # services, gas, seeds, funded spins
+journalctl -u bacha-treasury --since today       # any worker's log
+```
+
+After a change is pushed to `deploy-readiness`, update the server by running
+the Step 6 setup command again, then `systemctl restart bacha-randomness
+bacha-treasury bacha-governor`.
+
+From your Mac:
 
 ```bash
 # committer gas — top up below ~0.001 BNB
