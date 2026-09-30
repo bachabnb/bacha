@@ -6,8 +6,9 @@
 #   curl -fsSL https://raw.githubusercontent.com/bachabnb/bacha/deploy-readiness/scripts/server/setup.sh | bash
 #
 # It installs Node and Foundry's cast, creates a `bacha` system user, checks
-# the code out to /opt/bacha and installs three systemd services — without
-# starting them. Keys come next, with install-keys.sh.
+# the code out to /opt/bacha and installs the systemd services — without
+# starting them. Keys come next, with install-keys.sh; the website with web.sh.
+# Re-running it later updates the code and restarts whatever is running.
 set -euo pipefail
 
 BRANCH="${BACHA_BRANCH:-deploy-readiness}"
@@ -51,7 +52,8 @@ if [ -d /opt/bacha/.git ]; then
 else
   git clone -q -b "$BRANCH" "$REPO" /opt/bacha
 fi
-(cd /opt/bacha && npm ci --omit=dev --no-audit --no-fund --loglevel=error)
+# Full install: building the website needs the dev dependencies too.
+(cd /opt/bacha && npm ci --no-audit --no-fund --loglevel=error)
 
 if [ ! -f /etc/bacha/worker.env ]; then
   cat > /etc/bacha/worker.env <<'EOF'
@@ -77,10 +79,19 @@ echo "== services (installed, not started)"
 install -m 644 /opt/bacha/scripts/server/systemd/bacha-*.service /etc/systemd/system/
 systemctl daemon-reload
 
-echo "== firewall: SSH only"
+echo "== firewall: SSH only (the website is reached through the Cloudflare Tunnel)"
 ufw allow OpenSSH >/dev/null
 ufw --force enable >/dev/null
 
+# Re-running setup is how the server is updated: pick up the new code in
+# whatever is already running.
+if [ -f /etc/bacha/web.env ]; then
+  bash /opt/bacha/scripts/server/web.sh
+fi
+for s in randomness treasury governor; do
+  if systemctl is-active --quiet "bacha-$s"; then systemctl restart "bacha-$s" && echo "restarted bacha-$s"; fi
+done
+
 echo
-echo "Setup done. Next, from your Mac, copy the three worker wallets and the"
-echo "public launch settings here, then run install-keys.sh (see LAUNCH.md)."
+echo "Setup done. First time? Continue with Step 6 of LAUNCH.md: copy the three"
+echo "worker wallets and the launch settings here, then run install-keys.sh."

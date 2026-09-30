@@ -201,8 +201,9 @@ refused until Step 7.
 
 ## Step 6 — Set up the worker server
 
-The three workers run on a small always-on Linux server (about $4–6 a month:
-any provider's smallest Ubuntu 24.04 machine with 1–2 GB of memory). Only the
+The three workers and the website run on one small always-on Linux server
+(about $4–6 a month: an Ubuntu 24.04 machine with **2 GB of memory or more** —
+building the site needs it). Only the
 **committer, treasury and operator** wallets ever go there — never the admin
 or deployer, and never your password.
 
@@ -288,25 +289,52 @@ Stocked when `funded spins` reads 5 or more.
 
 ---
 
-## Step 9 — One real spin, end to end
+## Step 9 — Put the website online (Cloudflare)
 
-Point a local copy of the site at mainnet (`.env.local`):
+The site runs on the same server, listening only on the server itself. A
+free **Cloudflare Tunnel** carries visitors to it, so no web port is ever
+opened: Cloudflare handles HTTPS, and every request carries Cloudflare's
+country header, which the US block depends on.
 
-```
-NEXT_PUBLIC_CHAIN_ID=56
-NEXT_PUBLIC_BACHA_GAME_ADDRESS=0x...
-NEXT_PUBLIC_BACHA_VAULT_ADDRESS=0x...
-NEXT_PUBLIC_BACHA_RANDOMNESS_ADDRESS=0x...
-```
+1. **Domain on Cloudflare.** In a free Cloudflare account, add your domain
+   and switch its nameservers to Cloudflare's at your registrar (or buy the
+   domain from Cloudflare directly).
 
-`npm run dev`, connect a personal wallet with ~0.005 BNB, spin once, and
-check: the demo ribbon is gone, the console says **Healthy**, the spin
-settles within seconds, **Claim** delivers the token, and `/fairness`
-re-derives it as matched.
+2. **Build and start the site** on the server:
+
+   ```bash
+   bash /opt/bacha/scripts/server/web.sh yourdomain.com
+   ```
+
+   It writes `/etc/bacha/web.env` from your contract addresses, generates the
+   `/admin` password (`grep BACHA_ADMIN_TOKEN /etc/bacha/web.env`), builds the
+   site and checks it answers.
+
+3. **Create the tunnel** in the Cloudflare dashboard: *Zero Trust → Networks
+   → Tunnels → Create a tunnel → Cloudflared*. Name it `bacha`. Under
+   *Public hostname*, add `yourdomain.com` with service **HTTP** and URL
+   **localhost:3000**. Copy the token from the install command it shows (the
+   long string after `service install`), then on the server:
+
+   ```bash
+   bash /opt/bacha/scripts/server/tunnel.sh
+   ```
+
+4. Open `https://yourdomain.com`. The demo ribbon must be gone and the
+   console should read **Healthy**.
 
 ---
 
-## Step 10 — Verify the source on BscScan
+## Step 10 — One real spin, end to end
+
+On the live site, connect a personal wallet with ~0.005 BNB, spin once, and
+check: the spin settles within seconds, **Claim** delivers the stock, and
+`/fairness` re-derives it as matched. From a US connection (or a VPN exit in
+the US) the site must show the region notice instead.
+
+---
+
+## Step 11 — Verify the source on BscScan
 
 The fairness page invites people to check the contracts; unverified bytecode
 makes that hollow. Verification commands are in DEPLOYMENT.md ("Verify on

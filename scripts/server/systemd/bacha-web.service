@@ -1,0 +1,25 @@
+[Unit]
+Description=Bacha website
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=bacha
+Group=bacha
+WorkingDirectory=/opt/bacha
+EnvironmentFile=/etc/bacha/web.env
+Environment=NODE_ENV=production
+# Localhost only: the site is reached through the Cloudflare Tunnel and never
+# directly, so the country header the region block relies on is always
+# Cloudflare's own.
+ExecStart=/usr/bin/node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3000
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/bacha/.next
+
+[Install]
+WantedBy=multi-user.target
