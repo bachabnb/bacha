@@ -2,8 +2,9 @@
 # Starts one Bacha worker, unlocking its wallet from the Foundry keystore.
 #
 #   bash scripts/run-worker.sh randomness [--commit-only | --once]
-#   bash scripts/run-worker.sh treasury   [--quote | --live | --live --once]
-#   bash scripts/run-worker.sh governor   [--once | --live]
+#
+# The one worker: commits and reveals randomness, and delivers each settled
+# prize by swapping its BNB into the stock on PancakeSwap.
 #
 # Asks for the keystore password, decrypts the key into this process's memory
 # and hands it to the worker through its environment. The key is never written
@@ -19,9 +20,7 @@ role="${1:-}"
 shift || true
 case "$role" in
   randomness) account=bacha-committer; key_var=BACHA_COMMITTER_KEY; script=scripts/randomness-worker.mjs ;;
-  treasury)   account=bacha-treasury;  key_var=BACHA_TREASURY_KEY;  script=scripts/treasury-worker.mjs ;;
-  governor)   account=bacha-operator;  key_var=BACHA_OPERATOR_KEY;  script=scripts/solvency-governor.mjs ;;
-  *) echo "usage: bash scripts/run-worker.sh randomness|treasury|governor [worker flags]"; exit 1 ;;
+  *) echo "usage: bash scripts/run-worker.sh randomness [worker flags]"; exit 1 ;;
 esac
 
 if [ ! -f contracts/.env.launch ]; then
@@ -38,11 +37,6 @@ export BACHA_RPC_URL="${BACHA_RPC_URL:-$BSC_RPC_URL}"
 export BACHA_SEED_STORE="${BACHA_SEED_STORE:-$HOME/.bacha/seeds.json}"
 export BACHA_COMMIT_BATCH="${BACHA_COMMIT_BATCH:-64}"
 export BACHA_COMMIT_LOW_WATER="${BACHA_COMMIT_LOW_WATER:-16}"
-export BACHA_TARGET_SPINS="${BACHA_TARGET_SPINS:-5}"
-export BACHA_GAS_FLOOR_BNB="${BACHA_GAS_FLOOR_BNB:-0.003}"
-export BACHA_RESERVE_BNB="${BACHA_RESERVE_BNB:-0.005}"
-export BACHA_MAX_SPEND_PER_TICK_BNB="${BACHA_MAX_SPEND_PER_TICK_BNB:-0.02}"
-export BACHA_SWEEP_MIN_BNB="${BACHA_SWEEP_MIN_BNB:-0.002}"
 export BACHA_MAX_SLIPPAGE_BPS="${BACHA_MAX_SLIPPAGE_BPS:-200}"
 
 read -r -s -p "Wallet password for $account: " password

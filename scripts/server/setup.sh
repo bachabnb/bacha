@@ -88,7 +88,7 @@ ufw --force enable >/dev/null
 if [ -f /etc/bacha/web.env ]; then
   bash /opt/bacha/scripts/server/web.sh
 fi
-for s in randomness treasury governor; do
+for s in randomness; do
   if systemctl is-active --quiet "bacha-$s"; then systemctl restart "bacha-$s" && echo "restarted bacha-$s"; fi
 done
 

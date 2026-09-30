@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Unlocks the three worker wallets on the server, once. Run as root after
+# Unlocks the worker wallet on the server, once. Run as root after
 # copying, from your Mac:
-#   ~/.foundry/keystores/bacha-{committer,treasury,operator}  ->  /root/keystores/
+#   ~/.foundry/keystores/bacha-committer                       ->  /root/keystores/
 #   contracts/.env.launch                                     ->  /etc/bacha/launch.env
 #
 # Asks for the keystore password, checks each unlocked key belongs to the
@@ -16,7 +16,7 @@ APP="${BACHA_APP:-/opt/bacha}"
 CAST="$(command -v cast || echo /root/.foundry/bin/cast)"
 
 [ -f "$ETC/launch.env" ] || { echo "Missing $ETC/launch.env — copy contracts/.env.launch there first."; exit 1; }
-for w in committer treasury operator; do
+for w in committer; do
   [ -f "$KS/bacha-$w" ] || { echo "Missing $KS/bacha-$w — copy the keystore there first."; exit 1; }
 done
 
@@ -26,7 +26,7 @@ read -r -s -p "Wallet password: " password
 echo
 
 umask 077
-for spec in committer:BACHA_COMMITTER:BACHA_COMMITTER_KEY treasury:BACHA_TREASURY:BACHA_TREASURY_KEY operator:BACHA_OPERATOR:BACHA_OPERATOR_KEY; do
+for spec in committer:BACHA_COMMITTER:BACHA_COMMITTER_KEY; do
   IFS=: read -r wallet addr_var key_var <<<"$spec"
   want="$(expected "$addr_var")"
   [ -n "$want" ] || { echo "$addr_var is not set in $ETC/launch.env"; exit 1; }
@@ -51,7 +51,7 @@ done
 unset password
 
 # The keys now live only in the root-only env files. Remove the copies.
-for w in committer treasury operator; do
+for w in committer; do
   if command -v shred >/dev/null 2>&1; then shred -u "$KS/bacha-$w"; else rm -f "$KS/bacha-$w"; fi
 done
 rmdir "$KS" 2>/dev/null || true

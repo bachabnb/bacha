@@ -2,9 +2,7 @@
 # Runs one worker by hand, with the same settings and key its service uses —
 # for the one-off checks in LAUNCH.md. Run as root.
 #
-#   bash /opt/bacha/scripts/server/run.sh treasury --quote
-#   bash /opt/bacha/scripts/server/run.sh treasury --live --once
-#   bash /opt/bacha/scripts/server/run.sh governor --once
+#   bash /opt/bacha/scripts/server/run.sh randomness --once
 set -euo pipefail
 
 ETC="${BACHA_ETC:-/etc/bacha}"
@@ -12,9 +10,7 @@ role="${1:-}"
 shift || true
 case "$role" in
   randomness) wallet=committer; script=randomness-worker.mjs ;;
-  treasury)   wallet=treasury;  script=treasury-worker.mjs ;;
-  governor)   wallet=operator;  script=solvency-governor.mjs ;;
-  *) echo "usage: run.sh randomness|treasury|governor [worker flags]"; exit 1 ;;
+  *) echo "usage: run.sh randomness [worker flags]"; exit 1 ;;
 esac
 
 # Two copies of a worker sign with the same key and collide on nonces.

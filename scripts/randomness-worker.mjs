@@ -11,6 +11,13 @@
  *   2. REVEAL — open the committed seed for each request once its reveal block
  *      has been mined, which settles the spin.
  *
+ *   3. DELIVER — buy each settled prize on PancakeSwap and send it to the
+ *      player, through `BachaGame.deliver`. The key holds SETTLER_ROLE: it
+ *      picks the route and minimum output, and the contract fixes the amount,
+ *      the token and the recipient. A route that fails is set aside for that
+ *      spin and the next-best one is tried; the prize stays on-chain, safe,
+ *      until something fills — or the player takes it in BNB.
+ *
  * WHY THE SEED FILE MATTERS
  *
  * A commitment is `keccak256(abi.encode(seed))`. If the seed is lost, that
@@ -31,6 +38,8 @@
  *   BACHA_COMMIT_BATCH            seeds per commit batch (default 128)
  *   BACHA_COMMIT_LOW_WATER        top up below this many unused (default 64)
  *   BACHA_POLL_MS                 loop interval (default 4000)
+ *   BACHA_GAME_ADDRESS            the game; set it to deliver prizes
+ *   BACHA_MAX_SLIPPAGE_BPS        delivery slippage limit (default 200 = 2%)
  *
  * Usage:
  *   node scripts/randomness-worker.mjs          # run the loop
@@ -50,6 +59,7 @@ import {
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { bsc, bscTestnet } from 'viem/chains'
+import { bestRoute, toGameRoute } from './lib/routes.mjs'
 
 const argv = new Set(process.argv.slice(2))
 const ONCE = argv.has('--once')
@@ -62,6 +72,8 @@ const STORE = process.env.BACHA_SEED_STORE ?? '.secrets/seeds.json'
 const BATCH = Number(process.env.BACHA_COMMIT_BATCH ?? 128)
 const LOW_WATER = Number(process.env.BACHA_COMMIT_LOW_WATER ?? 64)
 const POLL_MS = Number(process.env.BACHA_POLL_MS ?? 4000)
+const GAME = process.env.BACHA_GAME_ADDRESS ? getAddress(process.env.BACHA_GAME_ADDRESS) : null
+const SLIPPAGE_BPS = BigInt(process.env.BACHA_MAX_SLIPPAGE_BPS ?? 200)
 
 if (!RPC || !BEACON || !KEY) {
   console.error(
@@ -99,6 +111,56 @@ const abi = [
   },
 ]
 
+const spinTuple = {
+  type: 'tuple',
+  components: [
+    { name: 'player', type: 'address' },
+    { name: 'tier', type: 'uint8' },
+    { name: 'status', type: 'uint8' },
+    { name: 'rarity', type: 'uint8' },
+    { name: 'versionId', type: 'uint64' },
+    { name: 'requestedAt', type: 'uint64' },
+    { name: 'settledAt', type: 'uint64' },
+    { name: 'payment', type: 'uint96' },
+    { name: 'reserve', type: 'uint96' },
+    { name: 'rewardToken', type: 'address' },
+    { name: 'rewardValue', type: 'uint96' },
+    { name: 'deliveredAmount', type: 'uint128' },
+    { name: 'requestId', type: 'uint256' },
+    { name: 'randomWord', type: 'uint256' },
+    { name: 'prizeTableHash', type: 'bytes32' },
+  ],
+}
+
+const gameAbi = [
+  { type: 'function', name: 'spinCount', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+  { type: 'function', name: 'getSpin', stateMutability: 'view', inputs: [{ name: 'spinId', type: 'uint256' }], outputs: [spinTuple] },
+  {
+    type: 'function',
+    name: 'deliver',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'spinId', type: 'uint256' },
+      {
+        name: 'route',
+        type: 'tuple',
+        components: [
+          { name: 'kind', type: 'uint8' },
+          { name: 'path', type: 'address[]' },
+          { name: 'v3Path', type: 'bytes' },
+        ],
+      },
+      { name: 'minOut', type: 'uint256' },
+      { name: 'deadline', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+]
+
+// BachaGame.SpinStatus
+const PENDING = 1
+const SETTLED = 2
+
 const account = privateKeyToAccount(KEY.startsWith('0x') ? KEY : `0x${KEY}`)
 const address = getAddress(BEACON)
 
@@ -110,7 +172,11 @@ const wallet = createWalletClient({ account, chain, transport: http(RPC) })
 const read = (functionName, args = []) => publicClient.readContract({ address, abi, functionName, args })
 
 async function send(functionName, args) {
-  const { request } = await publicClient.simulateContract({ address, abi, functionName, args, account })
+  return sendTo(address, abi, functionName, args)
+}
+
+async function sendTo(target, targetAbi, functionName, args) {
+  const { request } = await publicClient.simulateContract({ address: target, abi: targetAbi, functionName, args, account })
   const hash = await wallet.writeContract(request)
   const receipt = await publicClient.waitForTransactionReceipt({ hash })
   if (receipt.status !== 'success') throw new Error(`${functionName} reverted in ${hash}`)
@@ -239,20 +305,73 @@ async function revealPending(store, cursor) {
   return revealed
 }
 
+/* -------------------------------------------------------------- deliver */
+
+const readGame = (functionName, args = []) =>
+  publicClient.readContract({ address: GAME, abi: gameAbi, functionName, args })
+
+/** Routes that already failed, per spin — set aside so a retry tries another pool. */
+const failedRoutes = new Map()
+
+async function deliverSettled(cursor) {
+  if (!GAME) return 0
+  const total = Number(await readGame('spinCount'))
+  let delivered = 0
+
+  for (let id = cursor.next; id <= total; id++) {
+    const s = await readGame('getSpin', [BigInt(id)])
+
+    if (s.status !== SETTLED) {
+      // Delivered, paid in BNB or refunded: nothing left to do, and the cursor
+      // may pass it. A pending spin holds the cursor until it settles.
+      if (id === cursor.next && s.status !== PENDING) cursor.next = id + 1
+      continue
+    }
+
+    const exclude = failedRoutes.get(id) ?? new Set()
+    const route = await bestRoute(publicClient, s.rewardToken, s.rewardValue, { exclude })
+    if (!route) {
+      console.warn(`spin ${id}: no working route for ${s.rewardToken} — the player can still take it in BNB`)
+      continue
+    }
+
+    const minOut = (route.out * (10_000n - SLIPPAGE_BPS)) / 10_000n
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 120)
+    try {
+      const hash = await sendTo(GAME, gameAbi, 'deliver', [BigInt(id), toGameRoute(route), minOut, deadline])
+      delivered++
+      failedRoutes.delete(id)
+      if (id === cursor.next) cursor.next = id + 1
+      console.log(`delivered spin ${id}: ${s.rewardValue} wei of BNB → ${s.rewardToken} via ${route.label} ${hash}`)
+    } catch (err) {
+      exclude.add(route.label)
+      failedRoutes.set(id, exclude)
+      console.error(`delivery of spin ${id} via ${route.label} failed: ${err.shortMessage ?? err.message} — trying another route next pass`)
+    }
+  }
+
+  return delivered
+}
+
 /* ----------------------------------------------------------------- loop */
 
 const store = await loadStore()
 const cursor = { next: 1 }
+const deliveryCursor = { next: 1 }
 
 console.log(`beacon    ${address}`)
 console.log(`committer ${account.address}`)
 console.log(`chain     ${chainId}`)
 console.log(`store     ${STORE} (${Object.keys(store.seeds).length} seeds)`)
+console.log(`delivery  ${GAME ? `on — game ${GAME}, ${Number(SLIPPAGE_BPS) / 100}% slippage` : 'off (set BACHA_GAME_ADDRESS)'}`)
 
 async function tick() {
   try {
     await topUp(store)
-    if (!COMMIT_ONLY) await revealPending(store, cursor)
+    if (!COMMIT_ONLY) {
+      await revealPending(store, cursor)
+      await deliverSettled(deliveryCursor)
+    }
   } catch (err) {
     console.error(`tick failed: ${err.shortMessage ?? err.message}`)
   }
