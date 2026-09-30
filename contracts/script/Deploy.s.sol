@@ -3,66 +3,55 @@ pragma solidity 0.8.28;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {BachaGame} from "../src/BachaGame.sol";
-import {BachaVault} from "../src/BachaVault.sol";
 import {BachaRandomness} from "../src/BachaRandomness.sol";
 import {CliSigner} from "./CliSigner.sol";
 
-/// @notice Deploys the Bacha machine — beacon, vault, game — and wires them.
-/// @dev    Deliberately stops short of publishing a prize table, activating
-///         tiers or pushing seed commitments. Odds and inventory are an
-///         operational decision made against a funded vault, and commitments
-///         come from the reveal worker's key, never from a deploy script —
-///         see `PublishTable.s.sol`, `scripts/randomness-worker.mjs` and
-///         DEPLOYMENT.md.
+/// @notice Deploys the Bacha game — and the randomness beacon too, unless an
+///         existing one is given — wired to PancakeSwap on BNB Chain.
+/// @dev    Stops short of approving assets, publishing a table or funding the
+///         bankroll: those are the admin's, in Configure and PublishTable.
 ///
-///         Signer: pass it on the command line — `--account <keystore name>`
-///         or `--ledger` — so no key is ever written to a file. PRIVATE_KEY
-///         in the environment still works, for local rehearsals only.
+///         Signer: `--account <keystore>` or `--ledger` on the command line.
 ///
 ///         Required environment:
-///           BACHA_ADMIN       address that receives admin/operator/treasurer
-///                             roles — use a multisig on mainnet
-///           BACHA_COMMITTER   address that commits and reveals seeds. This is
-///                             a hot key held by the reveal worker; keep it
-///                             separate from admin, and fund it with gas only.
+///           BACHA_ADMIN               receives every game role — a multisig or
+///                                     cold wallet, never the deployer
+///           BACHA_RANDOMNESS_ADDRESS  an existing beacon to reuse; leave unset
+///                                     to deploy a new one (then BACHA_COMMITTER
+///                                     is required)
 contract Deploy is CliSigner {
-    function run() external returns (BachaVault vault, BachaGame game, BachaRandomness randomness) {
+    // PancakeSwap on BNB Smart Chain.
+    address internal constant V2_ROUTER = 0x10ED43C718714eb63d5aA57B78B54704E256024E;
+    address internal constant V3_SMART_ROUTER = 0x13f4EA83D0bd40E75C8222255bc855a974568Dd4;
+    address internal constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+
+    function run() external returns (BachaGame game, BachaRandomness randomness) {
         address admin = vm.envAddress("BACHA_ADMIN");
-        address committer = vm.envAddress("BACHA_COMMITTER");
+        address existing = vm.envOr("BACHA_RANDOMNESS_ADDRESS", address(0));
+        require(block.chainid == 56, "PancakeSwap addresses are for BNB Smart Chain (56)");
 
         address deployer = _startBroadcast();
         console2.log("deployer     ", deployer);
         console2.log("admin        ", admin);
-        console2.log("committer    ", committer);
-        console2.log("chain id     ", block.chainid);
 
-        // The deployer holds admin briefly so it can call setGame and grant
-        // the consumer role, then hands every role to `admin` and steps out.
-        vault = new BachaVault(deployer);
-        randomness = new BachaRandomness(deployer, committer);
-
-        game = new BachaGame(admin, address(vault), address(randomness));
-
-        vault.setGame(address(game));
-        randomness.grantRole(randomness.CONSUMER_ROLE(), address(game));
-
-        vault.grantRole(vault.DEFAULT_ADMIN_ROLE(), admin);
-        vault.grantRole(vault.TREASURER_ROLE(), admin);
-        randomness.grantRole(randomness.DEFAULT_ADMIN_ROLE(), admin);
-        if (admin != deployer) {
-            vault.renounceRole(vault.TREASURER_ROLE(), deployer);
-            vault.renounceRole(vault.DEFAULT_ADMIN_ROLE(), deployer);
-            randomness.renounceRole(randomness.DEFAULT_ADMIN_ROLE(), deployer);
+        if (existing == address(0)) {
+            address committer = vm.envAddress("BACHA_COMMITTER");
+            randomness = new BachaRandomness(deployer, committer);
+            randomness.grantRole(randomness.DEFAULT_ADMIN_ROLE(), admin);
+            if (admin != deployer) randomness.renounceRole(randomness.DEFAULT_ADMIN_ROLE(), deployer);
+            console2.log("new beacon    committer", committer);
+        } else {
+            randomness = BachaRandomness(existing);
+            console2.log("reusing beacon");
         }
+
+        game = new BachaGame(admin, address(randomness), V2_ROUTER, V3_SMART_ROUTER, WBNB);
 
         vm.stopBroadcast();
 
-        console2.log("BACHA_VAULT_ADDRESS     ", address(vault));
         console2.log("BACHA_GAME_ADDRESS      ", address(game));
         console2.log("BACHA_RANDOMNESS_ADDRESS", address(randomness));
         console2.log("");
-        console2.log("Next: start the reveal worker so the beacon has committed seeds.");
-        console2.log("      A spin reverts with NoCommitmentAvailable until it does.");
-        console2.log("Then: approve reward assets, fund the vault, publish a table, activate tiers.");
+        console2.log("Next (admin): Configure, then PublishTable, then fund the bankroll.");
     }
 }

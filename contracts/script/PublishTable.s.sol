@@ -1,29 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Script, console2} from "forge-std/Script.sol";
+import {console2} from "forge-std/Script.sol";
 import {BachaGame} from "../src/BachaGame.sol";
-import {BachaVault} from "../src/BachaVault.sol";
 import {CliSigner} from "./CliSigner.sol";
 
-/// @notice Approves reward assets and publishes the opening prize table.
-/// @dev    Reads a JSON table so odds never live in Solidity source. Run with
-///         BACHA_TABLE_FILE pointing at a file shaped like:
+/// @notice Publishes a prize table and points its tiers at it.
+/// @dev    Reads a JSON table so odds never live in Solidity source — the file
+///         `npm run table:export` writes:
 ///
-///         { "prizes": [ { "token": "0x..", "amount": "1200000000000000000",
-///                         "weight": 6800, "rarity": 0 }, ... ],
-///           "tiers":  [ { "id": 0, "label": "QUICK", "price": "2600000000000000" }, ... ] }
+///         { "prizes": [ { "token": "0x..", "value": "1200000000000000",
+///                         "weight": 2600, "rarity": 0 }, ... ],
+///           "tiers":  [ { "id": 0, "label": "BACHA", "price": "2600000000000000" } ] }
 ///
-///         Rarity: 0 common, 1 uncommon, 2 rare, 3 epic.
+///         `value` is the BNB, in wei, spent on the token when that prize is
+///         won. Rarity: 0 common, 1 uncommon, 2 rare, 3 epic. Run Configure
+///         first — every token must be approved and every value under the cap.
 ///
-///         The signer must hold vault admin and game OPERATOR_ROLE — the admin.
+///         Signer: the admin (it holds OPERATOR_ROLE), via `--account` or `--ledger`.
 contract PublishTable is CliSigner {
     function run() external {
-        address gameAddr = vm.envAddress("BACHA_GAME_ADDRESS");
-        address vaultAddr = vm.envAddress("BACHA_VAULT_ADDRESS");
-        string memory path = vm.envString("BACHA_TABLE_FILE");
-
-        string memory json = vm.readFile(path);
+        BachaGame game = BachaGame(payable(vm.envAddress("BACHA_GAME_ADDRESS")));
+        string memory json = vm.readFile(vm.envString("BACHA_TABLE_FILE"));
 
         // Read entry by entry. A `[*]` wildcard path yields several values,
         // which current forge refuses to decode as a single array.
@@ -31,25 +29,19 @@ contract PublishTable is CliSigner {
         uint256 t = _count(json, ".tiers");
         require(n > 0, "prizes: empty");
 
-        BachaGame game = BachaGame(gameAddr);
-        BachaVault vault = BachaVault(vaultAddr);
-
         BachaGame.Prize[] memory prizes = new BachaGame.Prize[](n);
-        address[] memory tokens = new address[](n);
         uint256 totalWeight;
         for (uint256 i; i < n; ++i) {
             string memory at = string.concat(".prizes[", vm.toString(i), "]");
-            tokens[i] = vm.parseJsonAddress(json, string.concat(at, ".token"));
-            uint256 amount = vm.parseJsonUint(json, string.concat(at, ".amount"));
+            uint256 value = vm.parseJsonUint(json, string.concat(at, ".value"));
             uint256 weight = vm.parseJsonUint(json, string.concat(at, ".weight"));
             uint256 rarity = vm.parseJsonUint(json, string.concat(at, ".rarity"));
-
             require(rarity <= 3, "rarity out of range");
-            require(amount > 0 && amount <= type(uint128).max, "bad amount");
+            require(value > 0 && value <= type(uint96).max, "bad value");
             require(weight > 0 && weight <= type(uint32).max, "bad weight");
             prizes[i] = BachaGame.Prize({
-                token: tokens[i],
-                amount: uint128(amount),
+                token: vm.parseJsonAddress(json, string.concat(at, ".token")),
+                value: uint96(value),
                 weight: uint32(weight),
                 rarity: BachaGame.Rarity(uint8(rarity))
             });
@@ -58,14 +50,7 @@ contract PublishTable is CliSigner {
 
         _startBroadcast();
 
-        for (uint256 i; i < tokens.length; ++i) {
-            if (!vault.approvedAsset(tokens[i])) {
-                vault.setAssetApproved(tokens[i], true);
-            }
-        }
-
         uint64 versionId = game.publishPrizeTable(prizes);
-
         for (uint256 i; i < t; ++i) {
             string memory at = string.concat(".tiers[", vm.toString(i), "]");
             uint256 id = vm.parseJsonUint(json, string.concat(at, ".id"));

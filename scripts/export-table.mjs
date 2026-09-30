@@ -18,7 +18,7 @@ const { machines } = JSON.parse(await readFile('data/machine.json', 'utf8'))
 if (!machines?.length) throw new Error('data/machine.json has no machines')
 
 const prizesOf = (m) =>
-  m.prizes.map((p) => ({ token: p.token, amount: p.amountUnits, weight: p.weight, rarity: p.rarity }))
+  m.prizes.map((p) => ({ token: p.token, value: p.valueWei, weight: p.weight, rarity: p.rarity }))
 
 const prizes = prizesOf(machines[0])
 for (const m of machines.slice(1)) {
@@ -29,7 +29,7 @@ for (const m of machines.slice(1)) {
 
 for (const p of prizes) {
   if (!/^0x[0-9a-fA-F]{40}$/.test(p.token)) throw new Error(`bad token address ${p.token}`)
-  if (!/^[1-9][0-9]*$/.test(p.amount)) throw new Error(`amount must be base units: ${p.amount}`)
+  if (!/^[1-9][0-9]*$/.test(p.value)) throw new Error(`value must be wei: ${p.value}`)
   if (!(p.rarity >= 0 && p.rarity <= 3)) throw new Error(`bad rarity ${p.rarity}`)
 }
 

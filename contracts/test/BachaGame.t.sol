@@ -1,637 +1,469 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {BachaBase} from "./BachaBase.t.sol";
-import {BachaGame} from "../src/BachaGame.sol";
-import {BachaVault} from "../src/BachaVault.sol";
-import {MockERC20, FeeOnTransferERC20, ReturnsFalseERC20} from "../src/mocks/MockERC20.sol";
 import {IAccessControl} from "openzeppelin-contracts/contracts/access/IAccessControl.sol";
 import {Pausable} from "openzeppelin-contracts/contracts/utils/Pausable.sol";
+import {BachaBase} from "./BachaBase.t.sol";
+import {BachaGame} from "../src/BachaGame.sol";
+import {BachaRandomness} from "../src/BachaRandomness.sol";
 
 contract BachaGameTest is BachaBase {
-    // ------------------------------------------------------- prize tables
+    // ------------------------------------------------------------ publish
 
-    function test_publishPrizeTable_storesImmutableVersion() public view {
-        (BachaGame.Version memory version, BachaGame.Prize[] memory prizes, address[] memory tokens) =
-            game.getVersion(v1);
-
-        assertTrue(version.published);
-        assertEq(version.totalWeight, 10_000);
+    function test_publishRecordsMaxValueAndHash() public view {
+        (BachaGame.Version memory v, BachaGame.Prize[] memory prizes) = game.getVersion(v1);
+        assertTrue(v.published);
+        assertEq(v.totalWeight, 10_000);
+        assertEq(v.maxValue, EPIC);
         assertEq(prizes.length, 4);
-        // CAKE appears twice but is one distinct asset for inventory purposes.
-        assertEq(tokens.length, 3);
-        assertTrue(version.prizeTableHash != bytes32(0));
+        assertTrue(v.prizeTableHash != bytes32(0));
     }
 
-    function test_publishPrizeTable_hashChangesWithContents() public {
-        BachaGame.Prize[] memory prizes = _defaultPrizes();
-        prizes[0].weight = 6801;
-        vm.prank(operator);
-        uint64 v2 = game.publishPrizeTable(prizes);
-
-        (BachaGame.Version memory a,,) = game.getVersion(v1);
-        (BachaGame.Version memory b,,) = game.getVersion(v2);
-        assertTrue(a.prizeTableHash != b.prizeTableHash);
-    }
-
-    function test_publishPrizeTable_rejectsUnapprovedAsset() public {
-        MockERC20 rogue = new MockERC20("Rogue", "RGE", 18);
+    function test_publishRejectsUnapprovedAsset() public {
         BachaGame.Prize[] memory prizes = new BachaGame.Prize[](1);
-        prizes[0] =
-            BachaGame.Prize({token: address(rogue), amount: 1e18, weight: 1, rarity: BachaGame.Rarity.Common});
-
+        prizes[0] = _prize(address(junk), 0.001 ether, 1, BachaGame.Rarity.Common);
         vm.prank(operator);
-        vm.expectRevert(abi.encodeWithSelector(BachaGame.AssetNotApprovedByVault.selector, address(rogue)));
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.AssetNotApproved.selector, address(junk)));
         game.publishPrizeTable(prizes);
     }
 
-    function test_publishPrizeTable_rejectsZeroWeightZeroAmountAndZeroAddress() public {
-        BachaGame.Prize[] memory p = new BachaGame.Prize[](1);
-
-        p[0] = BachaGame.Prize({token: address(cake), amount: 1e18, weight: 0, rarity: BachaGame.Rarity.Common});
+    function test_publishRejectsPrizeAboveMax() public {
+        BachaGame.Prize[] memory prizes = new BachaGame.Prize[](1);
+        prizes[0] = _prize(address(nvda), MAX_PRIZE + 1, 1, BachaGame.Rarity.Epic);
         vm.prank(operator);
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.PrizeExceedsMax.selector, MAX_PRIZE + 1, MAX_PRIZE));
+        game.publishPrizeTable(prizes);
+    }
+
+    function test_publishRejectsZeroValueZeroWeightAndEmpty() public {
+        BachaGame.Prize[] memory prizes = new BachaGame.Prize[](1);
+        prizes[0] = _prize(address(nvda), 0, 1, BachaGame.Rarity.Common);
+        vm.startPrank(operator);
+        vm.expectRevert(BachaGame.InvalidValue.selector);
+        game.publishPrizeTable(prizes);
+
+        prizes[0] = _prize(address(nvda), 1, 0, BachaGame.Rarity.Common);
         vm.expectRevert(BachaGame.InvalidWeight.selector);
-        game.publishPrizeTable(p);
-
-        p[0] = BachaGame.Prize({token: address(cake), amount: 0, weight: 1, rarity: BachaGame.Rarity.Common});
-        vm.prank(operator);
-        vm.expectRevert(BachaGame.InvalidAmount.selector);
-        game.publishPrizeTable(p);
-
-        p[0] = BachaGame.Prize({token: address(0), amount: 1e18, weight: 1, rarity: BachaGame.Rarity.Common});
-        vm.prank(operator);
-        vm.expectRevert(BachaGame.ZeroAddress.selector);
-        game.publishPrizeTable(p);
-    }
-
-    function test_publishPrizeTable_rejectsEmptyTable() public {
-        BachaGame.Prize[] memory none = new BachaGame.Prize[](0);
-        vm.prank(operator);
-        vm.expectRevert(BachaGame.EmptyPrizeTable.selector);
-        game.publishPrizeTable(none);
-    }
-
-    function test_publishPrizeTable_onlyOperator() public {
-        BachaGame.Prize[] memory prizes = _defaultPrizes();
-        bytes32 role = game.OPERATOR_ROLE();
-        vm.expectRevert(
-            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, alice, role)
-        );
-        vm.prank(alice);
         game.publishPrizeTable(prizes);
+
+        vm.expectRevert(BachaGame.EmptyPrizeTable.selector);
+        game.publishPrizeTable(new BachaGame.Prize[](0));
+        vm.stopPrank();
     }
 
-    // -------------------------------------------------------------- tiers
-
-    function test_configureTier_rejectsUnknownVersion() public {
-        vm.prank(operator);
-        vm.expectRevert(abi.encodeWithSelector(BachaGame.UnknownVersion.selector, uint64(99)));
-        game.configureTier(9, "GHOST", 1 ether, 99, true);
-    }
-
-    function test_spin_rejectsUnknownTier() public {
-        _fundGenerously();
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(BachaGame.UnknownTier.selector, uint8(7)));
-        game.spin{value: QUICK_PRICE}(7);
-    }
-
-    function test_spin_rejectsInactiveTier() public {
-        _fundGenerously();
-        vm.prank(operator);
-        game.configureTier(TIER_QUICK, "QUICK", QUICK_PRICE, v1, false);
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(BachaGame.TierInactive.selector, TIER_QUICK));
-        game.spin{value: QUICK_PRICE}(TIER_QUICK);
-    }
-
-    function test_spin_rejectsWrongPayment() public {
-        _fundGenerously();
-
-        vm.prank(alice);
-        vm.expectRevert(abi.encodeWithSelector(BachaGame.IncorrectPayment.selector, 1 wei, QUICK_PRICE));
-        game.spin{value: 1 wei}(TIER_QUICK);
-
-        vm.prank(alice);
+    function test_onlyOperatorPublishesAndOnlyAdminSetsLimits() public {
+        BachaGame.Prize[] memory prizes = _defaultPrizes();
+        bytes32 operatorRole = game.OPERATOR_ROLE();
+        vm.prank(stranger);
         vm.expectRevert(
-            abi.encodeWithSelector(BachaGame.IncorrectPayment.selector, uint256(QUICK_PRICE) + 1, QUICK_PRICE)
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, stranger, operatorRole)
         );
-        game.spin{value: uint256(QUICK_PRICE) + 1}(TIER_QUICK);
-    }
+        game.publishPrizeTable(prizes);
 
-    function test_spin_recordsStateAndRequestsRandomness() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-
-        BachaGame.Spin memory s = game.getSpin(spinId);
-        (BachaGame.Version memory version,,) = game.getVersion(v1);
-
-        assertEq(s.player, alice);
-        assertEq(s.tier, TIER_QUICK);
-        assertEq(uint8(s.status), uint8(BachaGame.SpinStatus.Pending));
-        assertEq(s.versionId, v1);
-        assertEq(s.prizeTableHash, version.prizeTableHash);
-        assertEq(s.payment, QUICK_PRICE);
-        assertTrue(s.requestId != 0);
-        assertEq(game.spinIdByRequest(s.requestId), spinId);
-        assertEq(game.pendingSpins(v1), 1);
-    }
-
-    function test_spin_pausedBlocksNewSpins() public {
-        _fundGenerously();
-        vm.prank(operator);
-        game.pause();
-
-        vm.prank(alice);
-        vm.expectRevert(Pausable.EnforcedPause.selector);
-        game.spin{value: QUICK_PRICE}(TIER_QUICK);
-
-        vm.prank(operator);
-        game.unpause();
-        _spin(alice, TIER_QUICK, QUICK_PRICE);
-    }
-
-    // ---------------------------------------------------------- settlement
-
-    function test_settle_selectsPrizeByWeightAndIsReproducible() public {
-        _fundGenerously();
-
-        // roll = word % 10000. 0..6799 -> USD1, 6800..9099 -> BABYDOGE,
-        // 9100..9899 -> CAKE rare, 9900..9999 -> CAKE epic.
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        _settle(spinId, 9950);
-
-        BachaGame.Spin memory s = game.getSpin(spinId);
-        assertEq(uint8(s.status), uint8(BachaGame.SpinStatus.Settled));
-        assertEq(s.rewardToken, address(cake));
-        assertEq(s.rewardAmount, 12e18);
-        assertEq(uint8(s.rarity), uint8(BachaGame.Rarity.Epic));
-        assertEq(s.randomWord, 9950);
-
-        // previewPrize reproduces exactly what the callback recorded.
-        (, address token, uint128 amount, BachaGame.Rarity rarity) = game.previewPrize(v1, 9950);
-        assertEq(token, s.rewardToken);
-        assertEq(amount, s.rewardAmount);
-        assertEq(uint8(rarity), uint8(s.rarity));
-    }
-
-    function test_settle_boundaryRollsLandOnExpectedPrize() public {
-        _fundGenerously();
-        _assertRoll(0, address(usd1));
-        _assertRoll(6799, address(usd1));
-        _assertRoll(6800, address(babydoge));
-        _assertRoll(9099, address(babydoge));
-        _assertRoll(9100, address(cake));
-        _assertRoll(9899, address(cake));
-        _assertRoll(9900, address(cake));
-        _assertRoll(9999, address(cake));
-    }
-
-    function _assertRoll(uint256 word, address expected) private {
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        _settle(spinId, word);
-        assertEq(game.getSpin(spinId).rewardToken, expected, "roll landed on wrong asset");
-    }
-
-    function test_settle_isIdempotent() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        BachaGame.Spin memory pending = game.getSpin(spinId);
-
-        _settleRequest(pending.requestId, 100);
-        uint256 owedAfterFirst = game.settledOwed(address(usd1));
-
-        // A second delivery is ignored: no revert, no double accounting.
-        _settleRequest(pending.requestId, 9999);
-
-        BachaGame.Spin memory s = game.getSpin(spinId);
-        assertEq(s.randomWord, 100, "outcome was overwritten by a replay");
-        assertEq(s.rewardToken, address(usd1));
-        assertEq(game.settledOwed(address(usd1)), owedAfterFirst, "liability double counted");
-    }
-
-    function test_settle_onlyCoordinatorMayFulfil() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        BachaGame.Spin memory s = game.getSpin(spinId);
-
-        uint256[] memory words = new uint256[](1);
-        words[0] = 9999;
-
-        vm.prank(alice);
-        vm.expectRevert();
-        game.rawFulfillRandomWords(s.requestId, words);
-    }
-
-    function test_settle_unknownRequestIsIgnored() public {
-        _fundGenerously();
-        uint256[] memory words = new uint256[](1);
-        words[0] = 1;
-
-        vm.prank(address(randomness));
-        game.rawFulfillRandomWords(123456, words); // must not revert
-        assertEq(game.spinCount(), 0);
-    }
-
-    // --------------------------------------------------------------- claim
-
-    function test_claim_paysRecordedPlayerAndCannotRepeat() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        _settle(spinId, 100); // USD1 1.2e18
-
-        uint256 before = usd1.balanceOf(alice);
-        game.claimFor(spinId);
-        assertEq(usd1.balanceOf(alice) - before, 1.2e18);
-        assertEq(uint8(game.getSpin(spinId).status), uint8(BachaGame.SpinStatus.Claimed));
-        assertEq(game.settledOwed(address(usd1)), 0);
-
+        vm.startPrank(operator);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                BachaGame.SpinNotSettled.selector, spinId, BachaGame.SpinStatus.Claimed
-            )
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, operator, bytes32(0))
         );
-        game.claimFor(spinId);
-    }
-
-    function test_claim_isPermissionlessButCannotRedirect() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        _settle(spinId, 100);
-
-        // A settlement bot with no special role may trigger the claim...
-        vm.prank(bot);
-        game.claimFor(spinId);
-
-        // ...and the tokens land with the player, never the caller.
-        assertEq(usd1.balanceOf(alice), 1.2e18);
-        assertEq(usd1.balanceOf(bot), 0);
-    }
-
-    function test_claim_revertsForPendingOrUnknownSpin() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-
+        game.setMaxPrizeValue(1 ether);
         vm.expectRevert(
-            abi.encodeWithSelector(BachaGame.SpinNotSettled.selector, spinId, BachaGame.SpinStatus.Pending)
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, operator, bytes32(0))
         );
-        game.claimFor(spinId);
-
-        vm.expectRevert(abi.encodeWithSelector(BachaGame.UnknownSpin.selector, uint256(4242)));
-        game.claimFor(4242);
+        game.setAssetApproved(address(junk), true);
+        vm.stopPrank();
     }
-
-    function test_claimMany_settlesABatch() public {
-        _fundGenerously();
-        uint256[] memory ids = new uint256[](3);
-        for (uint256 i; i < 3; ++i) {
-            ids[i] = _spin(alice, TIER_QUICK, QUICK_PRICE);
-            _settle(ids[i], 100);
-        }
-        game.claimMany(ids);
-        assertEq(usd1.balanceOf(alice), 3 * 1.2e18);
-    }
-
-    // ------------------------------------------------ odds cannot shift
 
     function test_pendingSpinKeepsItsOriginalPrizeTable() public {
-        _fundGenerously();
+        uint256 id = _spin(alice);
 
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        (BachaGame.Version memory original,,) = game.getVersion(v1);
+        BachaGame.Prize[] memory richer = _defaultPrizes();
+        richer[0].value = 0.005 ether;
+        uint64 v2 = _publish(richer);
+        vm.prank(operator);
+        game.configureTier(TIER, "BACHA", PRICE, v2, true);
 
-        // The operator publishes a table where every roll yields a dust prize
-        // and repoints the tier at it, mid-flight.
-        BachaGame.Prize[] memory nerfed = new BachaGame.Prize[](1);
-        nerfed[0] =
-            BachaGame.Prize({token: address(usd1), amount: 1, weight: 10_000, rarity: BachaGame.Rarity.Common});
-        vm.startPrank(operator);
-        uint64 v2 = game.publishPrizeTable(nerfed);
-        game.configureTier(TIER_QUICK, "QUICK", QUICK_PRICE, v2, true);
+        _settle(id, WORD_COMMON);
+        BachaGame.Spin memory s = game.getSpin(id);
+        assertEq(s.versionId, v1);
+        assertEq(s.rewardValue, 0.0012 ether, "settled against the table it was sold");
+    }
+
+    // --------------------------------------------------------------- spin
+
+    function test_spinReservesTheBiggestPrize() public {
+        uint256 id = _spin(alice);
+        BachaGame.Spin memory s = game.getSpin(id);
+        assertEq(uint8(s.status), uint8(BachaGame.SpinStatus.Pending));
+        assertEq(s.reserve, EPIC, "reserve is the table's biggest prize, which exceeds the price");
+        assertEq(game.pendingReserve(), EPIC);
+        assertEq(game.obligations(), EPIC);
+    }
+
+    function test_spinReservesThePaymentWhenItExceedsEveryPrize() public {
+        BachaGame.Prize[] memory small = new BachaGame.Prize[](1);
+        small[0] = _prize(address(nvda), 0.001 ether, 1, BachaGame.Rarity.Common);
+        uint64 v = _publish(small);
+        vm.prank(operator);
+        game.configureTier(TIER, "BACHA", PRICE, v, true);
+
+        uint256 id = _spin(alice);
+        assertEq(game.getSpin(id).reserve, PRICE, "a refund could return the whole payment");
+    }
+
+    function test_spinRejectsWrongPaymentAndInactiveTier() public {
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.IncorrectPayment.selector, 1, PRICE));
+        game.spin{value: 1}(TIER);
+
+        vm.prank(operator);
+        game.configureTier(TIER, "BACHA", PRICE, v1, false);
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.TierInactive.selector, TIER));
+        game.spin{value: PRICE}(TIER);
+    }
+
+    function test_spinRefusedWhenBankrollCannotCoverIt() public {
+        // A fresh, unfunded game: the payment alone cannot cover the epic.
+        vm.startPrank(admin);
+        BachaGame empty = new BachaGame(admin, address(randomness), address(router), address(router), wbnb);
+        randomness.grantRole(randomness.CONSUMER_ROLE(), address(empty));
+        empty.setAssetApproved(address(nvda), true);
+        empty.setAssetApproved(address(tsla), true);
+        empty.setMaxPrizeValue(MAX_PRIZE);
+        uint64 v = empty.publishPrizeTable(_defaultPrizes());
+        empty.configureTier(TIER, "BACHA", PRICE, v, true);
         vm.stopPrank();
 
-        // The in-flight spin still settles against the table it was sold.
-        _settle(spinId, 9950);
-        BachaGame.Spin memory s = game.getSpin(spinId);
+        assertEq(empty.remainingFundedSpins(v), 0);
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.InsufficientBankroll.selector, EPIC, PRICE));
+        empty.spin{value: PRICE}(TIER);
 
-        assertEq(s.versionId, v1, "version drifted");
-        assertEq(s.prizeTableHash, original.prizeTableHash, "table hash drifted");
-        assertEq(s.rewardToken, address(cake));
-        assertEq(s.rewardAmount, 12e18, "player was nerfed mid-spin");
-
-        // A fresh spin does get the new table.
-        uint256 later = _spin(bob, TIER_QUICK, QUICK_PRICE);
-        assertEq(game.getSpin(later).versionId, v2);
+        empty.fund{value: EPIC - PRICE}();
+        assertEq(empty.remainingFundedSpins(v), 1);
+        vm.prank(alice);
+        empty.spin{value: PRICE}(TIER);
+        assertEq(empty.remainingFundedSpins(v), 0, "exactly one spin was covered");
     }
 
-    function test_publishedVersionHasNoMutator() public view {
-        // There is deliberately no function to edit a published table. This
-        // asserts the surface stays that way: the only writer of version
-        // storage is publishPrizeTable, which always allocates a new id.
-        assertEq(game.versionCount(), 1);
+    function test_remainingFundedSpinsCountsWhatTheBankrollCovers() public {
+        // 0.1 BNB free; each spin needs EPIC − PRICE = 0.0034 BNB of it.
+        assertEq(game.remainingFundedSpins(v1), uint256(0.1 ether) / (EPIC - PRICE));
     }
 
-    // ------------------------------------------------------- treasury math
+    function test_spinRefusedWhilePausedAndWhenBeaconIsDry() public {
+        vm.prank(operator);
+        game.pause();
+        vm.prank(alice);
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        game.spin{value: PRICE}(TIER);
+        vm.prank(operator);
+        game.unpause();
 
-    function test_spin_refusesWhenInventoryCannotCoverWorstCase() public {
-        // Enough for exactly one worst case on CAKE (the 12e18 epic entry).
-        _fundVault(12e18, 1000e18, 1_000_000_000e9);
+        for (uint256 i; i < 256; ++i) {
+            _spin(alice);
+            _settle(i + 1, WORD_COMMON); // keep the bankroll from binding first
+        }
+        vm.prank(alice);
+        vm.expectRevert(BachaRandomness.NoCommitmentAvailable.selector);
+        game.spin{value: PRICE}(TIER);
+    }
 
-        _spin(alice, TIER_QUICK, QUICK_PRICE);
+    // ------------------------------------------------------------- settle
 
-        // The second spin would create a second 12e18 CAKE obligation.
-        vm.prank(bob);
+    function test_settleMovesReserveToOwed() public {
+        uint256 id = _spin(alice);
+        _settle(id, WORD_UNCOMMON);
+
+        BachaGame.Spin memory s = game.getSpin(id);
+        assertEq(uint8(s.status), uint8(BachaGame.SpinStatus.Settled));
+        assertEq(s.rewardToken, address(tsla));
+        assertEq(s.rewardValue, 0.0019 ether);
+        assertEq(uint8(s.rarity), uint8(BachaGame.Rarity.Uncommon));
+        assertEq(game.pendingReserve(), 0);
+        assertEq(game.settledOwed(), 0.0019 ether);
+    }
+
+    function test_onlyBeaconSettlesAndRepeatsAreIgnored() public {
+        uint256 id = _spin(alice);
+        uint256[] memory words = new uint256[](1);
+        uint256 requestId = game.getSpin(id).requestId;
+
+        vm.prank(stranger);
         vm.expectRevert(
-            abi.encodeWithSelector(BachaGame.InsufficientInventory.selector, address(cake), 24e18, 12e18)
+            abi.encodeWithSelector(BachaGame.OnlyRandomness.selector, stranger, address(randomness))
         );
-        game.spin{value: QUICK_PRICE}(TIER_QUICK);
+        game.rawFulfillRandomWords(requestId, words);
+
+        _settle(id, WORD_COMMON);
+        _settle(id, WORD_EPIC); // ignored
+        assertEq(game.getSpin(id).rewardValue, 0.0012 ether);
+        assertEq(game.settledOwed(), 0.0012 ether);
     }
 
-    function test_remainingFundedSpins_tracksInventory() public {
-        _fundVault(36e18, 1000e18, 1_000_000_000e9);
-        assertEq(game.remainingFundedSpins(v1), 3, "36 CAKE / 12 CAKE worst case");
-
-        _spin(alice, TIER_QUICK, QUICK_PRICE);
-        assertEq(game.remainingFundedSpins(v1), 2);
+    function test_previewMatchesSettlement() public {
+        uint256 id = _spin(alice);
+        _settle(id, WORD_RARE);
+        (uint16 index, address token, uint96 value,) = game.previewPrize(v1, WORD_RARE);
+        assertEq(index, 2);
+        assertEq(token, game.getSpin(id).rewardToken);
+        assertEq(value, game.getSpin(id).rewardValue);
     }
 
-    function test_pendingLiabilityCountsWorstCaseThenExactPrize() public {
-        _fundGenerously();
+    // ------------------------------------------------------------ deliver
 
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        // While pending: worst case on CAKE is the 12e18 epic.
-        assertEq(game.pendingLiabilityOf(address(cake)), 12e18);
+    function test_playerDeliversOverV2AndReceivesTheToken() public {
+        uint256 id = _spin(alice);
+        _settle(id, WORD_COMMON);
+        uint256 gameBefore = address(game).balance;
 
-        _settle(spinId, 100); // lands on USD1
-        // Once settled the CAKE exposure disappears and USD1 becomes exact.
-        assertEq(game.pendingLiabilityOf(address(cake)), 0);
-        assertEq(game.pendingLiabilityOf(address(usd1)), 1.2e18);
+        vm.prank(alice);
+        game.deliver(id, _v2(address(nvda)), 1, block.timestamp);
 
-        game.claimFor(spinId);
-        assertEq(game.pendingLiabilityOf(address(usd1)), 0);
+        BachaGame.Spin memory s = game.getSpin(id);
+        assertEq(uint8(s.status), uint8(BachaGame.SpinStatus.Delivered));
+        uint256 expected = uint256(0.0012 ether) * 3.3e18 / 1e18;
+        assertEq(nvda.balanceOf(alice), expected);
+        assertEq(s.deliveredAmount, expected);
+        assertEq(address(game).balance, gameBefore - 0.0012 ether, "exactly the prize value was spent");
+        assertEq(router.lastRecipient(), alice);
+        assertEq(game.settledOwed(), 0);
     }
 
-    function test_vaultCannotWithdrawObligations() public {
-        _fundVault(24e18, 1000e18, 1_000_000_000e9);
-        _spin(alice, TIER_QUICK, QUICK_PRICE);
+    function test_settlerDeliversOverV3DirectAndViaHop() public {
+        uint256 a = _spin(alice);
+        uint256 b = _spin(bob);
+        _settle(a, WORD_EPIC);
+        _settle(b, WORD_UNCOMMON);
 
-        // 24 CAKE held, 12 owed to the pending spin, so 12 is withdrawable.
-        assertEq(vault.reservedFor(address(cake)), 12e18);
-        assertEq(vault.withdrawable(address(cake)), 12e18);
+        vm.startPrank(settler);
+        game.deliver(a, _v3(address(tsla)), 1, block.timestamp);
+        game.deliver(b, _v3ViaHop(address(usdt), address(tsla)), 1, block.timestamp);
+        vm.stopPrank();
 
-        vm.prank(treasurer);
+        assertEq(tsla.balanceOf(alice), uint256(EPIC) * 2.2e18 / 1e18);
+        assertEq(tsla.balanceOf(bob), uint256(0.0019 ether) * 2.2e18 / 1e18);
+        assertEq(router.lastRecipient(), bob);
+    }
+
+    function test_strangerCannotDeliver() public {
+        uint256 id = _spin(alice);
+        _settle(id, WORD_COMMON);
+        vm.prank(stranger);
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.NotPlayerOrSettler.selector, stranger));
+        game.deliver(id, _v2(address(nvda)), 1, block.timestamp);
+    }
+
+    function test_routeMustStartAtWbnbEndAtPrizeAndUseApprovedHops() public {
+        uint256 id = _spin(alice);
+        _settle(id, WORD_COMMON); // prize is NVDAB
+        BachaGame.Route memory r;
+
+        // Wrong end token.
+        vm.startPrank(alice);
+        vm.expectRevert(BachaGame.BadRoute.selector);
+        game.deliver(id, _v2(address(tsla)), 1, block.timestamp);
+
+        // Wrong start.
+        r = _v2(address(nvda));
+        r.path[0] = address(usdt);
+        vm.expectRevert(BachaGame.BadRoute.selector);
+        game.deliver(id, r, 1, block.timestamp);
+
+        // Unapproved hop, V2 and V3.
+        r.kind = BachaGame.RouteKind.V2;
+        r.path = new address[](3);
+        r.path[0] = wbnb;
+        r.path[1] = address(junk);
+        r.path[2] = address(nvda);
+        vm.expectRevert(BachaGame.BadRoute.selector);
+        game.deliver(id, r, 1, block.timestamp);
+        vm.expectRevert(BachaGame.BadRoute.selector);
+        game.deliver(id, _v3ViaHop(address(junk), address(nvda)), 1, block.timestamp);
+
+        // Malformed V3 path.
+        r.kind = BachaGame.RouteKind.V3;
+        r.v3Path = abi.encodePacked(wbnb, uint24(2500), address(nvda), uint8(0));
+        vm.expectRevert(BachaGame.BadRoute.selector);
+        game.deliver(id, r, 1, block.timestamp);
+        vm.stopPrank();
+
+        assertEq(uint8(game.getSpin(id).status), uint8(BachaGame.SpinStatus.Settled), "still deliverable");
+    }
+
+    function test_shortChangedDeliveryReverts() public {
+        uint256 id = _spin(alice);
+        _settle(id, WORD_COMMON);
+        router.setIgnoreMinimum(true);
+        router.setPayoutBps(5_000); // pays half and says nothing
+
+        uint256 quoted = uint256(0.0012 ether) * 3.3e18 / 1e18;
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.InsufficientOutput.selector, quoted / 2, quoted));
+        game.deliver(id, _v2(address(nvda)), quoted, block.timestamp);
+        assertEq(nvda.balanceOf(alice), 0, "the whole delivery unwound");
+        assertEq(game.settledOwed(), 0.0012 ether);
+    }
+
+    function test_brokenPoolLeavesThePrizeClaimable() public {
+        uint256 id = _spin(alice);
+        _settle(id, WORD_COMMON);
+        router.setBroken(true);
+
+        vm.prank(settler);
+        vm.expectRevert("pool broken");
+        game.deliver(id, _v2(address(nvda)), 1, block.timestamp);
+        assertEq(uint8(game.getSpin(id).status), uint8(BachaGame.SpinStatus.Settled));
+
+        // Retry once the pool recovers…
+        router.setBroken(false);
+        vm.prank(settler);
+        game.deliver(id, _v2(address(nvda)), 1, block.timestamp);
+        assertEq(uint8(game.getSpin(id).status), uint8(BachaGame.SpinStatus.Delivered));
+    }
+
+    function test_deliverRejectsExpiredPendingAndRepeat() public {
+        uint256 id = _spin(alice);
+        vm.prank(alice);
         vm.expectRevert(
-            abi.encodeWithSelector(BachaVault.NotWithdrawable.selector, address(cake), 13e18, 12e18)
+            abi.encodeWithSelector(BachaGame.SpinNotSettled.selector, id, BachaGame.SpinStatus.Pending)
         );
-        vault.withdraw(address(cake), treasurer, 13e18);
+        game.deliver(id, _v2(address(nvda)), 1, block.timestamp);
 
-        vm.prank(treasurer);
-        vault.withdraw(address(cake), treasurer, 12e18);
-        assertEq(cake.balanceOf(treasurer), 12e18);
-    }
+        _settle(id, WORD_COMMON);
+        vm.prank(alice);
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.Expired.selector, block.timestamp - 1));
+        game.deliver(id, _v2(address(nvda)), 1, block.timestamp - 1);
 
-    function test_vaultCannotWithdrawSettledButUnclaimedPrize() public {
-        _fundVault(24e18, 1000e18, 1_000_000_000e9);
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        _settle(spinId, 9950); // CAKE epic, 12e18
-
-        assertEq(vault.reservedFor(address(cake)), 12e18);
-
-        vm.prank(treasurer);
+        vm.startPrank(alice);
+        game.deliver(id, _v2(address(nvda)), 1, block.timestamp);
         vm.expectRevert(
-            abi.encodeWithSelector(BachaVault.NotWithdrawable.selector, address(cake), 24e18, 12e18)
+            abi.encodeWithSelector(BachaGame.SpinNotSettled.selector, id, BachaGame.SpinStatus.Delivered)
         );
-        vault.withdraw(address(cake), treasurer, 24e18);
-
-        // The player can still be paid afterwards.
-        game.claimFor(spinId);
-        assertEq(cake.balanceOf(alice), 12e18);
+        game.deliver(id, _v2(address(nvda)), 1, block.timestamp);
+        vm.stopPrank();
     }
 
-    // -------------------------------------------------------- VRF failure
+    // -------------------------------------------------------- pay in BNB
 
-    function test_refundAfterTimeoutReturnsPayment() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
+    function test_playerCanTakeThePrizeInBnb() public {
+        uint256 id = _spin(alice);
+        _settle(id, WORD_RARE);
         uint256 before = alice.balance;
 
+        vm.prank(alice);
+        game.payInBnb(id);
+        assertEq(alice.balance, before + 0.0036 ether);
+        assertEq(uint8(game.getSpin(id).status), uint8(BachaGame.SpinStatus.PaidInBnb));
+        assertEq(game.settledOwed(), 0);
+
+        vm.prank(alice);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                BachaGame.RefundTooEarly.selector, spinId, uint64(block.timestamp) + game.revealTimeout()
-            )
+            abi.encodeWithSelector(BachaGame.SpinNotSettled.selector, id, BachaGame.SpinStatus.PaidInBnb)
         );
-        game.refundExpiredSpin(spinId);
-
-        vm.warp(block.timestamp + game.revealTimeout() + 1);
-        vm.prank(bob); // permissionless
-        game.refundExpiredSpin(spinId);
-
-        assertEq(alice.balance - before, QUICK_PRICE);
-        assertEq(uint8(game.getSpin(spinId).status), uint8(BachaGame.SpinStatus.Refunded));
-        assertEq(game.pendingSpins(v1), 0);
-        assertEq(game.pendingLiabilityOf(address(cake)), 0);
+        game.deliver(id, _v2(address(nvda)), 1, block.timestamp);
     }
 
-    function test_refundedSpinCannotLaterSettle() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        BachaGame.Spin memory s = game.getSpin(spinId);
-
-        vm.warp(block.timestamp + game.revealTimeout() + 1);
-        game.refundExpiredSpin(spinId);
-
-        // A late VRF delivery is a no-op rather than a second payout.
-        _settleRequest(s.requestId, 9950);
-        assertEq(uint8(game.getSpin(spinId).status), uint8(BachaGame.SpinStatus.Refunded));
-        assertEq(game.settledOwed(address(cake)), 0);
+    function test_onlyThePlayerCanTakeBnb() public {
+        uint256 id = _spin(alice);
+        _settle(id, WORD_COMMON);
+        vm.prank(settler);
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.NotPlayer.selector, settler));
+        game.payInBnb(id);
     }
 
-    function test_refundCannotBeTakenTwice() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        vm.warp(block.timestamp + game.revealTimeout() + 1);
-        game.refundExpiredSpin(spinId);
+    // ------------------------------------------------------------- refund
 
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                BachaGame.SpinNotPending.selector, spinId, BachaGame.SpinStatus.Refunded
-            )
-        );
-        game.refundExpiredSpin(spinId);
+    function test_refundAfterTimeoutReleasesTheReserve() public {
+        uint256 id = _spin(alice);
+        uint64 claimableAt = game.getSpin(id).requestedAt + game.revealTimeout();
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.RefundTooEarly.selector, id, claimableAt));
+        game.refundExpiredSpin(id);
+
+        vm.warp(claimableAt);
+        uint256 before = alice.balance;
+        game.refundExpiredSpin(id); // anyone may trigger it; the player is paid
+        assertEq(alice.balance, before + PRICE);
+        assertEq(game.pendingReserve(), 0);
+
+        _settle(id, WORD_EPIC); // a late word is ignored
+        assertEq(uint8(game.getSpin(id).status), uint8(BachaGame.SpinStatus.Refunded));
+        assertEq(game.settledOwed(), 0);
     }
 
-    function test_feesAreNotWithdrawableWhileRefundable() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
+    // ----------------------------------------------------------- treasury
 
-        assertEq(game.refundablePayments(), QUICK_PRICE);
-        assertEq(game.withdrawableFees(), 0);
+    function test_feesExcludeEveryObligation() public {
+        uint256 a = _spin(alice);
+        _spin(bob);
+        _settle(a, WORD_EPIC);
+        // balance 0.1 + 2 × PRICE; owed EPIC settled + EPIC pending.
+        uint256 expected = 0.1 ether + 2 * uint256(PRICE) - 2 * uint256(EPIC);
+        assertEq(game.withdrawableFees(), expected);
 
         vm.prank(treasurer);
         vm.expectRevert(BachaGame.NothingToWithdraw.selector);
-        game.withdrawFees(treasurer, QUICK_PRICE);
+        game.withdrawFees(treasurer, expected + 1);
 
-        _settle(spinId, 100);
-        assertEq(game.withdrawableFees(), QUICK_PRICE);
-
-        vm.prank(treasurer);
-        game.withdrawFees(treasurer, QUICK_PRICE);
-        assertEq(treasurer.balance, QUICK_PRICE);
-    }
-
-    // ------------------------------------------------------- access control
-
-    function test_onlyOperatorCanPauseAndConfigure() public {
-        vm.prank(alice);
-        vm.expectRevert();
-        game.pause();
-
-        vm.prank(alice);
-        vm.expectRevert();
-        game.configureTier(TIER_QUICK, "X", 1, v1, true);
-
-        vm.prank(alice);
-        vm.expectRevert();
-        game.setRevealTimeout(1 hours);
-    }
-
-    function test_onlyTreasurerCanWithdrawFees() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        _settle(spinId, 100);
-
-        vm.prank(alice);
-        vm.expectRevert();
-        game.withdrawFees(alice, QUICK_PRICE);
-    }
-
-    function test_onlyGameCanTriggerVaultPayout() public {
-        _fundGenerously();
-        vm.prank(alice);
-        vm.expectRevert();
-        vault.payout(address(cake), alice, 1e18);
-    }
-
-    function test_revealTimeoutBounds() public {
-        vm.prank(operator);
-        vm.expectRevert(BachaGame.InvalidTimeout.selector);
-        game.setRevealTimeout(1 minutes);
-
-        vm.prank(operator);
-        vm.expectRevert(BachaGame.InvalidTimeout.selector);
-        game.setRevealTimeout(8 days);
-
-        vm.prank(operator);
-        game.setRevealTimeout(6 hours);
-        assertEq(game.revealTimeout(), 6 hours);
-    }
-
-    // --------------------------------------------------- unusual ERC20s
-
-    function test_vaultFundMeasuresActualReceiptForFeeOnTransferAsset() public {
-        FeeOnTransferERC20 fot = new FeeOnTransferERC20("Fee", "FEE", 500); // 5%
-        vm.prank(admin);
-        vault.setAssetApproved(address(fot), true);
-
-        fot.mint(address(this), 1000e18);
-        fot.approve(address(vault), 1000e18);
-        uint256 received = vault.fund(address(fot), 1000e18);
-
-        assertEq(received, 950e18, "credited more than actually arrived");
-        assertEq(vault.balanceOfAsset(address(fot)), 950e18);
-    }
-
-    function test_vaultRejectsTokenThatReturnsFalse() public {
-        ReturnsFalseERC20 bad = new ReturnsFalseERC20();
-        vm.prank(admin);
-        vault.setAssetApproved(address(bad), true);
-        bad.mint(address(vault), 100e18);
+        bytes32 treasurerRole = game.TREASURER_ROLE();
+        vm.prank(stranger);
+        vm.expectRevert(
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, stranger, treasurerRole)
+        );
+        game.withdrawFees(stranger, 1);
 
         vm.prank(treasurer);
-        vm.expectRevert(); // SafeERC20FailedOperation
-        vault.withdraw(address(bad), treasurer, 1e18);
+        game.withdrawFees(treasurer, expected);
+        assertEq(address(game).balance, game.obligations(), "exactly the obligations remain");
     }
 
-    function test_nineDecimalRewardPaysExactUnits() public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        _settle(spinId, 7000); // BABYDOGE band
-        game.claimFor(spinId);
+    // --------------------------------------------------------- end to end
 
-        assertEq(babydoge.balanceOf(alice), 5_000_000e9);
-        assertEq(babydoge.decimals(), 9);
-    }
+    function test_endToEndThroughTheRealBeacon() public {
+        uint256 id = _spin(alice);
+        uint256 requestId = game.getSpin(id).requestId;
+        BachaRandomness.Request memory req = randomness.getRequest(requestId);
+        vm.roll(req.revealBlock + 1);
 
-    // ----------------------------------------------------------- vault misc
+        bytes32 seed = _seed(req.commitmentIndex);
+        vm.prank(committer);
+        randomness.reveal(requestId, seed);
 
-    function test_vaultRejectsUnapprovedFunding() public {
-        MockERC20 rogue = new MockERC20("Rogue", "RGE", 18);
-        rogue.mint(address(this), 1e18);
-        rogue.approve(address(vault), 1e18);
-        vm.expectRevert(abi.encodeWithSelector(BachaVault.AssetNotApproved.selector, address(rogue)));
-        vault.fund(address(rogue), 1e18);
-    }
-
-    function test_rescueOnlyTouchesUnapprovedAssets() public {
-        MockERC20 stray = new MockERC20("Stray", "STR", 18);
-        stray.mint(address(vault), 5e18);
-
-        vm.prank(admin);
-        vault.rescueUnapproved(address(stray), admin, 5e18);
-        assertEq(stray.balanceOf(admin), 5e18);
-
-        _fundVault(10e18, 0, 0);
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(BachaVault.AssetIsApproved.selector, address(cake)));
-        vault.rescueUnapproved(address(cake), admin, 1e18);
-    }
-
-    function test_spinsOfPaginatesNewestFirst() public {
-        _fundGenerously();
-        uint256 a = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        uint256 b = _spin(alice, TIER_BOOST, BOOST_PRICE);
-        uint256 c = _spin(alice, TIER_MAX, MAX_PRICE);
-
-        (uint256[] memory ids, uint256 total) = game.spinsOf(alice, 0, 10);
-        assertEq(total, 3);
-        assertEq(ids[0], c);
-        assertEq(ids[1], b);
-        assertEq(ids[2], a);
-
-        (uint256[] memory page2,) = game.spinsOf(alice, 2, 10);
-        assertEq(page2.length, 1);
-        assertEq(page2[0], a);
-    }
-
-    // ------------------------------------------------------------- fuzzing
-
-    /// @dev Whatever the beacon returns, exactly one prize from the frozen
-    ///      table comes out, and it is always one the vault can actually pay.
-    function testFuzz_anyRandomWordYieldsExactlyOneValidPrize(uint256 word) public {
-        _fundGenerously();
-        uint256 spinId = _spin(alice, TIER_QUICK, QUICK_PRICE);
-        _settle(spinId, word);
-
-        BachaGame.Spin memory s = game.getSpin(spinId);
+        BachaGame.Spin memory s = game.getSpin(id);
         assertEq(uint8(s.status), uint8(BachaGame.SpinStatus.Settled));
+        (, address token, uint96 value,) = game.previewPrize(v1, s.randomWord);
+        assertEq(s.rewardToken, token);
+        assertEq(s.rewardValue, value);
 
-        (, BachaGame.Prize[] memory prizes,) = game.getVersion(v1);
-        bool matched;
-        for (uint256 i; i < prizes.length; ++i) {
-            if (prizes[i].token == s.rewardToken && prizes[i].amount == s.rewardAmount) {
-                matched = true;
-                break;
-            }
-        }
-        assertTrue(matched, "reward is not an entry in the frozen table");
-
-        uint256 before = _balanceOf(s.rewardToken, alice);
-        game.claimFor(spinId);
-        assertEq(_balanceOf(s.rewardToken, alice) - before, s.rewardAmount);
+        vm.prank(settler);
+        game.deliver(id, _v2(token), 1, block.timestamp);
+        assertGt(game.getSpin(id).deliveredAmount, 0);
     }
 
-    function _balanceOf(address token, address who) private view returns (uint256) {
-        return MockERC20(token).balanceOf(who);
+    // ---------------------------------------------------------------- gas
+
+    /// @dev The beacon forwards CALLBACK_GAS; the heaviest settlement the game
+    ///      allows must fit, with headroom.
+    function test_worstCaseSettlementFitsTheCallbackBudget() public {
+        uint256 n = game.MAX_PRIZES_PER_TABLE();
+        BachaGame.Prize[] memory prizes = new BachaGame.Prize[](n);
+        for (uint256 i; i < n; ++i) {
+            prizes[i] = _prize(address(nvda), 0.001 ether, 1, BachaGame.Rarity.Common);
+        }
+        uint64 v = _publish(prizes);
+        vm.prank(operator);
+        game.configureTier(TIER, "BACHA", PRICE, v, true);
+        uint256 id = _spin(alice);
+
+        uint256[] memory words = new uint256[](1);
+        words[0] = n - 1;
+        uint256 requestId = game.getSpin(id).requestId;
+        vm.cool(address(game));
+        vm.prank(address(randomness));
+        uint256 before = gasleft();
+        game.rawFulfillRandomWords(requestId, words);
+        uint256 used = before - gasleft();
+
+        emit log_named_uint("worst-case settlement gas", used);
+        assertLt(used, randomness.CALLBACK_GAS() * 3 / 4);
     }
 }

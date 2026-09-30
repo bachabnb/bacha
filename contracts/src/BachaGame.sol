@@ -4,41 +4,51 @@ pragma solidity 0.8.28;
 import {AccessControl} from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 import {Pausable} from "openzeppelin-contracts/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
-import {EnumerableSet} from "openzeppelin-contracts/contracts/utils/structs/EnumerableSet.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
-import {BachaVault} from "./BachaVault.sol";
 import {BachaRandomness} from "./BachaRandomness.sol";
+import {IPancakeV2Router, IPancakeV3Router} from "./interfaces/IPancakeRouters.sol";
 
 /// @title BachaGame
 /// @notice The Bacha machine: take payment for a spin, ask BachaRandomness for
-///         a random word, and turn that word into exactly one reward from a
-///         prize table that was frozen the moment the player paid.
+///         a random word, turn that word into exactly one prize from a table
+///         frozen the moment the player paid — and only then buy the prize.
 ///
-/// @dev    Three invariants shape the whole design.
+/// @dev    A prize is a fixed amount of BNB to be spent on a named token. No
+///         reward tokens are stockpiled: when a spin settles, the BNB it won
+///         is swapped on PancakeSwap straight into the player's wallet. The
+///         house holds one asset, BNB, and the payout rate is exactly what the
+///         table says, whatever the tokens do in the meantime.
+///
+///         Four invariants shape the design.
 ///
 ///         1. A spin's odds cannot move under it. `spin()` stamps the spin with
-///            a `versionId` and the `prizeTableHash` of that version. Published
-///            versions are append-only — no function in this contract can edit
-///            one — so an operator publishing new odds mid-flight cannot touch
-///            a spin already in the air.
+///            a version and that version's table hash. Published versions are
+///            append-only, so new odds can never reach a spin already paid for.
 ///
-///         2. The machine never promises a reward it cannot pay. `spin()`
-///            refuses unless the vault holds enough of *every* asset in the
-///            table to cover the worst case for this spin on top of everything
-///            already owed.
+///         2. The machine never promises BNB it does not hold. Every pending
+///            spin reserves the larger of its table's biggest prize and its own
+///            payment; every settled, undelivered prize is owed in full; and
+///            `spin()` refuses unless the balance covers all of it.
 ///
-///         3. The randomness callback cannot be made to fail. It writes storage and
-///            nothing else — no transfers, no external calls, no loops over
-///            untrusted input. Moving the prize is a separate, permissionless
-///            `claimFor` whose destination was fixed before randomness existed.
+///         3. The randomness callback cannot be made to fail. It writes storage
+///            and nothing else — the swap is a separate step, so a broken pool
+///            can delay a delivery but never block settlement.
+///
+///         4. A prize can only ever reach the player. Every route is built and
+///            checked here — it must start at WBNB, end at the prize token and
+///            pass only through approved hops — and the router is told to pay
+///            the player, whose balance change is what the delivery records. If
+///            no route will fill, the player can take the prize in BNB instead.
 contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
-    using EnumerableSet for EnumerableSet.UintSet;
-
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     bytes32 public constant TREASURER_ROLE = keccak256("TREASURER_ROLE");
+    /// @notice May deliver prizes on a player's behalf, choosing the route and
+    ///         minimum output. Held by the settlement bot; it can never change
+    ///         where a prize goes.
+    bytes32 public constant SETTLER_ROLE = keccak256("SETTLER_ROLE");
 
     uint256 public constant MAX_PRIZES_PER_TABLE = 64;
-    uint256 public constant MAX_ACTIVE_VERSIONS = 32;
     uint64 public constant MIN_REVEAL_TIMEOUT = 30 minutes;
     uint64 public constant MAX_REVEAL_TIMEOUT = 7 days;
 
@@ -53,13 +63,20 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         None,
         Pending,
         Settled,
-        Claimed,
+        Delivered,
+        PaidInBnb,
         Refunded
     }
 
+    enum RouteKind {
+        V2,
+        V3
+    }
+
+    /// @param value BNB, in wei, spent on `token` when this prize is won.
     struct Prize {
         address token;
-        uint128 amount;
+        uint96 value;
         uint32 weight;
         Rarity rarity;
     }
@@ -68,6 +85,7 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         bool published;
         uint32 totalWeight;
         uint64 publishedAt;
+        uint96 maxValue;
         bytes32 prizeTableHash;
     }
 
@@ -88,32 +106,47 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         uint64 requestedAt;
         uint64 settledAt;
         uint96 payment;
+        /// @dev BNB held back for this spin while it waits on randomness.
+        uint96 reserve;
         address rewardToken;
-        uint128 rewardAmount;
+        uint96 rewardValue;
+        uint128 deliveredAmount;
         uint256 requestId;
         uint256 randomWord;
         bytes32 prizeTableHash;
     }
 
+    /// @notice A swap route. V2: `path` of token addresses. V3: a packed
+    ///         PancakeSwap path — token, fee, token, fee, … token.
+    struct Route {
+        RouteKind kind;
+        address[] path;
+        bytes v3Path;
+    }
+
     // ------------------------------------------------------------ storage
 
-    BachaVault public immutable vault;
+    IPancakeV2Router public immutable v2Router;
+    IPancakeV3Router public immutable v3Router;
+    address public immutable wbnb;
 
     /// @notice The commit–reveal beacon this machine draws from.
-    /// @dev    Mutable so a provider can be replaced without redeploying the
-    ///         game. Spins already in flight keep the request ids they were
-    ///         issued, so a swap must only happen with the machine paused and
-    ///         the queue drained.
     BachaRandomness public randomness;
 
-    /// @notice How long a pending spin waits before anyone may refund it.
     uint64 public revealTimeout = 3 hours;
+
+    /// @notice Largest single prize the operator may publish, in wei. It is
+    ///         what bounds a compromised operator key; admin-set.
+    uint96 public maxPrizeValue;
+
+    /// @notice Tokens a prize may pay out in. Admin-set.
+    mapping(address token => bool) public approvedAsset;
+    /// @notice Intermediate tokens a route may pass through (e.g. USDT).
+    mapping(address token => bool) public routeHop;
 
     uint64 public versionCount;
     mapping(uint64 versionId => Version) private _versions;
     mapping(uint64 versionId => Prize[]) private _versionPrizes;
-    mapping(uint64 versionId => address[]) private _versionTokens;
-    mapping(uint64 versionId => mapping(address token => uint256)) private _versionMaxPerToken;
 
     mapping(uint8 tierId => Tier) private _tiers;
     uint8[] private _tierIds;
@@ -123,34 +156,23 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
     mapping(uint256 requestId => uint256 spinId) public spinIdByRequest;
     mapping(address player => uint256[]) private _spinsByPlayer;
 
-    /// @notice Unsettled spins per version, used for worst-case liability.
-    mapping(uint64 versionId => uint256) public pendingSpins;
-
-    /// @notice Largest amount of `token` any single prize entry may promise.
-    /// @dev    Zero means unbounded. Admin-set, deliberately NOT operator-set:
-    ///         it exists to bound what a compromised operator key can do. Odds
-    ///         are retuned automatically as prices move, which means a hot key
-    ///         holds OPERATOR_ROLE in production, and without a ceiling that
-    ///         key could publish a table whose top prize is the whole vault
-    ///         and then win it. Set one for every approved asset.
-    mapping(address token => uint256) public prizeCeiling;
-    EnumerableSet.UintSet private _activeVersions;
-
-    /// @notice Settled prizes not yet claimed, per token.
-    mapping(address token => uint256) public settledOwed;
-
-    /// @notice BNB taken for spins that could still be refunded.
-    uint256 public refundablePayments;
+    /// @notice BNB held back for spins still waiting on randomness.
+    uint256 public pendingReserve;
+    /// @notice BNB owed on settled prizes not yet delivered.
+    uint256 public settledOwed;
 
     // ------------------------------------------------------------- events
 
     event PrizeTablePublished(
-        uint64 indexed versionId, bytes32 indexed prizeTableHash, uint32 totalWeight, uint256 prizeCount
+        uint64 indexed versionId, bytes32 indexed prizeTableHash, uint32 totalWeight, uint256 prizeCount, uint96 maxValue
     );
     event TierConfigured(uint8 indexed tierId, string label, uint96 price, uint64 versionId, bool active);
     event RandomnessUpdated(address indexed randomness);
     event RevealTimeoutUpdated(uint64 timeout);
-    event PrizeCeilingUpdated(address indexed token, uint256 ceiling);
+    event MaxPrizeValueUpdated(uint96 value);
+    event AssetApproved(address indexed token, bool approved);
+    event RouteHopUpdated(address indexed token, bool allowed);
+    event Funded(address indexed from, uint256 amount);
 
     event SpinRequested(
         uint256 indexed spinId,
@@ -166,15 +188,21 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         uint256 indexed spinId,
         address indexed player,
         address indexed rewardToken,
-        uint128 rewardAmount,
+        uint96 rewardValue,
         Rarity rarity,
         uint16 prizeIndex,
         uint256 randomWord,
         uint64 settledAt
     );
-    event SpinClaimed(
-        uint256 indexed spinId, address indexed player, address indexed rewardToken, uint128 rewardAmount, address caller
+    event SpinDelivered(
+        uint256 indexed spinId,
+        address indexed player,
+        address indexed rewardToken,
+        uint96 rewardValue,
+        uint256 amountOut,
+        address caller
     );
+    event SpinPaidInBnb(uint256 indexed spinId, address indexed player, uint96 rewardValue);
     event SpinRefunded(uint256 indexed spinId, address indexed player, uint96 amount);
     event UnknownRequestFulfilled(uint256 indexed requestId);
     event FeesWithdrawn(address indexed to, uint256 amount);
@@ -185,14 +213,14 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
     error EmptyPrizeTable();
     error TooManyPrizes();
     error InvalidWeight();
-    error InvalidAmount();
-    error AssetNotApprovedByVault(address token);
+    error InvalidValue();
+    error AssetNotApproved(address token);
+    error PrizeExceedsMax(uint256 value, uint256 max);
     error UnknownVersion(uint64 versionId);
     error UnknownTier(uint8 tierId);
     error TierInactive(uint8 tierId);
     error IncorrectPayment(uint256 sent, uint256 required);
-    error InsufficientInventory(address token, uint256 required, uint256 available);
-    error TooManyActiveVersions();
+    error InsufficientBankroll(uint256 required, uint256 available);
     error UnknownSpin(uint256 spinId);
     error SpinNotSettled(uint256 spinId, SpinStatus status);
     error SpinNotPending(uint256 spinId, SpinStatus status);
@@ -201,16 +229,23 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
     error NothingToWithdraw();
     error TransferFailed();
     error OnlyRandomness(address caller, address expected);
-    error PrizeExceedsCeiling(address token, uint256 amount, uint256 ceiling);
+    error NotPlayerOrSettler(address caller);
+    error NotPlayer(address caller);
+    error Expired(uint256 deadline);
+    error BadRoute();
+    error InsufficientOutput(uint256 received, uint256 minimum);
 
     // -------------------------------------------------------- construction
 
-    constructor(address admin, address vaultAddress, address randomnessAddress) {
-        if (admin == address(0) || vaultAddress == address(0) || randomnessAddress == address(0)) {
-            revert ZeroAddress();
-        }
-        vault = BachaVault(vaultAddress);
+    constructor(address admin, address randomnessAddress, address v2, address v3, address wbnbAddress) {
+        if (
+            admin == address(0) || randomnessAddress == address(0) || v2 == address(0) || v3 == address(0)
+                || wbnbAddress == address(0)
+        ) revert ZeroAddress();
         randomness = BachaRandomness(randomnessAddress);
+        v2Router = IPancakeV2Router(v2);
+        v3Router = IPancakeV3Router(v3);
+        wbnb = wbnbAddress;
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(OPERATOR_ROLE, admin);
@@ -219,12 +254,59 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         emit RandomnessUpdated(randomnessAddress);
     }
 
+    /// @notice Top up the bankroll. Anyone may; it earns no claim.
+    function fund() external payable {
+        emit Funded(msg.sender, msg.value);
+    }
+
+    receive() external payable {
+        emit Funded(msg.sender, msg.value);
+    }
+
+    // ---------------------------------------------------------- admin
+
+    function setAssetApproved(address token, bool approved) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (token == address(0)) revert ZeroAddress();
+        approvedAsset[token] = approved;
+        emit AssetApproved(token, approved);
+    }
+
+    function setRouteHop(address token, bool allowed) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (token == address(0)) revert ZeroAddress();
+        routeHop[token] = allowed;
+        emit RouteHopUpdated(token, allowed);
+    }
+
+    /// @dev Admin-only on purpose: the operator key publishes tables, and this
+    ///      is the limit it cannot cross. Published versions are untouched.
+    function setMaxPrizeValue(uint96 value) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        maxPrizeValue = value;
+        emit MaxPrizeValueUpdated(value);
+    }
+
+    function setRandomness(address randomnessAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (randomnessAddress == address(0)) revert ZeroAddress();
+        randomness = BachaRandomness(randomnessAddress);
+        emit RandomnessUpdated(randomnessAddress);
+    }
+
+    function setRevealTimeout(uint64 timeout) external onlyRole(OPERATOR_ROLE) {
+        if (timeout < MIN_REVEAL_TIMEOUT || timeout > MAX_REVEAL_TIMEOUT) revert InvalidTimeout();
+        revealTimeout = timeout;
+        emit RevealTimeoutUpdated(timeout);
+    }
+
+    function pause() external onlyRole(OPERATOR_ROLE) {
+        _pause();
+    }
+
+    function unpause() external onlyRole(OPERATOR_ROLE) {
+        _unpause();
+    }
+
     // ---------------------------------------------------- prize table admin
 
     /// @notice Publish a new, permanently immutable prize table.
-    /// @dev    There is no edit path by design. Changing odds means publishing
-    ///         a new version and repointing a tier at it; spins already stamped
-    ///         with an older version keep resolving against that older table.
     function publishPrizeTable(Prize[] calldata prizes)
         external
         onlyRole(OPERATOR_ROLE)
@@ -233,41 +315,37 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         uint256 n = prizes.length;
         if (n == 0) revert EmptyPrizeTable();
         if (n > MAX_PRIZES_PER_TABLE) revert TooManyPrizes();
+        uint96 cap = maxPrizeValue;
 
         versionId = ++versionCount;
+        Prize[] storage stored = _versionPrizes[versionId];
 
         uint256 totalWeight;
-        Prize[] storage stored = _versionPrizes[versionId];
-        address[] storage tokens = _versionTokens[versionId];
-        mapping(address => uint256) storage maxPerToken = _versionMaxPerToken[versionId];
-
+        uint96 maxValue;
         for (uint256 i; i < n; ++i) {
             Prize calldata p = prizes[i];
             if (p.token == address(0)) revert ZeroAddress();
+            if (!approvedAsset[p.token]) revert AssetNotApproved(p.token);
             if (p.weight == 0) revert InvalidWeight();
-            if (p.amount == 0) revert InvalidAmount();
-            if (!vault.approvedAsset(p.token)) revert AssetNotApprovedByVault(p.token);
-
-            uint256 ceiling = prizeCeiling[p.token];
-            if (ceiling != 0 && p.amount > ceiling) {
-                revert PrizeExceedsCeiling(p.token, p.amount, ceiling);
-            }
+            if (p.value == 0) revert InvalidValue();
+            if (p.value > cap) revert PrizeExceedsMax(p.value, cap);
 
             totalWeight += p.weight;
+            if (p.value > maxValue) maxValue = p.value;
             stored.push(p);
-
-            uint256 current = maxPerToken[p.token];
-            if (current == 0) tokens.push(p.token);
-            if (p.amount > current) maxPerToken[p.token] = p.amount;
         }
-
-        if (totalWeight == 0 || totalWeight > type(uint32).max) revert InvalidWeight();
+        if (totalWeight > type(uint32).max) revert InvalidWeight();
 
         bytes32 hash = keccak256(abi.encode(block.chainid, address(this), versionId, prizes));
-        _versions[versionId] =
-            Version({published: true, totalWeight: uint32(totalWeight), publishedAt: uint64(block.timestamp), prizeTableHash: hash});
+        _versions[versionId] = Version({
+            published: true,
+            totalWeight: uint32(totalWeight),
+            publishedAt: uint64(block.timestamp),
+            maxValue: maxValue,
+            prizeTableHash: hash
+        });
 
-        emit PrizeTablePublished(versionId, hash, uint32(totalWeight), n);
+        emit PrizeTablePublished(versionId, hash, uint32(totalWeight), n, maxValue);
     }
 
     function configureTier(uint8 tierId, string calldata label, uint96 price, uint64 versionId, bool active)
@@ -289,40 +367,6 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         emit TierConfigured(tierId, label, price, versionId, active);
     }
 
-    /// @notice Bound the largest single prize that may ever be published for
-    ///         an asset. Zero removes the bound.
-    /// @dev    Admin-only on purpose. The operator key publishes tables; this
-    ///         is the limit it cannot cross. Existing published versions are
-    ///         untouched — like every other table rule, it applies at publish
-    ///         time and never rewrites a spin that already happened.
-    function setPrizeCeiling(address token, uint256 ceiling) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (token == address(0)) revert ZeroAddress();
-        prizeCeiling[token] = ceiling;
-        emit PrizeCeilingUpdated(token, ceiling);
-    }
-
-    /// @dev Admin rather than operator: pointing the machine at a different
-    ///      beacon is a trust decision, not a tuning knob.
-    function setRandomness(address randomnessAddress) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        if (randomnessAddress == address(0)) revert ZeroAddress();
-        randomness = BachaRandomness(randomnessAddress);
-        emit RandomnessUpdated(randomnessAddress);
-    }
-
-    function setRevealTimeout(uint64 timeout) external onlyRole(OPERATOR_ROLE) {
-        if (timeout < MIN_REVEAL_TIMEOUT || timeout > MAX_REVEAL_TIMEOUT) revert InvalidTimeout();
-        revealTimeout = timeout;
-        emit RevealTimeoutUpdated(timeout);
-    }
-
-    function pause() external onlyRole(OPERATOR_ROLE) {
-        _pause();
-    }
-
-    function unpause() external onlyRole(OPERATOR_ROLE) {
-        _unpause();
-    }
-
     // ---------------------------------------------------------------- spin
 
     /// @notice Pay for one spin on `tierId` and request randomness for it.
@@ -336,22 +380,19 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         Version memory version = _versions[versionId];
         if (!version.published) revert UnknownVersion(versionId);
 
-        _requireInventoryForOneMore(versionId);
-
-        if (pendingSpins[versionId] == 0 && _activeVersions.length() >= MAX_ACTIVE_VERSIONS) {
-            revert TooManyActiveVersions();
-        }
+        // Held back until the spin resolves: enough for the biggest prize, or
+        // to refund the payment if randomness never comes — whichever is more.
+        uint96 reserve = version.maxValue > msg.value ? version.maxValue : uint96(msg.value);
+        uint256 required = obligations() + reserve;
+        // The payment is already part of the balance.
+        if (address(this).balance < required) revert InsufficientBankroll(required, address(this).balance);
 
         spinId = ++spinCount;
         uint64 nowTs = uint64(block.timestamp);
+        pendingReserve += reserve;
 
-        pendingSpins[versionId] += 1;
-        _activeVersions.add(versionId);
-        refundablePayments += msg.value;
-
-        // Consumes the next committed seed. Reverts if the beacon has run
-        // dry, which refuses the spin rather than selling one that cannot
-        // settle.
+        // Consumes the next committed seed; reverts if the beacon has run dry,
+        // refusing the spin rather than selling one that cannot settle.
         uint256 requestId = randomness.requestRandomWords(1);
 
         _spins[spinId] = Spin({
@@ -363,8 +404,10 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
             requestedAt: nowTs,
             settledAt: 0,
             payment: uint96(msg.value),
+            reserve: reserve,
             rewardToken: address(0),
-            rewardAmount: 0,
+            rewardValue: 0,
+            deliveredAmount: 0,
             requestId: requestId,
             randomWord: 0,
             prizeTableHash: version.prizeTableHash
@@ -377,98 +420,97 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         );
     }
 
-    /// @notice Delivery point for a revealed word.
-    /// @dev    Only the configured beacon may call it.
+    /// @notice Delivery point for a revealed word. Only the beacon may call.
     function rawFulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) external {
         if (msg.sender != address(randomness)) revert OnlyRandomness(msg.sender, address(randomness));
-        _fulfillRandomWords(requestId, randomWords);
-    }
 
-    /// @dev Storage-only. No transfers, no calls into other contracts, no
-    ///      unbounded work — the callback must never be the thing that fails.
-    function _fulfillRandomWords(uint256 requestId, uint256[] calldata randomWords) internal {
         uint256 spinId = spinIdByRequest[requestId];
         if (spinId == 0) {
             emit UnknownRequestFulfilled(requestId);
             return;
         }
-
         Spin storage s = _spins[spinId];
-        // A second delivery for the same request is ignored rather than
-        // reverted, so a retry can never brick the beacon.
+        // A second delivery is ignored rather than reverted, so a retry can
+        // never brick the beacon.
         if (s.status != SpinStatus.Pending) return;
 
         uint256 word = randomWords.length > 0 ? randomWords[0] : 0;
-        uint64 versionId = s.versionId;
-
-        (uint16 prizeIndex, address token, uint128 amount, Rarity rarity) = _selectPrize(versionId, word);
+        (uint16 prizeIndex, address token, uint96 value, Rarity rarity) = _selectPrize(s.versionId, word);
 
         s.status = SpinStatus.Settled;
         s.settledAt = uint64(block.timestamp);
         s.randomWord = word;
         s.rewardToken = token;
-        s.rewardAmount = amount;
+        s.rewardValue = value;
         s.rarity = rarity;
 
-        uint256 pending = pendingSpins[versionId];
-        if (pending > 0) {
-            unchecked {
-                pending -= 1;
-            }
-            pendingSpins[versionId] = pending;
-            if (pending == 0) _activeVersions.remove(versionId);
-        }
+        pendingReserve -= s.reserve;
+        settledOwed += value;
 
-        settledOwed[token] += amount;
-
-        uint256 payment = s.payment;
-        if (refundablePayments >= payment) {
-            unchecked {
-                refundablePayments -= payment;
-            }
-        } else {
-            refundablePayments = 0;
-        }
-
-        emit SpinSettled(spinId, s.player, token, amount, rarity, prizeIndex, word, s.settledAt);
+        emit SpinSettled(spinId, s.player, token, value, rarity, prizeIndex, word, s.settledAt);
     }
 
-    /// @notice Deliver a settled prize to the wallet that paid for the spin.
-    /// @dev    Permissionless. The recipient is read from spin state written
-    ///         before randomness was requested, so a settlement bot calling
-    ///         this on a player's behalf takes no custody and cannot redirect
-    ///         anything. The player can always call it themselves.
-    function claimFor(uint256 spinId) public nonReentrant {
+    // ------------------------------------------------------------- delivery
+
+    /// @notice Buy the prize and send it to the player.
+    /// @dev    The player, or a settler on their behalf, picks the route and
+    ///         the minimum output; the contract fixes everything else — the
+    ///         amount in, the token out and the recipient. What the player's
+    ///         balance actually gained is what is recorded.
+    function deliver(uint256 spinId, Route calldata route, uint256 minOut, uint256 deadline) external nonReentrant {
         Spin storage s = _spins[spinId];
-        if (s.status == SpinStatus.None) revert UnknownSpin(spinId);
         if (s.status != SpinStatus.Settled) revert SpinNotSettled(spinId, s.status);
+        address player = s.player;
+        if (msg.sender != player && !hasRole(SETTLER_ROLE, msg.sender)) revert NotPlayerOrSettler(msg.sender);
+        if (block.timestamp > deadline) revert Expired(deadline);
 
         address token = s.rewardToken;
-        uint128 amount = s.rewardAmount;
-        address player = s.player;
+        uint96 value = s.rewardValue;
+        _checkRoute(route, token);
 
-        // Effects before interaction: the status flip is what makes a second
-        // claim impossible, so it happens before the vault is touched.
-        s.status = SpinStatus.Claimed;
+        // Effects first: the status flip is what makes a second delivery (or a
+        // BNB payout) impossible.
+        s.status = SpinStatus.Delivered;
+        settledOwed -= value;
 
-        uint256 owed = settledOwed[token];
-        settledOwed[token] = owed > amount ? owed - amount : 0;
+        uint256 before = IERC20(token).balanceOf(player);
+        if (route.kind == RouteKind.V2) {
+            v2Router.swapExactETHForTokensSupportingFeeOnTransferTokens{value: value}(
+                minOut, route.path, player, deadline
+            );
+        } else {
+            v3Router.exactInput{value: value}(
+                IPancakeV3Router.ExactInputParams({
+                    path: route.v3Path, recipient: player, amountIn: value, amountOutMinimum: minOut
+                })
+            );
+        }
+        uint256 received = IERC20(token).balanceOf(player) - before;
+        if (received == 0 || received < minOut) revert InsufficientOutput(received, minOut);
 
-        vault.payout(token, player, amount);
-
-        emit SpinClaimed(spinId, player, token, amount, msg.sender);
+        s.deliveredAmount = uint128(received);
+        emit SpinDelivered(spinId, player, token, value, received, msg.sender);
     }
 
-    function claimMany(uint256[] calldata spinIds) external {
-        for (uint256 i; i < spinIds.length; ++i) {
-            claimFor(spinIds[i]);
-        }
+    /// @notice Take a settled prize as BNB instead of the token.
+    /// @dev    The way out when no route will fill. Player only — a settler
+    ///         must never be able to swap a player's token prize for BNB.
+    function payInBnb(uint256 spinId) external nonReentrant {
+        Spin storage s = _spins[spinId];
+        if (s.status != SpinStatus.Settled) revert SpinNotSettled(spinId, s.status);
+        address player = s.player;
+        if (msg.sender != player) revert NotPlayer(msg.sender);
+
+        uint96 value = s.rewardValue;
+        s.status = SpinStatus.PaidInBnb;
+        settledOwed -= value;
+
+        emit SpinPaidInBnb(spinId, player, value);
+        (bool ok,) = payable(player).call{value: value}("");
+        if (!ok) revert TransferFailed();
     }
 
     /// @notice Take the spin price back if randomness never arrived.
-    /// @dev    The only escape hatch for a spin stuck Pending. Settling later
-    ///         is impossible for a refunded spin because the status check in
-    ///         the callback no longer matches.
     function refundExpiredSpin(uint256 spinId) external nonReentrant {
         Spin storage s = _spins[spinId];
         if (s.status == SpinStatus.None) revert UnknownSpin(spinId);
@@ -479,81 +521,79 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
 
         uint96 amount = s.payment;
         address player = s.player;
-        uint64 versionId = s.versionId;
 
         s.status = SpinStatus.Refunded;
         s.settledAt = uint64(block.timestamp);
-
-        uint256 pending = pendingSpins[versionId];
-        if (pending > 0) {
-            unchecked {
-                pending -= 1;
-            }
-            pendingSpins[versionId] = pending;
-            if (pending == 0) _activeVersions.remove(versionId);
-        }
-
-        if (refundablePayments >= amount) {
-            unchecked {
-                refundablePayments -= amount;
-            }
-        } else {
-            refundablePayments = 0;
-        }
+        pendingReserve -= s.reserve;
 
         emit SpinRefunded(spinId, player, amount);
-
         (bool ok,) = payable(player).call{value: amount}("");
         if (!ok) revert TransferFailed();
     }
 
-    // ----------------------------------------------------------- liability
-
-    /// @notice Everything the machine could still owe in `token`.
-    /// @dev    Settled-unclaimed prizes, plus the worst case for every spin
-    ///         still waiting on randomness — that is, every pending spin
-    ///         landing on this token's largest entry at once. The vault reads
-    ///         this before allowing any withdrawal.
-    function pendingLiabilityOf(address token) public view returns (uint256 total) {
-        total = settledOwed[token];
-        uint256 n = _activeVersions.length();
-        for (uint256 i; i < n; ++i) {
-            uint64 versionId = uint64(_activeVersions.at(i));
-            uint256 max = _versionMaxPerToken[versionId][token];
-            if (max != 0) {
-                total += max * pendingSpins[versionId];
+    /// @dev A route must start at WBNB, end at the prize token, and pass only
+    ///      through approved hops. The recipient and amount are not in the
+    ///      caller's hands at all.
+    function _checkRoute(Route calldata route, address token) private view {
+        if (route.kind == RouteKind.V2) {
+            address[] calldata path = route.path;
+            uint256 n = path.length;
+            if (n < 2 || n > 4 || path[0] != wbnb || path[n - 1] != token) revert BadRoute();
+            for (uint256 i = 1; i < n - 1; ++i) {
+                if (!routeHop[path[i]]) revert BadRoute();
+            }
+        } else {
+            bytes calldata p = route.v3Path;
+            // token (20) + [fee (3) + token (20)] × hops, one to three hops
+            if (p.length < 43 || p.length > 89 || (p.length - 20) % 23 != 0) revert BadRoute();
+            if (address(bytes20(p[0:20])) != wbnb) revert BadRoute();
+            if (address(bytes20(p[p.length - 20:])) != token) revert BadRoute();
+            for (uint256 at = 23; at < p.length - 20; at += 23) {
+                if (!routeHop[address(bytes20(p[at:at + 20]))]) revert BadRoute();
             }
         }
     }
 
-    function _requireInventoryForOneMore(uint64 versionId) private view {
-        address[] storage tokens = _versionTokens[versionId];
-        uint256 n = tokens.length;
-        for (uint256 i; i < n; ++i) {
-            address token = tokens[i];
-            uint256 required = pendingLiabilityOf(token) + _versionMaxPerToken[versionId][token];
-            uint256 held = vault.balanceOfAsset(token);
-            if (held < required) revert InsufficientInventory(token, required, held);
-        }
+    // ------------------------------------------------------------ bankroll
+
+    /// @notice Everything the balance must cover right now.
+    function obligations() public view returns (uint256) {
+        return pendingReserve + settledOwed;
     }
 
     /// @notice How many more spins this version can safely accept right now.
-    function remainingFundedSpins(uint64 versionId) external view returns (uint256 remaining) {
-        if (!_versions[versionId].published) return 0;
-        address[] storage tokens = _versionTokens[versionId];
-        uint256 n = tokens.length;
-        if (n == 0) return 0;
-
-        remaining = type(uint256).max;
-        for (uint256 i; i < n; ++i) {
-            address token = tokens[i];
-            uint256 held = vault.balanceOfAsset(token);
-            uint256 owed = pendingLiabilityOf(token);
-            uint256 free = held > owed ? held - owed : 0;
-            uint256 perSpin = _versionMaxPerToken[versionId][token];
-            uint256 fits = perSpin == 0 ? type(uint256).max : free / perSpin;
-            if (fits < remaining) remaining = fits;
+    function remainingFundedSpins(uint64 versionId) external view returns (uint256) {
+        Version memory version = _versions[versionId];
+        if (!version.published || version.maxValue == 0) return 0;
+        uint256 balance = address(this).balance;
+        uint256 owed = obligations();
+        if (balance <= owed) return 0;
+        // A spin adds its payment to the balance and reserves the larger of its
+        // payment and the biggest prize, so it needs (reserve − payment) free.
+        uint256 perSpin = version.maxValue;
+        for (uint256 i; i < _tierIds.length; ++i) {
+            Tier storage t = _tiers[_tierIds[i]];
+            if (t.versionId == versionId && t.price > 0) {
+                perSpin = t.price >= version.maxValue ? 1 : version.maxValue - t.price;
+                break;
+            }
         }
+        return (balance - owed) / perSpin;
+    }
+
+    /// @notice BNB above every obligation — spin revenue the house may take.
+    function withdrawableFees() public view returns (uint256) {
+        uint256 balance = address(this).balance;
+        uint256 owed = obligations();
+        return balance > owed ? balance - owed : 0;
+    }
+
+    function withdrawFees(address to, uint256 amount) external nonReentrant onlyRole(TREASURER_ROLE) {
+        if (to == address(0)) revert ZeroAddress();
+        if (amount == 0 || amount > withdrawableFees()) revert NothingToWithdraw();
+        emit FeesWithdrawn(to, amount);
+        (bool ok,) = payable(to).call{value: amount}("");
+        if (!ok) revert TransferFailed();
     }
 
     // -------------------------------------------------------- prize picking
@@ -563,7 +603,7 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
     function _selectPrize(uint64 versionId, uint256 randomWord)
         private
         view
-        returns (uint16 index, address token, uint128 amount, Rarity rarity)
+        returns (uint16 index, address token, uint96 value, Rarity rarity)
     {
         Prize[] storage prizes = _versionPrizes[versionId];
         uint256 roll = randomWord % _versions[versionId].totalWeight;
@@ -574,20 +614,20 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
             cumulative += prizes[i].weight;
             if (roll < cumulative) {
                 Prize storage p = prizes[i];
-                return (uint16(i), p.token, p.amount, p.rarity);
+                return (uint16(i), p.token, p.value, p.rarity);
             }
         }
         // Unreachable: roll < totalWeight == sum of all weights.
         Prize storage last = prizes[n - 1];
-        return (uint16(n - 1), last.token, last.amount, last.rarity);
+        // forge-lint: disable-next-line(unsafe-typecast)
+        return (uint16(n - 1), last.token, last.value, last.rarity);
     }
 
     /// @notice Reproduce the exact outcome a given random word yields.
-    /// @dev    Used by the fairness page to re-derive a settled result offchain.
     function previewPrize(uint64 versionId, uint256 randomWord)
         external
         view
-        returns (uint16 index, address token, uint128 amount, Rarity rarity)
+        returns (uint16 index, address token, uint96 value, Rarity rarity)
     {
         if (!_versions[versionId].published) revert UnknownVersion(versionId);
         return _selectPrize(versionId, randomWord);
@@ -595,15 +635,10 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
 
     // -------------------------------------------------------------- getters
 
-    function getVersion(uint64 versionId)
-        external
-        view
-        returns (Version memory version, Prize[] memory prizes, address[] memory tokens)
-    {
+    function getVersion(uint64 versionId) external view returns (Version memory version, Prize[] memory prizes) {
         version = _versions[versionId];
         if (!version.published) revert UnknownVersion(versionId);
         prizes = _versionPrizes[versionId];
-        tokens = _versionTokens[versionId];
     }
 
     function getTier(uint8 tierId) external view returns (Tier memory) {
@@ -636,31 +671,5 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         for (uint256 i; i < ids.length; ++i) {
             ids[i] = all[total - 1 - (offset + i)];
         }
-    }
-
-    function activeVersions() external view returns (uint256[] memory) {
-        return _activeVersions.values();
-    }
-
-    function versionMaxPerToken(uint64 versionId, address token) external view returns (uint256) {
-        return _versionMaxPerToken[versionId][token];
-    }
-
-    // -------------------------------------------------------------- treasury
-
-    /// @notice Spin revenue, minus anything a pending spin could still reclaim.
-    function withdrawableFees() public view returns (uint256) {
-        uint256 balance = address(this).balance;
-        uint256 owed = refundablePayments;
-        return balance > owed ? balance - owed : 0;
-    }
-
-    function withdrawFees(address to, uint256 amount) external nonReentrant onlyRole(TREASURER_ROLE) {
-        if (to == address(0)) revert ZeroAddress();
-        uint256 free = withdrawableFees();
-        if (amount == 0 || amount > free) revert NothingToWithdraw();
-        emit FeesWithdrawn(to, amount);
-        (bool ok,) = payable(to).call{value: amount}("");
-        if (!ok) revert TransferFailed();
     }
 }

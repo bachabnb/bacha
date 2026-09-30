@@ -20,7 +20,7 @@ const byId = Object.fromEntries(tokens.map((t) => [t.id, t]))
 // asset. Used only to print expected value while tuning — the contract never
 // sees a price.
 const refPrice = {
-  bnb: 763.60,
+  bnb: 769.50,
   spcx: 149.46, nvda: 228.23, tsla: 350.80,
   aapl: 330.06, msft: 509.01, googl: 343.83,
 }
@@ -48,10 +48,14 @@ const R = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3 }
  * gas and swap slippage. Spins settle in seconds, so five in flight is a
  * burst limit, not a volume limit, and it lifts as revenue restocks the vault.
  *
- * Every reward is a fraction of one tokenized share (a bStock). The largest
- * amounts sit on as few assets as possible — Tesla carries the uncommon, a
- * rare and the epic — because each asset's own maximum is what one pending
- * spin reserves, so spreading big prizes across the roster costs float.
+ * Every prize is a fixed amount of BNB, spent on the named stock only when
+ * the spin that won it settles: the contract swaps it on PancakeSwap straight
+ * into the player's wallet. Nothing is stockpiled, so the payout rate is
+ * exactly what this table says — the stocks' prices change how many shares a
+ * prize buys, never what it costs the house.
+ *
+ * A pending spin reserves the table's biggest prize, so the epic sets the
+ * bankroll one spin in flight needs: the epic minus the spin price.
  *
  * Bands must stay ordered: every epic amount is worth more than every rare,
  * every rare more than every uncommon, and so on. Reference prices move, so
@@ -62,19 +66,20 @@ const machines = [
   {
     id: 'bacha', tierId: 0, label: 'BACHA', priceBnb: 0.0026,
     tagline: 'One machine. Six stocks. One pull.',
+    // [stock, BNB spent on it, weight, rarity]
     prizes: [
-      ['nvda', 0.004, 2600, R.COMMON],
-      ['spcx', 0.006, 2300, R.COMMON],
-      ['aapl', 0.0027, 1900, R.COMMON],
+      ['nvda', 0.0012, 2600, R.COMMON],
+      ['spcx', 0.0012, 2300, R.COMMON],
+      ['aapl', 0.0012, 1900, R.COMMON],
 
-      ['tsla', 0.0042, 1400, R.UNCOMMON],
-      ['googl', 0.0042, 900, R.UNCOMMON],
+      ['tsla', 0.0019, 1400, R.UNCOMMON],
+      ['googl', 0.0019, 900, R.UNCOMMON],
 
-      ['msft', 0.0053, 450, R.RARE],
-      ['tsla', 0.0085, 280, R.RARE],
-      ['spcx', 0.019, 70, R.RARE],
+      ['msft', 0.0035, 450, R.RARE],
+      ['tsla', 0.0039, 280, R.RARE],
+      ['spcx', 0.0037, 70, R.RARE],
 
-      ['tsla', 0.013, 100, R.EPIC],
+      ['tsla', 0.006, 100, R.EPIC],
     ],
   },
 ]
@@ -103,14 +108,17 @@ console.log('')
 for (const m of machines) {
   const priceUsd = m.priceBnb * refPrice.bnb
   let totalWeight = 0
-  const prizes = m.prizes.map(([id, amount, weight, rarity]) => {
+  const prizes = m.prizes.map(([id, valueBnb, weight, rarity]) => {
     const token = byId[id]
     if (!token) throw new Error(`unknown token id: ${id}`)
     totalWeight += weight
+    const valueUsd = valueBnb * refPrice.bnb
     return {
       tokenId: id, token: token.address, symbol: token.symbol, decimals: token.decimals,
-      amount, amountUnits: toUnits(amount, token.decimals), weight, rarity,
-      valueUsd: Number((amount * refPrice[id]).toFixed(4)),
+      valueBnb, valueWei: toUnits(valueBnb, 18), weight, rarity,
+      valueUsd: Number(valueUsd.toFixed(4)),
+      // Shares it buys at the reference price. Display only — the swap decides.
+      amount: Number((valueUsd / refPrice[id]).toPrecision(3)),
     }
   })
 
@@ -122,10 +130,10 @@ for (const m of machines) {
     if (!(top < next)) throw new Error(`${m.id}: rarity ${r} tops out at $${top}, above rarity ${r + 1} starting at $${next}`)
   }
 
-  // What one pending spin ties up: the largest entry of every asset at once.
-  const maxByToken = new Map()
-  for (const p of prizes) maxByToken.set(p.tokenId, Math.max(maxByToken.get(p.tokenId) ?? 0, p.valueUsd))
-  const reservationUsd = [...maxByToken.values()].reduce((a, b) => a + b, 0)
+  // What one pending spin needs from the bankroll: the biggest prize, less
+  // the payment that arrives with it.
+  const maxValueBnb = Math.max(...prizes.map((p) => p.valueBnb))
+  const reservationUsd = Math.max(maxValueBnb - m.priceBnb, 0) * refPrice.bnb
 
   const ev = prizes.reduce((sum, p) => sum + (p.weight / totalWeight) * p.valueUsd, 0)
   const rtp = ev / priceUsd
@@ -133,7 +141,7 @@ for (const m of machines) {
   // Mirrors the contract: keccak over (chainId, gameAddress, versionId, prizes).
   // Address and version are unknown until deploy, so the local hash is scoped
   // to the table contents and labelled as a *local* hash, never a chain hash.
-  const canonical = JSON.stringify(prizes.map((p) => [p.token.toLowerCase(), p.amountUnits, p.weight, p.rarity]))
+  const canonical = JSON.stringify(prizes.map((p) => [p.token.toLowerCase(), p.valueWei, p.weight, p.rarity]))
   const localHash = '0x' + createHash('sha256').update(canonical).digest('hex')
 
   const byRarity = [0, 1, 2, 3].map((r) =>
@@ -153,7 +161,7 @@ for (const m of machines) {
 
   console.log(`${m.label.padEnd(6)} $${priceUsd.toFixed(2).padStart(5)}  EV $${ev.toFixed(3)}  RTP ${(rtp * 100).toFixed(1)}%  ` +
     `C ${(byRarity[0] * 100).toFixed(0)}% U ${(byRarity[1] * 100).toFixed(0)}% R ${(byRarity[2] * 100).toFixed(0)}% E ${(byRarity[3] * 100).toFixed(1)}%  ` +
-    `reserves $${reservationUsd.toFixed(2)} per pending spin`)
+    `needs $${reservationUsd.toFixed(2)} of bankroll per pending spin`)
 }
 
 console.log('')
