@@ -20,10 +20,14 @@ export default function middleware(request: NextRequest) {
     .filter(Boolean)
 
   if (blocked.length > 0) {
-    // Read only the header the host in front of us sets. Cloudflare passes
-    // client-sent headers through, so a visitor behind it could otherwise
-    // send their own `x-vercel-ip-country` and pick any country they like.
-    const header = process.env.VERCEL ? 'x-vercel-ip-country' : 'cf-ipcountry'
+    // Read only the header the host in front of us sets — named explicitly by
+    // BACHA_GEO_HEADER (x-vercel-ip-country on Vercel, cf-ipcountry behind
+    // Cloudflare). Cloudflare passes client-sent headers through, so reading
+    // any other header would let a visitor pick their own country. The
+    // VERCEL fallback only helps when system variables are exposed.
+    const header =
+      process.env.BACHA_GEO_HEADER?.trim().toLowerCase() ||
+      (process.env.VERCEL ? 'x-vercel-ip-country' : 'cf-ipcountry')
     const country = (request.headers.get(header) ?? '').toUpperCase()
 
     // In production a missing or unknowable country — no header, Cloudflare's
