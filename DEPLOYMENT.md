@@ -1,376 +1,236 @@
 # Deploying Bacha
 
-Two things ship independently: the contracts, and the web app. The app runs
-happily against no contracts at all (demo mode), so deploy them in that order
-and nothing is ever broken in between.
+What is live, how it fits together, and how to change it safely. For the
+original first-launch walkthrough (wallet creation, first funding) see
+`LAUNCH.md`; where the two disagree, this file is current.
 
 ---
 
-## 0. Before you start
+## Live on BNB Chain mainnet
 
-You need:
+### Contracts
 
-- a **multisig** for admin authority on mainnet — not an EOA
-- a **committer key** for the randomness worker — a hot EOA holding gas only
-- reward-token inventory to fund the vault with
-- a deployer key holding only gas
-
-> A single EOA holding `DEFAULT_ADMIN_ROLE` on a contract that custodies
-> rewards is the weakest link in the whole design. The deploy script hands
-> every role to `BACHA_ADMIN` and renounces the deployer's, but it is on you
-> to point that at a multisig.
-
----
-
-## 1. Contracts
-
-### Testnet first
-
-```bash
-cd contracts
-cp ../.env.example .env        # fill in the contract section
-forge test                     # 81 tests must pass
-```
-
-Randomness is first-party: `BachaRandomness` is deployed alongside the game by
-the same script, so there is no third-party coordinator to look up or fund.
-What it does need is `BACHA_COMMITTER` — the address the reveal worker signs
-with. Keep it separate from `BACHA_ADMIN`: it is a hot key, and the worst it
-can do is refuse to reveal.
-
-### Deploy
-
-```bash
-source .env
-
-forge script script/Deploy.s.sol:Deploy \
-  --rpc-url $BSC_TESTNET_RPC_URL \
-  --broadcast \
-  --verify \
-  --etherscan-api-key $BSCSCAN_API_KEY \
-  -vvvv
-```
-
-The script prints `BACHA_VAULT_ADDRESS`, `BACHA_GAME_ADDRESS` and
-`BACHA_RANDOMNESS_ADDRESS`. It deliberately stops short of publishing a prize
-table, activating tiers or committing seeds —
-odds and inventory are an operational decision made against a funded vault,
-not a deploy-time constant.
-
-### Start the randomness worker
-
-The beacon must hold committed seeds before anyone can spin. Until it does,
-`spin()` reverts with `NoCommitmentAvailable` — the machine refuses to sell a
-spin it cannot settle, which is the safe failure.
-
-```bash
-export BACHA_RPC_URL=...
-export BACHA_RANDOMNESS_ADDRESS=...   # printed by the deploy script
-export BACHA_COMMITTER_KEY=...        # the hot key, gas only
-export BACHA_SEED_STORE=/var/lib/bacha/seeds.json
-
-npm run randomness:commit   # one batch, to prove the wiring
-npm run randomness:worker   # then run this as a service
-```
-
-> **Back up the seed store.** A commitment whose seed is lost can never be
-> opened, and every spin bound to it must be refunded through the timeout.
-> It is also secret until revealed — whoever holds it knows outcomes early.
-
-The worker tops the queue up automatically and reveals each request once its
-reveal block is mined. If it stops, spins accumulate as pending and become
-refundable after `revealTimeout`; nothing is lost, but the machine stalls.
-
-### Start the treasury worker
-
-This is what makes the float self-funding. Every pass it sweeps spin revenue
-out of the game, buys whatever inventory is below target, and funds the vault.
-
-```bash
-export BACHA_TREASURY_KEY=...      # hot key, game TREASURER_ROLE only
-export BACHA_TARGET_SPINS=5        # concurrent spins to keep stocked
-
-npm run treasury:plan              # dry run — prints what it would do
-node scripts/treasury-worker.mjs --quote   # check routes before going live
-npm run treasury:worker            # then run this as a service
-```
-
-Grant it `TREASURER_ROLE` on the **game** and nothing else:
-
-```bash
-cast send $BACHA_GAME_ADDRESS "grantRole(bytes32,address)" \
-  $(cast keccak "TREASURER_ROLE") $TREASURY_ADDRESS
-```
-
-> Do **not** give it `TREASURER_ROLE` on the vault. `vault.fund()` is
-> permissionless, so restocking needs no vault role. With game-treasurer only,
-> a stolen key can take unreserved spin revenue but cannot touch vault
-> inventory, so recorded player rewards stay payable.
-
-**Sizing the float.** The game reserves the *worst case* of every asset in the
-table for each pending spin — not the expected payout. For the current table
-that is about $18.60 per spin against a $1.83 expected payout, so roughly:
-
-| Float | Concurrent pending spins |
-|---|---|
-| $100 | 5 |
-| $250 | 13 |
-| $500 | 26 |
-
-The largest entry for each asset is what sets this, so the rarest prizes drive
-working capital far more than they drive payout. Raising an epic amount costs
-concurrency across the whole machine; check this table before doing it.
-
-That is a throughput limit, not a solvency one. Spins settle in seconds, so
-the cap only bites under bursts, and it lifts on its own as revenue accumulates.
-
-**Routing.** Quotes go across PancakeSwap V2 *and* V3 at every fee tier, direct
-and via USDT, and the best fill wins. This matters: measured against the
-current roster, V2 alone would have bought B2 at roughly twice the market
-price. Re-run `--quote` after any roster change.
-
-### Set prize ceilings, then start the governor
-
-A prize is a fixed number of tokens; a spin costs a fixed amount of BNB. RTP is
-therefore not a constant — it is the ratio of two baskets that move apart. On
-the current table, **if the reward roster gains 62% against BNB, RTP reaches
-100%** and the machine stops making money on every spin.
-
-The governor measures the RTP the published table is actually paying and, when
-it leaves the band, republishes the same table with every amount scaled by one
-factor. Weights, rarity split and band ordering are untouched; only size moves.
-Spins already in flight keep the version they were stamped with.
-
-It needs `OPERATOR_ROLE`, which is a larger privilege than the treasury
-worker's. **Set a ceiling for every asset first** — it is the limit that key
-cannot cross:
-
-```bash
-# Roughly 10x the largest intended prize, in token units.
-cast send $BACHA_GAME_ADDRESS "setPrizeCeiling(address,uint256)" $TOKEN $MAX_UNITS
-```
-
-`setPrizeCeiling` is admin-only, so the operator key cannot raise its own
-limit. The governor refuses to run against an asset with no ceiling set.
-
-```bash
-npm run governor:check    # dry run — prints measured RTP and the verdict
-npm run governor          # then run this as a service
-```
-
-### Taking profit
-
-The treasury worker takes profit **only** from surplus above the inventory
-target and the BNB reserve, in that order. Set `BACHA_PROFIT_ADDRESS` to a cold
-wallet to enable it; leave it unset to compound everything.
-
-> **Do not take profit without the governor running.** Over 10k simulated spins
-> with memecoin-grade volatility, profit-taking alone stalled the machine in
-> **8.5%** of runs, because the buffer that would have absorbed RTP drift had
-> been paid out. With the governor, the same policy stalled in **0.00%**.
-> The governor is what makes profit-taking safe, not an optional extra.
-
-| Configuration | Stalled | Median profit over 10k spins |
+| Contract | Address | Notes |
 |---|---|---|
-| No governor, no profit-taking | 1.0% | — |
-| No governor, profit-taking | **8.5%** | $10,765 |
-| Governor, no profit-taking | 0.0% | — |
-| **Governor + profit-taking** | **0.0%** | **$10,528** |
+| **BachaGame** | [`0xf85b4ae5a43387da702d9b5db368cfa4128f6157`](https://bscscan.com/address/0xf85b4ae5a43387da702d9b5db368cfa4128f6157) | Current game. Buy-at-spin, `spinMany` up to 25. Block 124973227. |
+| **BachaRandomness** | [`0x3C825aed2854ED84cD8D6683eE9826C13c3e7367`](https://bscscan.com/address/0x3C825aed2854ED84cD8D6683eE9826C13c3e7367) | Commit–reveal beacon, shared across game upgrades. Reveal delay 2 blocks. |
 
-Numbers are a model, not a forecast: they assume the spin volume stated, that
-prices follow the modelled volatility, and that both workers stay running.
+Prize table: `contracts/tables/bacha.json`, published as **version 1** on the
+current game. One tier, `0` / "BACHA", at **0.0026 BNB** a spin. Refund
+timeout (`revealTimeout`) is 3 hours.
 
-### Approve and fund reward assets
+### Retired contracts
 
-```bash
-# For each reward asset, on the vault:
-cast send $BACHA_VAULT_ADDRESS "setAssetApproved(address,bool)" $TOKEN true \
-  --rpc-url $BSC_RPC_URL --private-key $PRIVATE_KEY
+Nothing live points at these. They hold no funds and owe nothing.
 
-# Funding is permissionless — anyone may top the vault up, and gains no claim
-# by doing so. Approve, then fund:
-cast send $TOKEN "approve(address,uint256)" $BACHA_VAULT_ADDRESS $AMOUNT ...
-cast send $BACHA_VAULT_ADDRESS "fund(address,uint256)" $TOKEN $AMOUNT ...
-```
+| Contract | Address | Retired |
+|---|---|---|
+| BachaGame (buy-at-spin, single spin only) | `0x3fB3b94455b12b897B057246a18fE330e8fB1b20` | Replaced by the current game. Paused, beacon access revoked, bankroll moved. |
+| BachaGame (vault design) | `0x406c4e5166188219FFcAc1dd31c0367Fb153F794` | Replaced by buy-at-spin. Beacon access revoked. |
+| BachaVault | `0x49B98cF4D2eC644776F6d91F4C00c54902763792` | Emptied; stock withdrawn to the admin wallet. |
 
-The vault credits the **measured balance delta**, not the requested amount, so
-an asset that takes a cut on transfer is accounted for by what actually
-arrived.
+Spins made on a retired game do not appear on the site, which reads only the
+current game.
 
-### Publish a prize table and activate tiers
+### Wallets and roles
 
-Author the table as JSON — amounts in **exact base units**, never decimals:
+All five are Foundry keystores in `~/.foundry/keystores` on the owner's Mac,
+named `bacha-<role>`. Addresses are also in `contracts/.env.launch`.
 
-```json
-{
-  "prizes": [
-    { "token": "0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d",
-      "amount": "1200000000000000000", "weight": 2600, "rarity": 0 }
-  ],
-  "tiers": [
-    { "id": 0, "label": "QUICK", "price": "2600000000000000" }
-  ]
-}
-```
-
-Rarity: `0` common, `1` uncommon, `2` rare, `3` epic.
-
-`npm run table:export` writes `contracts/tables/bacha.json` from
-`data/machine.json` in exactly this shape.
-
-`PRIVATE_KEY` here must hold vault admin and game `OPERATOR_ROLE` — with a
-multisig admin, that means the multisig runs this step, not the deployer.
-
-```bash
-npm run table:export
-cd contracts
-BACHA_TABLE_FILE=./tables/bacha.json \
-forge script script/PublishTable.s.sol:PublishTable \
-  --rpc-url $BSC_RPC_URL --broadcast -vvvv
-```
-
-It prints `remainingFundedSpins` — how many spins the vault can actually
-honour. **If that is zero, the machine will refuse every spin.** Fund more
-before announcing anything.
-
-The admin console at `/admin/tables` previews the same maths before you
-commit: total weight, per-spin worst-case liability, and spins fundable
-against real vault balances.
-
-### Verify on BscScan
-
-`--verify` during deploy usually handles it. If not:
-
-The vault and beacon are constructed with the **deployer** address (the
-deploy script hands their roles to `BACHA_ADMIN` afterwards); the game is
-constructed with `BACHA_ADMIN` directly.
-
-```bash
-DEPLOYER=$(cast wallet address $PRIVATE_KEY)
-
-forge verify-contract $BACHA_VAULT_ADDRESS src/BachaVault.sol:BachaVault \
-  --chain 56 --etherscan-api-key $BSCSCAN_API_KEY \
-  --constructor-args $(cast abi-encode "constructor(address)" $DEPLOYER)
-
-forge verify-contract $BACHA_RANDOMNESS_ADDRESS src/BachaRandomness.sol:BachaRandomness \
-  --chain 56 --etherscan-api-key $BSCSCAN_API_KEY \
-  --constructor-args $(cast abi-encode "constructor(address,address)" $DEPLOYER $BACHA_COMMITTER)
-
-forge verify-contract $BACHA_GAME_ADDRESS src/BachaGame.sol:BachaGame \
-  --chain 56 --etherscan-api-key $BSCSCAN_API_KEY \
-  --constructor-args $(cast abi-encode "constructor(address,address,address)" \
-    $BACHA_ADMIN $BACHA_VAULT_ADDRESS $BACHA_RANDOMNESS_ADDRESS)
-```
-
-Verified source is not optional here. The fairness page links people to the
-contract and invites them to check the maths; unverified bytecode makes that
-claim hollow.
-
-### Hand over authority
-
-The deploy script already does this when `BACHA_ADMIN` is not the deployer:
-the game is constructed with `BACHA_ADMIN` as its only role holder, and the
-deployer renounces its vault and beacon roles before the broadcast ends. The
-deployer key holds nothing afterwards. Confirm it before walking away:
-
-```bash
-ADMIN_ROLE=0x0000000000000000000000000000000000000000000000000000000000000000
-for c in $BACHA_GAME_ADDRESS $BACHA_VAULT_ADDRESS $BACHA_RANDOMNESS_ADDRESS; do
-  echo "$c admin=$(cast call $c 'hasRole(bytes32,address)(bool)' $ADMIN_ROLE $BACHA_ADMIN) \
-deployer=$(cast call $c 'hasRole(bytes32,address)(bool)' $ADMIN_ROLE $DEPLOYER)"
-done
-# expect admin=true deployer=false on all three
-```
-
----
-
-## 2. Web app
-
-### Configure
-
-```
-NEXT_PUBLIC_CHAIN_ID=56
-NEXT_PUBLIC_BSC_RPC_URL=<a dedicated endpoint, not the public dataseed>
-NEXT_PUBLIC_BACHA_GAME_ADDRESS=0x...
-NEXT_PUBLIC_BACHA_VAULT_ADDRESS=0x...
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...
-NEXT_PUBLIC_SITE_URL=https://your-domain
-
-COINGECKO_API_KEY=...
-BACHA_ADMIN_TOKEN=$(openssl rand -hex 32)
-```
-
-Setting the two contract addresses is what flips the app out of demo mode.
-Until then every result is labelled *Simulated* — which is correct, and should
-not be worked around.
-
-### Build
-
-```bash
-npm ci
-npm run contracts:build && node scripts/export-abi.mjs   # if the ABI changed
-npm run art:generate && npm run art:optimize             # once, then commit
-npm run typecheck && npm run lint && npm test
-npm run build
-```
-
-Artwork is committed, not generated at deploy time. `OPENAI_API_KEY` is only
-needed by whoever regenerates it.
+| Wallet | Address | Holds |
+|---|---|---|
+| `bacha-admin` | `0x25c23Cbc13a92A0cb1143E8608C30e63b72bC916` | Game `DEFAULT_ADMIN`, `OPERATOR`, `TREASURER`; beacon `DEFAULT_ADMIN` |
+| `bacha-committer` | `0x970Ee31f265a39c5463C8d9091A861Db6C15C30d` | Beacon `COMMITTER`; game `SETTLER`. The worker's hot key — gas only. |
+| `bacha-deployer` | `0x1A49A273b89709c37a34b48E61165EaC4b6A416C` | Nothing. Deploys contracts, holds a little gas. |
+| `bacha-operator` | `0xa0205F8e64842fCF1acE2E6166DDc4a4D855A618` | Nothing — unused since the governor was retired. |
+| `bacha-treasury` | `0x6842b7a0785D9917490541f9B245be4Cf9C79C32` | Nothing — unused since the treasury worker was retired. |
 
 ### Hosting
 
-Any Node host running `npm run build && npm start` works. On Vercel the
-defaults are correct; set the environment variables above and nothing else.
-
-Middleware handles locale routing and the optional geofence, so it must run —
-do not deploy the app as a purely static export.
-
----
-
-## 3. Before you announce
-
-- [ ] `remainingFundedSpins` is comfortably above zero for every active tier
-- [ ] randomness worker is running, the beacon has committed seeds, and the seed store is backed up
-- [ ] a test spin on mainnet settled and claimed end to end
-- [ ] both contracts verified on BscScan
-- [ ] admin roles held by the multisig; deployer roles renounced
-- [ ] `BACHA_ADMIN_TOKEN` set to a long random value
-- [ ] `/fairness` shows the right addresses and the published odds
-- [ ] the demo ribbon is **gone** — its presence means contracts are not wired
+| Piece | Where | Config |
+|---|---|---|
+| Website | Vercel, production branch `main` → `www.bacha.fun` | `NEXT_PUBLIC_BACHA_GAME_ADDRESS`, `NEXT_PUBLIC_BACHA_RANDOMNESS_ADDRESS` (Config type) |
+| Randomness worker | Railway project *cooperative-nature*, service `randomness` | `Dockerfile.workers`, `BACHA_WORKER=randomness`, `BACHA_GAME_ADDRESS`, `BACHA_RANDOMNESS_ADDRESS`, committer key; seed store on the `/data` volume |
+| Wallet modal | Reown project `bc92f3593e8b9859ceb450323b647150` | Allowlist `bacha.fun` and `www.bacha.fun` in the Reown dashboard |
 
 ---
 
-## Operating
+## How it works
 
-**Changing odds.** Publish a new version and repoint the tier. Existing
-versions are never edited, so spins already in flight keep resolving against
-what they were sold.
+1. A player pays `price` (or `price × count` through `spinMany`, 1–25). Each
+   spin reserves the table's biggest prize from the bankroll and takes the
+   beacon's next committed seed. If either is short, the purchase reverts
+   whole.
+2. The worker reveals the seed a couple of blocks later. The beacon calls the
+   game, which picks the prize from the spin's locked table version.
+3. The worker buys the prize on PancakeSwap (best of V2 and V3, direct or via
+   USDT) and `deliver`s it straight to the player. The recipient is fixed by
+   the contract.
+4. If delivery stalls, the player can `payInBnb` for the prize's BNB value.
+   If randomness never comes, anyone can `refundExpiredSpin` after 3 hours.
 
-**Pausing.** `cast send $BACHA_GAME_ADDRESS "pause()"` stops new spins
-immediately. It does not touch pending spins: they keep their locked table,
-settle normally, and stay claimable. Deliberately not wired to a button in the
-console — a pause should require the same key custody as any other privileged
-action, not a session cookie.
+The game holds only BNB. There is no stock inventory to keep topped up; the
+bankroll just needs enough BNB to reserve the biggest prize for every spin in
+flight.
 
-**Withdrawing.** `BachaVault.withdraw` subtracts everything owed —
-settled-unclaimed prizes plus the worst case for every pending spin — before
-releasing anything. You cannot withdraw a player's reward, by construction.
+---
 
-**If randomness stalls.** After `revealTimeout` (default 3h) anyone can call
-`refundExpiredSpin(spinId)` and the price returns to the wallet that paid it.
-A refunded spin can never settle afterwards.
+## Health check
+
+From `contracts/`, with `set -a && source .env.launch && set +a` first:
+
+```bash
+cast balance $BACHA_GAME_ADDRESS --ether --rpc-url $BSC_RPC_URL                            # bankroll
+cast call $BACHA_GAME_ADDRESS "obligations()(uint256)" --rpc-url $BSC_RPC_URL              # owed right now
+cast call $BACHA_GAME_ADDRESS "remainingFundedSpins(uint64)(uint256)" 1 --rpc-url $BSC_RPC_URL
+cast call $BACHA_RANDOMNESS_ADDRESS "availableCommitments()(uint256)" --rpc-url $BSC_RPC_URL  # seeds ready
+cast balance $BACHA_COMMITTER --ether --rpc-url $BSC_RPC_URL                               # worker gas
+```
+
+What good looks like:
+
+- **Funded spins** comfortably above 25, so one full batch cannot lock everyone else out.
+- **Seeds** not stuck near zero. The worker commits a fresh batch on its own when they run low.
+- **Committer gas** above ~0.002 BNB. Each spin costs it about 0.00003 BNB to reveal and deliver.
+
+---
+
+## Routine operations
+
+**Top up the worker's gas.** Send BNB on BNB Chain to the committer address,
+from any wallet.
+
+**Grow the bankroll.** Anyone can call `fund()`. It adds spin capacity and
+gives the sender no claim.
+
+```bash
+cast send $BACHA_GAME_ADDRESS "fund()" --value 0.05ether \
+  --account bacha-admin --rpc-url $BSC_RPC_URL --gas-price 0.1gwei
+```
+
+**Take revenue.** `withdrawFees` only releases BNB above every obligation, so
+it cannot touch a player's prize or reserve.
+
+```bash
+cast call $BACHA_GAME_ADDRESS "withdrawableFees()(uint256)" --rpc-url $BSC_RPC_URL
+cast send $BACHA_GAME_ADDRESS "withdrawFees(address,uint256)" $BACHA_ADMIN <wei> \
+  --account bacha-admin --rpc-url $BSC_RPC_URL --gas-price 0.1gwei
+```
+
+Withdrawing lowers funded spins. Leave enough for at least one full batch.
+
+**Pause.** `pause()` (admin) stops new spins immediately. Pending spins still
+settle, deliver and refund.
+
+**Change odds or add a stock.** Add the token with `scripts/add-token.mjs`,
+rebalance `scripts/build-machine-config.mjs`, then run `npm run table:export`.
+Next, run `Configure.s.sol` to approve any new asset and raise the prize cap
+if needed. Finally, run `PublishTable.s.sol`, which publishes a new version and
+repoints the tier. Published versions are never edited, so spins in flight
+keep the table they were sold against.
+
+---
+
+## Upgrading the game contract
+
+The beacon stays; only the game is replaced. This is the sequence used to move
+from `0x3fB3…1b20` to the current game. Run it from `contracts/` with
+`.env.launch` loaded.
+
+1. **Test.** Run `forge test`; every suite must pass. Rehearse on an anvil fork
+   of mainnet if the change touches settlement or delivery.
+2. **Deploy** (deployer). With `BACHA_RANDOMNESS_ADDRESS` set, the script
+   reuses the beacon and prints the new `BACHA_GAME_ADDRESS`.
+   ```bash
+   forge script script/Deploy.s.sol:Deploy --rpc-url $BSC_RPC_URL \
+     --account bacha-deployer --sender $DEPLOYER --broadcast --slow --with-gas-price 0.1gwei
+   ```
+3. **Repoint `.env.launch`.** Set `BACHA_OLD_GAME_ADDRESS` to the current game
+   and `BACHA_GAME_ADDRESS` to the new one.
+4. **Pause the old game, then configure and publish on the new one** (admin).
+   Configure grants the new game beacon access and revokes the old one's,
+   approves the table's assets, sets the prize cap and makes the committer
+   the settler.
+   ```bash
+   cast send $BACHA_OLD_GAME_ADDRESS "pause()" --account bacha-admin --rpc-url $BSC_RPC_URL --gas-price 0.1gwei
+   forge script script/Configure.s.sol:Configure --rpc-url $BSC_RPC_URL \
+     --account bacha-admin --sender $BACHA_ADMIN --broadcast --slow --with-gas-price 0.1gwei
+   forge script script/PublishTable.s.sol:PublishTable --rpc-url $BSC_RPC_URL \
+     --account bacha-admin --sender $BACHA_ADMIN --broadcast --slow --with-gas-price 0.1gwei
+   ```
+5. **Move the bankroll** once the old game's `obligations()` is 0.
+   ```bash
+   cast send $BACHA_OLD_GAME_ADDRESS "withdrawFees(address,uint256)" $BACHA_ADMIN <withdrawableFees> \
+     --account bacha-admin --rpc-url $BSC_RPC_URL --gas-price 0.1gwei
+   cast send $BACHA_GAME_ADDRESS "fund()" --value <same amount>wei \
+     --account bacha-admin --rpc-url $BSC_RPC_URL --gas-price 0.1gwei
+   ```
+6. **Repoint the services.** Set `BACHA_GAME_ADDRESS` on Railway and
+   `NEXT_PUBLIC_BACHA_GAME_ADDRESS` on Vercel. If the ABI changed, run
+   `node scripts/export-abi.mjs` and commit.
+7. **Ship the site** by pushing to `main`. Vercel only reads the new address on
+   a fresh deploy, so update it in step 6 first.
+8. **Spin once for real.** Confirm it settles and delivers, then update the
+   address tables at the top of this file.
+
+A game deploy is about 3.9M gas, roughly 0.0004 BNB at 0.1 gwei.
+
+---
+
+## Verify on BscScan
+
+The game's constructor is `(admin, randomness, v2Router, v3Router, wbnb)`:
+
+```bash
+forge verify-contract $BACHA_GAME_ADDRESS src/BachaGame.sol:BachaGame \
+  --chain 56 --etherscan-api-key $BSCSCAN_API_KEY \
+  --constructor-args $(cast abi-encode "constructor(address,address,address,address,address)" \
+    $BACHA_ADMIN $BACHA_RANDOMNESS_ADDRESS \
+    0x10ED43C718714eb63d5aA57B78B54704E256024E \
+    0x13f4EA83D0bd40E75C8222255bc855a974568Dd4 \
+    0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c)
+```
+
+The routers are PancakeSwap's V2 router and V3 SmartRouter; the last address
+is WBNB. The fairness page invites players to check the contract, so its
+source should be verified.
+
+---
+
+## Web app
+
+```
+NEXT_PUBLIC_CHAIN_ID=56
+NEXT_PUBLIC_BSC_RPC_URL=<dedicated endpoint; blank uses the public dataseed>
+NEXT_PUBLIC_BACHA_GAME_ADDRESS=0xf85b4ae5a43387da702d9b5db368cfa4128f6157
+NEXT_PUBLIC_BACHA_RANDOMNESS_ADDRESS=0x3C825aed2854ED84cD8D6683eE9826C13c3e7367
+NEXT_PUBLIC_SITE_URL=https://www.bacha.fun
+BACHA_GEO_HEADER=x-vercel-ip-country
+BACHA_BLOCKED_COUNTRIES=US,PR,GU,VI,AS,MP,UM
+```
+
+`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is optional. It defaults to Bacha's Reown
+project. Leaving the two contract addresses blank runs the site in demo mode,
+where every result is labelled *Simulated*.
+
+Build checks: `npm run typecheck && npm run lint && npm test && npm run build`.
+Middleware handles locale routing and the geofence, so the app must not be
+deployed as a static export.
 
 ---
 
 ## Security notes
 
-- `SETTLEMENT_PRIVATE_KEY` is optional and **not recommended as plaintext**.
-  A settlement worker only calls `claimFor`, takes no custody, and cannot
-  redirect a reward — but a hot key in an environment variable is still poor
-  custody. Prefer a KMS/HSM signer, or leave it unset: players can always claim
-  their own rewards.
-- Never put a private key behind a `NEXT_PUBLIC_` prefix. That prefix means
-  "inline this into the browser bundle", and there is no way to un-ship it.
-- Reward assets are only as safe as the registry. Adding one means verifying
-  the contract address against independent sources first — see the policy in
-  `data/tokens.json` and `/admin/assets`.
+- **Never put a private key behind a `NEXT_PUBLIC_` prefix.** That prefix inlines
+  the value into the browser bundle.
+- **The committer key is the only hot key.** It lives in Railway's variables.
+  At worst it can refuse to reveal (spins refund after 3h) or deliver a prize
+  over a worse route, bounded by `minOut`. It can never redirect a prize.
+- **Back up the seed store** on the Railway volume. A lost seed orphans its
+  commitment, and every spin bound to it must refund. It is also secret until
+  revealed.
+- **Admin is a single EOA.** Before the bankroll grows much, move
+  `DEFAULT_ADMIN` to a multisig.
+- **bStocks are issuer-controlled.** Balances rebase for dividends and splits,
+  the issuer can blacklist addresses, and US persons must stay geo-blocked.
+  Verify any new stock's address against independent sources before adding it.
