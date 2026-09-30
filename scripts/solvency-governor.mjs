@@ -83,7 +83,7 @@ const gameAbi = [
   {
     type: 'function', name: 'getVersion', stateMutability: 'view', inputs: [{ name: 'versionId', type: 'uint64' }],
     outputs: [
-      { name: 'version', type: 'tuple', components: [{ name: 'published', type: 'bool' }, { name: 'totalWeight', type: 'uint32' }, { name: 'prizeTableHash', type: 'bytes32' }, { name: 'publishedAt', type: 'uint64' }] },
+      { name: 'version', type: 'tuple', components: [{ name: 'published', type: 'bool' }, { name: 'totalWeight', type: 'uint32' }, { name: 'publishedAt', type: 'uint64' }, { name: 'prizeTableHash', type: 'bytes32' }] },
       { name: 'prizes', type: 'tuple[]', components: [{ name: 'token', type: 'address' }, { name: 'amount', type: 'uint128' }, { name: 'weight', type: 'uint32' }, { name: 'rarity', type: 'uint8' }] },
       { name: 'tokens', type: 'address[]' },
     ],
@@ -121,13 +121,22 @@ const WBNB = '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c'
  * has no price input and this never touches settlement.
  */
 async function livePrices(addresses) {
-  const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${addresses.join(',')}`, {
-    headers: { Accept: 'application/json' },
-  })
-  if (!res.ok) throw new Error(`dexscreener ${res.status}`)
-  const body = await res.json()
+  // One request per address. A batched lookup returns at most 30 pairs in
+  // total, and a heavily traded asset (WBNB above all) crowds the rest out —
+  // or, being mostly the quote side, never appears as a base token at all.
+  const bodies = await Promise.all(
+    addresses.map(async (address) => {
+      const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${address}`, {
+        headers: { Accept: 'application/json' },
+      })
+      if (!res.ok) throw new Error(`dexscreener ${res.status}`)
+      return res.json()
+    }),
+  )
   const deepest = new Map()
-  for (const pair of body.pairs ?? []) {
+  for (const pair of bodies.flatMap((body) => body.pairs ?? [])) {
+    // The same address can exist on other chains with an unrelated price.
+    if (pair.chainId !== 'bsc') continue
     const address = pair.baseToken?.address?.toLowerCase()
     if (!address) continue
     const best = deepest.get(address)
@@ -242,6 +251,14 @@ async function run() {
   }
 }
 
+// Passes run back to back, never overlapping: two passes that both decide to
+// retune would publish two versions from one measurement.
 await run()
-if (!ONCE) setInterval(run, POLL_MS)
-else process.exit(0)
+if (!ONCE) {
+  for (;;) {
+    await new Promise((r) => setTimeout(r, POLL_MS))
+    await run()
+  }
+} else {
+  process.exit(0)
+}

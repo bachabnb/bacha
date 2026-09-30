@@ -56,6 +56,7 @@ import {
   createPublicClient,
   createWalletClient,
   http,
+  encodeFunctionData,
   encodePacked,
   erc20Abi,
   formatEther,
@@ -81,7 +82,7 @@ const GAS_FLOOR = parseEther(process.env.BACHA_GAS_FLOOR_BNB ?? '0.02')
 const SLIPPAGE_BPS = BigInt(process.env.BACHA_MAX_SLIPPAGE_BPS ?? 200)
 const MAX_SPEND = parseEther(process.env.BACHA_MAX_SPEND_PER_TICK_BNB ?? '0.05')
 const SWEEP_MIN = parseEther(process.env.BACHA_SWEEP_MIN_BNB ?? '0.01')
-const POLL_MS = Number(process.env.BACHA_POLL_MS ?? 30000)
+const POLL_MS = Number(process.env.BACHA_TREASURY_POLL_MS ?? 30000)
 const RESERVE = parseEther(process.env.BACHA_RESERVE_BNB ?? '0.13')
 const PROFIT_ADDRESS = process.env.BACHA_PROFIT_ADDRESS
 const PROFIT_SPLIT_BPS = BigInt(process.env.BACHA_PROFIT_SPLIT_BPS ?? 5000)
@@ -148,6 +149,12 @@ const v3RouterAbi = [
     }],
     outputs: [{ name: 'amountOut', type: 'uint256' }],
   },
+  // SmartRouter's exactInput takes no deadline; its MulticallExtended wrapper does.
+  {
+    type: 'function', name: 'multicall', stateMutability: 'payable',
+    inputs: [{ name: 'deadline', type: 'uint256' }, { name: 'data', type: 'bytes[]' }],
+    outputs: [{ name: 'results', type: 'bytes[]' }],
+  },
 ]
 
 const account = privateKeyToAccount(KEY.startsWith('0x') ? KEY : `0x${KEY}`)
@@ -171,14 +178,23 @@ async function send(address, abi, functionName, args, value = 0n) {
   return hash
 }
 
+/** True while a transaction from the treasury key is still unmined. */
+async function hasInFlight() {
+  const [latest, pending] = await Promise.all([
+    publicClient.getTransactionCount({ address: account.address, blockTag: 'latest' }),
+    publicClient.getTransactionCount({ address: account.address, blockTag: 'pending' }),
+  ])
+  return pending > latest
+}
+
 /* ------------------------------------------------------------------ swaps */
 
 /**
  * Find the best route across PancakeSwap V2 and V3.
  *
  * Quoting V2 alone is not safe here. Measured against this roster, V2 had
- * almost no depth in B2 and would have filled at roughly twice the market
- * price, and mubarak about 10% over — both of which quietly eat the margin
+ * almost no depth in one roster asset and would have filled at roughly twice the market
+ * price, and another about 10% over — both of which quietly eat the margin
  * this whole loop depends on. The same tokens fill at market on V3. Several
  * also route better through USDT than against WBNB directly, so both hops
  * are tried at every fee tier.
@@ -230,18 +246,21 @@ async function bestRoute(token, amountIn) {
 
 /** Executes `route` for `spend` wei of BNB, enforcing `minOut`. */
 async function executeSwap(route, spend, minOut) {
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + 120)
   if (route.kind === 'v2') {
-    const deadline = BigInt(Math.floor(Date.now() / 1000) + 120)
     return send(
       V2_ROUTER, v2RouterAbi, 'swapExactETHForTokensSupportingFeeOnTransferTokens',
       [minOut, route.path, account.address, deadline], spend,
     )
   }
-  // The V3 router wraps native BNB itself when the path starts at WBNB.
-  return send(
-    V3_ROUTER, v3RouterAbi, 'exactInput',
-    [{ path: route.path, recipient: account.address, amountIn: spend, amountOutMinimum: minOut }], spend,
-  )
+  // The V3 router wraps native BNB itself when the path starts at WBNB. The
+  // swap goes through multicall so a transaction stuck in the mempool cannot
+  // fill minutes later at whatever price minOut still happens to allow.
+  const swap = encodeFunctionData({
+    abi: v3RouterAbi, functionName: 'exactInput',
+    args: [{ path: route.path, recipient: account.address, amountIn: spend, amountOutMinimum: minOut }],
+  })
+  return send(V3_ROUTER, v3RouterAbi, 'multicall', [deadline, [swap]], spend)
 }
 
 /* ------------------------------------------------------------------- tick */
@@ -249,6 +268,14 @@ async function executeSwap(route, spend, minOut) {
 const roster = JSON.parse(await readFile('data/tokens.json', 'utf8')).tokens.filter((t) => t.rewardEnabled)
 
 async function tick() {
+  // A transaction still in the mempool has not moved the balance or the vault
+  // yet, so this pass would budget and buy against a stale read — and its
+  // nonce would collide. Wait for it instead.
+  if (await hasInFlight()) {
+    console.log('tick skipped: a transaction from the treasury is still pending')
+    return
+  }
+
   const bnbBefore = await publicClient.getBalance({ address: account.address })
 
   // --- which table is live ------------------------------------------------
@@ -428,7 +455,8 @@ async function takeProfit(deficits) {
     return
   }
   const hash = await wallet.sendTransaction({ to, value: take })
-  await publicClient.waitForTransactionReceipt({ hash })
+  const receipt = await publicClient.waitForTransactionReceipt({ hash })
+  if (receipt.status !== 'success') throw new Error(`profit transfer reverted (${hash})`)
   console.log(`profit ${formatEther(take)} BNB -> ${to}  ${hash}  (left ${formatEther(surplus - take)} compounding)`)
 }
 
@@ -476,6 +504,16 @@ if (QUOTE_ONLY) {
   process.exit(0)
 }
 
+// Ticks run back to back, never overlapping: a tick spends minutes quoting
+// and waiting on receipts, and two racing through it would each budget
+// against the same balance — spending past MAX_SPEND and the gas floor — and
+// sign with the same nonce.
 await run()
-if (!ONCE) setInterval(run, POLL_MS)
-else process.exit(0)
+if (!ONCE) {
+  for (;;) {
+    await new Promise((r) => setTimeout(r, POLL_MS))
+    await run()
+  }
+} else {
+  process.exit(0)
+}
