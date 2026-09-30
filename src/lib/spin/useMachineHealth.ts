@@ -7,7 +7,7 @@ import type { Machine } from '@/lib/machine'
 
 export type MachineHealth =
   | { status: 'demo' | 'unknown' | 'paused' | 'inactive' | 'empty' | 'noRandomness' }
-  | { status: 'ready' | 'low'; fundedSpins: number }
+  | { status: 'ready' | 'low'; fundedSpins: number; seeds: number }
 
 /** Below this many fundable spins the pool reads as low rather than healthy. */
 const LOW_WATER = 5
@@ -49,7 +49,16 @@ export function useMachineHealth(machine: Machine): MachineHealth {
   if (commitments === 0n) return { status: 'noRandomness' }
   const fundedSpins = Number(funded as bigint)
   if (fundedSpins === 0) return { status: 'empty' }
-  return { status: fundedSpins < LOW_WATER ? 'low' : 'ready', fundedSpins }
+  return { status: fundedSpins < LOW_WATER ? 'low' : 'ready', fundedSpins, seeds: Number(commitments as bigint) }
+}
+
+/**
+ * How many spins one purchase can buy right now: every spin needs its own
+ * reserve and its own seed, so a batch larger than either would revert.
+ */
+export function maxSpinsNow(health: MachineHealth, cap: number): number {
+  if (health.status !== 'ready' && health.status !== 'low') return cap
+  return Math.max(1, Math.min(cap, health.fundedSpins, health.seeds))
 }
 
 /** States in which `spin()` is certain to revert. */

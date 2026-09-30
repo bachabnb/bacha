@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useAccount, useBalance, useChainId } from 'wagmi'
 import { useTranslations } from 'next-intl'
 import { TierSelector } from './TierSelector'
@@ -13,8 +14,8 @@ import { publicEnv, contractsConfigured } from '@/lib/env'
 import { networkLabel } from '@/lib/chain'
 import { formatBnb, shortHash, formatTokenAmount } from '@/lib/format'
 import { cn } from '@/lib/cn'
-import type { SpinPhase } from '@/lib/spin/useSpin'
-import { useMachineHealth, blocksSpin, type MachineHealth } from '@/lib/spin/useMachineHealth'
+import { MAX_SPINS_PER_CALL, type SpinPhase } from '@/lib/spin/useSpin'
+import { useMachineHealth, blocksSpin, maxSpinsNow, type MachineHealth } from '@/lib/spin/useMachineHealth'
 
 interface ControlConsoleProps {
   machine: Machine
@@ -22,6 +23,11 @@ interface ControlConsoleProps {
   phase: SpinPhase
   txHash: string | null
   error: string | null
+  /** How many spins the next purchase buys. */
+  count: number
+  onCountChange: (count: number) => void
+  /** A batch in flight: how many of its spins have revealed so far. */
+  batchProgress?: { settled: number; total: number } | null
   onSpin: () => void
   onReset: () => void
 }
@@ -40,6 +46,9 @@ export function ControlConsole({
   phase,
   txHash,
   error,
+  count,
+  onCountChange,
+  batchProgress,
   onSpin,
   onReset,
 }: ControlConsoleProps) {
@@ -51,10 +60,17 @@ export function ControlConsole({
   const { data: balance } = useBalance({ address, chainId: publicEnv.chainId })
 
   const wrongNetwork = isConnected && chainId !== publicEnv.chainId
-  const insufficient = Boolean(balance && balance.value < machine.priceWei)
+  const totalWei = machine.priceWei * BigInt(count)
+  const insufficient = Boolean(balance && balance.value < totalWei)
   const busy = phase === 'confirming' || phase === 'submitted' || phase === 'settling'
   const health = useMachineHealth(machine)
   const h = useTranslations('health')
+  const maxCount = maxSpinsNow(health, MAX_SPINS_PER_CALL)
+
+  // The pool can shrink under the slider — never offer a batch that reverts.
+  useEffect(() => {
+    if (count > maxCount) onCountChange(maxCount)
+  }, [count, maxCount, onCountChange])
 
   const drops = dedupeTokens(machine)
 
@@ -69,14 +85,14 @@ export function ControlConsole({
         </div>
         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3">
           <span className="font-display text-[2.3rem] font-extrabold leading-[0.88] tracking-[-0.055em] text-foreground">
-            ${machine.referencePriceUsd.toFixed(0)}
+            ${(machine.referencePriceUsd * count).toFixed(0)}
           </span>
           <span className="num text-[0.9rem] text-foreground-secondary">
-            ≈ {machine.priceBnb} BNB
+            ≈ {formatBnb(totalWei)} BNB
           </span>
         </div>
         <p className="mt-1.5 text-[0.72rem] leading-snug text-foreground-muted">
-          {t('payNote', { amount: machine.priceBnb })}
+          {t('payNote', { amount: formatBnb(totalWei) })}
         </p>
       </div>
 
@@ -136,6 +152,16 @@ export function ControlConsole({
         </ul>
       </div>
 
+      {/* --------------------------------------------------------- count */}
+      <SpinCount
+        count={count}
+        max={maxCount}
+        priceBnb={machine.priceBnb}
+        totalWei={totalWei}
+        disabled={busy}
+        onChange={onCountChange}
+      />
+
       {/* -------------------------------------------------------- action */}
       <div>
         {!isConnected ? (
@@ -153,6 +179,8 @@ export function ControlConsole({
         ) : (
           <SpinButton
             machine={machine}
+            count={count}
+            totalBnb={formatBnb(totalWei)}
             phase={phase}
             insufficient={insufficient}
             blocked={blocksSpin(health)}
@@ -177,7 +205,13 @@ export function ControlConsole({
               <span className="num">{shortHash(txHash)}</span>
             </StatusLine>
           )}
-          {phase === 'settling' && <StatusLine pulse>{s('waitingRandomness')}</StatusLine>}
+          {phase === 'settling' && (
+            <StatusLine pulse>
+              {batchProgress
+                ? s('settledProgress', { settled: batchProgress.settled, count: batchProgress.total })
+                : s('waitingRandomness')}
+            </StatusLine>
+          )}
           {error && (
             <p
               role="alert"
@@ -196,6 +230,8 @@ export function ControlConsole({
 
 function SpinButton({
   machine,
+  count,
+  totalBnb,
   phase,
   insufficient,
   blocked,
@@ -203,6 +239,8 @@ function SpinButton({
   onReset,
 }: {
   machine: Machine
+  count: number
+  totalBnb: string
   phase: SpinPhase
   insufficient: boolean
   blocked: boolean
@@ -212,6 +250,11 @@ function SpinButton({
   const t = useTranslations('play.actions')
   const c = useTranslations('play.console')
   const h = useTranslations('health')
+  const price = `$${(machine.referencePriceUsd * count).toFixed(0)}`
+  const label =
+    count > 1
+      ? c('spinManyLabel', { label: machine.label, count, price })
+      : c('spinLabel', { label: machine.label, price })
 
   const base =
     'inline-flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[13px] text-[0.98rem] font-semibold ' +
@@ -251,7 +294,7 @@ function SpinButton({
     return (
       <div>
         <button disabled className={cn(base, primary)}>
-          {c('spinLabel', { label: machine.label, price: `$${machine.referencePriceUsd.toFixed(0)}` })}
+          {label}
         </button>
         <p className="mt-2.5 text-center text-[0.76rem] text-foreground-muted">{h('blockedHint')}</p>
       </div>
@@ -264,15 +307,98 @@ function SpinButton({
           {t('notEnough')}
         </button>
         <p className="mt-2.5 text-center text-[0.76rem] text-foreground-muted">
-          {t('notEnoughHint', { amount: machine.priceBnb })}
+          {count > 1
+            ? t('notEnoughManyHint', { count, amount: totalBnb })
+            : t('notEnoughHint', { amount: machine.priceBnb })}
         </p>
       </div>
     )
   }
   return (
     <button onClick={onSpin} className={cn(base, primary)}>
-      {c('spinLabel', { label: machine.label, price: `$${machine.referencePriceUsd.toFixed(0)}` })}
+      {label}
     </button>
+  )
+}
+
+/* -------------------------------------------------------------- count */
+
+/**
+ * How many spins to buy at once. A slider for reach, steppers for precision
+ * (a thumb on a phone rarely lands on exactly 7).
+ */
+function SpinCount({
+  count,
+  max,
+  priceBnb,
+  totalWei,
+  disabled,
+  onChange,
+}: {
+  count: number
+  max: number
+  priceBnb: number
+  totalWei: bigint
+  disabled: boolean
+  onChange: (count: number) => void
+}) {
+  const t = useTranslations('play.console')
+  const fill = max > 1 ? ((count - 1) / (max - 1)) * 100 : 100
+  const step =
+    'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border border-border bg-surface ' +
+    'text-[1rem] font-semibold text-foreground transition-colors hover:border-border-strong hover:bg-surface-hover ' +
+    'disabled:pointer-events-none disabled:opacity-40'
+
+  return (
+    <div className="border-t border-border pt-3.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <label
+          htmlFor="spin-count"
+          className="text-[0.64rem] uppercase tracking-[0.18em] text-foreground-muted"
+        >
+          {t('spins')}
+        </label>
+        <span className="num font-display text-[1.15rem] font-bold leading-none tracking-[-0.03em] text-foreground">
+          ×{count}
+        </span>
+      </div>
+      <div className="mt-2.5 flex items-center gap-2.5">
+        <button
+          type="button"
+          className={step}
+          aria-label={t('decrease')}
+          disabled={disabled || count <= 1}
+          onClick={() => onChange(count - 1)}
+        >
+          −
+        </button>
+        <input
+          id="spin-count"
+          type="range"
+          min={1}
+          max={max}
+          step={1}
+          value={Math.min(count, max)}
+          disabled={disabled || max <= 1}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="spin-slider min-w-0 flex-1"
+          style={{ '--fill': `${fill}%` } as React.CSSProperties}
+        />
+        <button
+          type="button"
+          className={step}
+          aria-label={t('increase')}
+          disabled={disabled || count >= max}
+          onClick={() => onChange(count + 1)}
+        >
+          +
+        </button>
+      </div>
+      <p className="num mt-1.5 flex flex-wrap justify-between gap-x-3 text-[0.72rem] text-foreground-muted">
+        <span>{t('spinsTotal', { count, each: priceBnb, total: formatBnb(totalWei) })}</span>
+        {max < MAX_SPINS_PER_CALL && <span>{t('spinsMax', { max })}</span>}
+      </p>
+    </div>
   )
 }
 

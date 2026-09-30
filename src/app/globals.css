@@ -872,6 +872,63 @@
   }
 }
 
+/* Spin-count slider: a yellow fill up to the thumb, drawn from --fill. */
+@layer components {
+  .spin-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 22px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .spin-slider:disabled { cursor: default; opacity: 0.5; }
+  .spin-slider:focus-visible { outline: none; }
+
+  .spin-slider::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: linear-gradient(
+      90deg,
+      var(--brand) 0 var(--fill, 0%),
+      var(--border-strong) var(--fill, 0%) 100%
+    );
+  }
+  .spin-slider::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border-strong);
+  }
+  .spin-slider::-moz-range-progress {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--brand);
+  }
+
+  .spin-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    margin-top: -7px;
+    border-radius: 999px;
+    background: var(--brand);
+    border: 3px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--brand-line), var(--shadow-brand);
+    transition: transform 120ms var(--ease-physical);
+  }
+  .spin-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: var(--brand);
+    border: 3px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--brand-line), var(--shadow-brand);
+  }
+  .spin-slider:active::-webkit-slider-thumb { transform: scale(1.12); }
+  .spin-slider:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--brand-soft), 0 0 0 1px var(--brand-line); }
+  .spin-slider:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--brand-soft), 0 0 0 1px var(--brand-line); }
+}
+
 /* ------------------------------------------------------------------
    Printing the whitepaper.
 

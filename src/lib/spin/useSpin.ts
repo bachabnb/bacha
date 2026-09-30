@@ -11,8 +11,11 @@ import { tokenByAddress } from '@/lib/tokens'
 import { unitsToNumber } from '@/lib/format'
 import { errorKey } from '@/lib/errors'
 import { useTranslations } from 'next-intl'
-import { rarityFromIndex } from '@/lib/rarity'
+import { rarityFromIndex, type Rarity } from '@/lib/rarity'
 import type { SpinRecord } from './types'
+
+/** Most spins one transaction may buy — BachaGame.MAX_SPINS_PER_CALL. */
+export const MAX_SPINS_PER_CALL = 25
 
 /**
  * The spin lifecycle, for both settlement modes.
@@ -35,8 +38,14 @@ export type SpinPhase =
 
 export interface SpinState {
   phase: SpinPhase
-  /** Named `record` rather than `spin` so it never collides with the action. */
+  /**
+   * Named `record` rather than `spin` so it never collides with the action.
+   * For a batch, the best pull once every spin has revealed — what the
+   * machine drops into the tray.
+   */
   record: SpinRecord | null
+  /** Every spin of a multi-spin purchase, in order. Null for a single spin. */
+  batch: SpinRecord[] | null
   txHash: string | null
   error: string | null
   /**
@@ -53,7 +62,14 @@ export interface SpinState {
  */
 const spinAbi = [...bachaGameAbi, ...bachaRandomnessAbi.filter((item) => item.type === 'error')] as const
 
-const INITIAL: SpinState = { phase: 'idle', record: null, txHash: null, error: null, deliverySlow: false }
+const INITIAL: SpinState = {
+  phase: 'idle',
+  record: null,
+  batch: null,
+  txHash: null,
+  error: null,
+  deliverySlow: false,
+}
 
 /** How long a settled prize may wait for delivery before BNB is offered. */
 const DELIVERY_SLOW_MS = 90_000
@@ -78,7 +94,8 @@ export function useSpin() {
   }, [])
 
   const spin = useCallback(
-    async (machineId: string) => {
+    async (machineId: string, requestedCount = 1) => {
+      const count = Math.min(Math.max(1, Math.floor(requestedCount)), MAX_SPINS_PER_CALL)
       const machine = machineById(machineId)
       if (!machine) {
         setState({ ...INITIAL, phase: 'error', error: t('unknownSpin') })
@@ -98,7 +115,8 @@ export function useSpin() {
 
       try {
         if (spinMode === 'demo') {
-          await runDemoSpin(machine, address, setState, cancelled)
+          if (count === 1) await runDemoSpin(machine, address, setState, cancelled)
+          else await runDemoBatch(machine, address, count, setState, cancelled)
           return
         }
 
@@ -123,14 +141,24 @@ export function useSpin() {
         if (!tier.active) throw new Error('TierInactive')
         if (cancelled.current) return
 
-        const hash = await writeContractAsync({
-          address: publicEnv.gameAddress,
-          abi: spinAbi,
-          functionName: 'spin',
-          args: [machine.tierId],
-          value: tier.price,
-          chainId: publicEnv.chainId,
-        })
+        const hash =
+          count === 1
+            ? await writeContractAsync({
+                address: publicEnv.gameAddress,
+                abi: spinAbi,
+                functionName: 'spin',
+                args: [machine.tierId],
+                value: tier.price,
+                chainId: publicEnv.chainId,
+              })
+            : await writeContractAsync({
+                address: publicEnv.gameAddress,
+                abi: spinAbi,
+                functionName: 'spinMany',
+                args: [machine.tierId, BigInt(count)],
+                value: tier.price * BigInt(count),
+                chainId: publicEnv.chainId,
+              })
         if (cancelled.current) return
         setState({ ...INITIAL, phase: 'submitted', txHash: hash })
 
@@ -138,8 +166,17 @@ export function useSpin() {
         if (cancelled.current) return
 
         if (receipt.status !== 'success') throw new Error('SpinReverted')
-        const spinId = extractSpinId(receipt.logs)
-        if (spinId === null) throw new Error('SpinReverted')
+        const spinIds = extractSpinIds(receipt.logs)
+        if (spinIds.length === 0) throw new Error('SpinReverted')
+
+        if (count > 1) {
+          const pendings = spinIds.map((id) => pendingRecord(id, machine, tier.price, address, hash))
+          setState({ ...INITIAL, phase: 'settling', batch: pendings, txHash: hash })
+          await watchBatch(spinIds, hash, machine, publicClient, cancelled, setState)
+          return
+        }
+
+        const spinId = spinIds[0]
 
         const pending = pendingRecord(spinId, machine, tier.price, address, hash)
         setState({ ...INITIAL, phase: 'settling', record: pending, txHash: hash })
@@ -233,6 +270,26 @@ async function runDemoSpin(
   setState({ ...INITIAL, phase: 'revealing', record: settled.spin })
 }
 
+async function runDemoBatch(
+  machine: Machine,
+  player: `0x${string}`,
+  count: number,
+  setState: React.Dispatch<React.SetStateAction<SpinState>>,
+  cancelled: React.MutableRefObject<boolean>,
+) {
+  const batch: SpinRecord[] = []
+  setState({ ...INITIAL, phase: 'settling', batch: [] })
+  for (let i = 0; i < count; i++) {
+    const created = await postJson<{ spin: SpinRecord }>('/api/demo/spin', { machineId: machine.id, player })
+    if (cancelled.current) return
+    const settled = await postJson<{ spin: SpinRecord }>('/api/demo/settle', { id: created.spin.id })
+    if (cancelled.current) return
+    batch.push(settled.spin)
+    setState((s) => ({ ...s, batch: [...batch] }))
+  }
+  setState((s) => ({ ...s, phase: 'revealing', record: bestOf(batch) }))
+}
+
 /* --------------------------------------------------------------- onchain */
 
 function pendingRecord(
@@ -266,7 +323,8 @@ function pendingRecord(
   }
 }
 
-function extractSpinId(logs: readonly { data: `0x${string}`; topics: readonly `0x${string}`[] }[]): bigint | null {
+function extractSpinIds(logs: readonly { data: `0x${string}`; topics: readonly `0x${string}`[] }[]): bigint[] {
+  const ids: bigint[] = []
   for (const log of logs) {
     try {
       const decoded = decodeEventLog({
@@ -275,13 +333,13 @@ function extractSpinId(logs: readonly { data: `0x${string}`; topics: readonly `0
         topics: log.topics as [`0x${string}`, ...`0x${string}`[]],
       })
       if (decoded.eventName === 'SpinRequested') {
-        return (decoded.args as unknown as { spinId: bigint }).spinId
+        ids.push((decoded.args as unknown as { spinId: bigint }).spinId)
       }
     } catch {
       // Not one of ours — beacon and token logs land in the same receipt.
     }
   }
-  return null
+  return ids
 }
 
 interface ContractSpin {
@@ -298,6 +356,7 @@ interface ContractSpin {
 }
 
 // BachaGame.SpinStatus
+const PENDING = 1
 const SETTLED = 2
 const DELIVERED = 3
 const PAID_IN_BNB = 4
@@ -315,6 +374,124 @@ async function readSpin(
   })) as unknown as ContractSpin
 }
 
+/** The chain's view of a revealed spin, in the shape the UI consumes. */
+function settledFields(raw: ContractSpin, machine: Machine): Partial<SpinRecord> {
+  // The live roster carries the version the tier sells; a spin stamped with
+  // an older one cannot be indexed against it.
+  const index =
+    machine.source === 'onchain' && machine.versionId === raw.versionId.toString()
+      ? selectPrize(machine, raw.randomWord).index
+      : null
+  // Until delivery, show what the value buys at the table's price.
+  const estimate = index !== null ? machine.prizes[index].amount : null
+  const decimals = tokenByAddress(raw.rewardToken)?.decimals ?? null
+  const delivered = raw.status === DELIVERED
+  return {
+    machineVersion: raw.versionId.toString(),
+    prizeTableHash: raw.prizeTableHash,
+    settledAt: Number(raw.settledAt) * 1000,
+    requestId: raw.requestId.toString(),
+    randomWord: raw.randomWord.toString(),
+    rewardTokenAddress: raw.rewardToken.toLowerCase() as `0x${string}`,
+    rewardValueWei: raw.rewardValue.toString(),
+    rewardAmountUnits: delivered ? raw.deliveredAmount.toString() : null,
+    rewardAmount: delivered && decimals !== null ? unitsToNumber(raw.deliveredAmount, decimals) : estimate,
+    rewardAmountExact: delivered,
+    rarity: rarityFromIndex(raw.rarity),
+    prizeIndex: index,
+    status: delivered ? 'CLAIMED' : raw.status === PAID_IN_BNB ? 'PAID_BNB' : 'SETTLED',
+  }
+}
+
+const MULTICALL3 = '0xcA11bde05977b3631167028862bE2a173976CA11'
+
+/** Reads every spin of a batch in one call. */
+async function readSpins(
+  spinIds: bigint[],
+  publicClient: NonNullable<ReturnType<typeof usePublicClient>>,
+): Promise<ContractSpin[]> {
+  const results = await publicClient.multicall({
+    multicallAddress: MULTICALL3,
+    allowFailure: false,
+    contracts: spinIds.map((id) => ({
+      address: publicEnv.gameAddress!,
+      abi: bachaGameAbi,
+      functionName: 'getSpin' as const,
+      args: [id],
+    })),
+  })
+  return results as unknown as ContractSpin[]
+}
+
+const RARITY_RANK: Record<Rarity, number> = { COMMON: 0, UNCOMMON: 1, RARE: 2, EPIC: 3 }
+
+/** The pull a batch is remembered by: rarest first, then most valuable. */
+export function bestOf(batch: SpinRecord[]): SpinRecord | null {
+  let best: SpinRecord | null = null
+  for (const r of batch) {
+    if (!r.rarity || !r.rewardTokenAddress) continue
+    if (
+      !best ||
+      RARITY_RANK[r.rarity] > RARITY_RANK[best.rarity!] ||
+      (RARITY_RANK[r.rarity] === RARITY_RANK[best.rarity!] &&
+        BigInt(r.rewardValueWei ?? '0') > BigInt(best.rewardValueWei ?? '0'))
+    ) {
+      best = r
+    }
+  }
+  return best
+}
+
+/**
+ * Follows every spin of a batch from pending to delivered. Results land one by
+ * one as the worker reveals them; once none is pending the machine drops the
+ * best of them, and the watch carries on until every prize has arrived.
+ */
+async function watchBatch(
+  spinIds: bigint[],
+  hash: `0x${string}`,
+  machine: Machine,
+  publicClient: NonNullable<ReturnType<typeof usePublicClient>>,
+  cancelled: React.MutableRefObject<boolean>,
+  setState: React.Dispatch<React.SetStateAction<SpinState>>,
+) {
+  const started = Date.now()
+  let revealedAt: number | null = null
+
+  while (!cancelled.current && Date.now() - started < 30 * 60_000) {
+    const raws = await readSpins(spinIds, publicClient).catch(() => null)
+    if (cancelled.current) return
+
+    if (raws) {
+      const pending = raws.filter((r) => r.status === PENDING).length
+      const open = raws.filter((r) => r.status === SETTLED).length
+      if (pending === 0 && revealedAt === null) revealedAt = Date.now()
+      const slow = revealedAt !== null && open > 0 && Date.now() - revealedAt > DELIVERY_SLOW_MS
+
+      setState((s) => {
+        if (s.txHash !== hash || !s.batch) return s
+        const batch = s.batch.map((r, i) => {
+          const raw = raws[i]
+          if (raw.status === REFUNDED) return { ...r, status: 'REFUNDED' as const }
+          if (raw.status >= SETTLED) return { ...r, ...settledFields(raw, machine) }
+          return r
+        })
+        const next: SpinState = { ...s, batch, deliverySlow: slow }
+        if (pending === 0 && s.phase === 'settling') {
+          next.phase = 'revealing'
+          next.record = bestOf(batch)
+        }
+        return next
+      })
+
+      if (pending === 0 && open === 0) return
+    }
+
+    if (revealedAt === null && Date.now() - started > 10 * 60_000) throw new Error('StillPending')
+    await sleep(3000)
+  }
+}
+
 async function pollForSettlement(
   spinId: bigint,
   machine: Machine,
@@ -327,34 +504,7 @@ async function pollForSettlement(
   while (!cancelled.current && Date.now() - started < TIMEOUT_MS) {
     const raw = await readSpin(spinId, publicClient)
 
-    if (raw.status >= SETTLED && raw.status <= PAID_IN_BNB) {
-      // The live roster carries the version the tier sells; a spin stamped
-      // with an older one cannot be indexed against it.
-      const index =
-        machine.source === 'onchain' && machine.versionId === raw.versionId.toString()
-          ? selectPrize(machine, raw.randomWord).index
-          : null
-      // Until delivery, show what the value buys at the table's price.
-      const estimate = index !== null ? machine.prizes[index].amount : null
-      const decimals = tokenByAddress(raw.rewardToken)?.decimals ?? null
-      const delivered = raw.status === DELIVERED
-      return {
-        machineVersion: raw.versionId.toString(),
-        prizeTableHash: raw.prizeTableHash,
-        settledAt: Number(raw.settledAt) * 1000,
-        requestId: raw.requestId.toString(),
-        randomWord: raw.randomWord.toString(),
-        rewardTokenAddress: raw.rewardToken.toLowerCase() as `0x${string}`,
-        rewardValueWei: raw.rewardValue.toString(),
-        rewardAmountUnits: delivered ? raw.deliveredAmount.toString() : null,
-        rewardAmount:
-          delivered && decimals !== null ? unitsToNumber(raw.deliveredAmount, decimals) : estimate,
-        rewardAmountExact: delivered,
-        rarity: rarityFromIndex(raw.rarity),
-        prizeIndex: index,
-        status: delivered ? 'CLAIMED' : raw.status === PAID_IN_BNB ? 'PAID_BNB' : 'SETTLED',
-      }
-    }
+    if (raw.status >= SETTLED && raw.status <= PAID_IN_BNB) return settledFields(raw, machine)
 
     if (raw.status === REFUNDED) throw new Error('SpinRefunded')
     await sleep(3000)

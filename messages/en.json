@@ -758,7 +758,8 @@
       "running": "The machine is running",
       "tryAgain": "Try again",
       "notEnough": "Not enough BNB",
-      "notEnoughHint": "This spin costs {amount} BNB plus gas. Top up and come back."
+      "notEnoughHint": "This spin costs {amount} BNB plus gas. Top up and come back.",
+      "notEnoughManyHint": "{count} spins cost {amount} BNB plus gas. Lower the count or top up."
     },
     "status": {
       "machine": "Machine",
@@ -788,7 +789,18 @@
       "delivered": "Delivered to your wallet.",
       "paidBnb": "Paid out as {amount} BNB.",
       "takeBnb": "Take BNB instead",
-      "takingBnb": "Sending BNB…"
+      "takingBnb": "Sending BNB…",
+      "batchTitle": "Your {count} pulls",
+      "batchProgress": "{settled} of {count} revealed · {delivered} delivered",
+      "batchValue": "Total prize value",
+      "batchPaid": "You paid {amount} BNB",
+      "batchDelivering": "Buying your stocks now — each lands in your wallet a few seconds after it is revealed.",
+      "batchSlow": "Some prizes are taking longer than usual. They will still arrive — or take any of them in BNB from My Bacha.",
+      "batchDone": "Every prize is in your wallet.",
+      "batchRefunded": "{count} spins were refunded.",
+      "spinAgainMany": "Spin ×{count} again",
+      "myBacha": "My Bacha",
+      "pending": "Waiting"
     },
     "stage": {
       "eyebrow": "The machine",
@@ -823,14 +835,21 @@
       "spinLabel": "Spin {label} — {price}",
       "connectPrompt": "Connect your wallet to spin.",
       "switchPrompt": "Switch to BNB Chain.",
-      "pausedPrompt": "This machine is temporarily unavailable."
+      "pausedPrompt": "This machine is temporarily unavailable.",
+      "spins": "Spins",
+      "spinsTotal": "{count} × {each} BNB = {total} BNB",
+      "spinsMax": "Up to {max} at once right now.",
+      "spinManyLabel": "Spin {label} ×{count} — {price}",
+      "decrease": "One fewer spin",
+      "increase": "One more spin"
     },
     "states": {
       "waitingSignature": "Waiting for signature…",
       "submitted": "Spin submitted.",
       "waitingRandomness": "Waiting for randomness…",
       "resultReceived": "Result received.",
-      "tx": "Tx"
+      "tx": "Tx",
+      "settledProgress": "Revealed {settled} of {count}…"
     },
     "session": {
       "title": "Your session",

@@ -49,6 +49,8 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
     bytes32 public constant SETTLER_ROLE = keccak256("SETTLER_ROLE");
 
     uint256 public constant MAX_PRIZES_PER_TABLE = 64;
+    /// @notice Most spins one `spinMany` call may buy.
+    uint256 public constant MAX_SPINS_PER_CALL = 25;
     uint64 public constant MIN_REVEAL_TIMEOUT = 30 minutes;
     uint64 public constant MAX_REVEAL_TIMEOUT = 7 days;
 
@@ -220,6 +222,7 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
     error UnknownTier(uint8 tierId);
     error TierInactive(uint8 tierId);
     error IncorrectPayment(uint256 sent, uint256 required);
+    error InvalidSpinCount(uint256 count);
     error InsufficientBankroll(uint256 required, uint256 available);
     error UnknownSpin(uint256 spinId);
     error SpinNotSettled(uint256 spinId, SpinStatus status);
@@ -371,20 +374,51 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
 
     /// @notice Pay for one spin on `tierId` and request randomness for it.
     function spin(uint8 tierId) external payable nonReentrant whenNotPaused returns (uint256 spinId) {
-        Tier memory tier = _tiers[tierId];
+        (Tier memory tier, Version memory version) = _sellable(tierId);
+        if (msg.value != tier.price) revert IncorrectPayment(msg.value, tier.price);
+        spinId = _openSpin(tierId, tier, version);
+    }
+
+    /// @notice Pay for `count` spins on `tierId` at once. Each is an ordinary
+    ///         spin — its own seed, its own reserve, its own prize — so it
+    ///         settles, delivers and refunds exactly as if bought alone.
+    function spinMany(uint8 tierId, uint256 count)
+        external
+        payable
+        nonReentrant
+        whenNotPaused
+        returns (uint256[] memory spinIds)
+    {
+        if (count == 0 || count > MAX_SPINS_PER_CALL) revert InvalidSpinCount(count);
+        (Tier memory tier, Version memory version) = _sellable(tierId);
+        uint256 total = uint256(tier.price) * count;
+        if (msg.value != total) revert IncorrectPayment(msg.value, total);
+
+        spinIds = new uint256[](count);
+        for (uint256 i; i < count; ++i) {
+            spinIds[i] = _openSpin(tierId, tier, version);
+        }
+    }
+
+    function _sellable(uint8 tierId) private view returns (Tier memory tier, Version memory version) {
+        tier = _tiers[tierId];
         if (!tier.exists) revert UnknownTier(tierId);
         if (!tier.active) revert TierInactive(tierId);
-        if (msg.value != tier.price) revert IncorrectPayment(msg.value, tier.price);
+        version = _versions[tier.versionId];
+        if (!version.published) revert UnknownVersion(tier.versionId);
+    }
 
+    /// @dev Opens one spin paid at `tier.price`. The payment is already in the
+    ///      balance, so a batch checks the bankroll once per spin against the
+    ///      reserves of every spin before it.
+    function _openSpin(uint8 tierId, Tier memory tier, Version memory version) private returns (uint256 spinId) {
+        uint96 payment = tier.price;
         uint64 versionId = tier.versionId;
-        Version memory version = _versions[versionId];
-        if (!version.published) revert UnknownVersion(versionId);
 
         // Held back until the spin resolves: enough for the biggest prize, or
         // to refund the payment if randomness never comes — whichever is more.
-        uint96 reserve = version.maxValue > msg.value ? version.maxValue : uint96(msg.value);
+        uint96 reserve = version.maxValue > payment ? version.maxValue : payment;
         uint256 required = obligations() + reserve;
-        // The payment is already part of the balance.
         if (address(this).balance < required) revert InsufficientBankroll(required, address(this).balance);
 
         spinId = ++spinCount;
@@ -403,7 +437,7 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
             versionId: versionId,
             requestedAt: nowTs,
             settledAt: 0,
-            payment: uint96(msg.value),
+            payment: payment,
             reserve: reserve,
             rewardToken: address(0),
             rewardValue: 0,
@@ -415,9 +449,7 @@ contract BachaGame is AccessControl, Pausable, ReentrancyGuard {
         spinIdByRequest[requestId] = spinId;
         _spinsByPlayer[msg.sender].push(spinId);
 
-        emit SpinRequested(
-            spinId, msg.sender, tierId, versionId, version.prizeTableHash, uint96(msg.value), requestId, nowTs
-        );
+        emit SpinRequested(spinId, msg.sender, tierId, versionId, version.prizeTableHash, payment, requestId, nowTs);
     }
 
     /// @notice Delivery point for a revealed word. Only the beacon may call.

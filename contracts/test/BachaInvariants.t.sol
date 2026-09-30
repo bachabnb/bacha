@@ -58,6 +58,16 @@ contract GameHandler is Test {
         } catch {}
     }
 
+    function spinMany(uint256 who, uint256 count) external {
+        address p = players[who % players.length];
+        count = bound(count, 1, game.MAX_SPINS_PER_CALL());
+        uint256 total = uint256(game.getTier(0).price) * count;
+        vm.prank(p);
+        try game.spinMany{value: total}(0, count) returns (uint256[] memory ids) {
+            for (uint256 i; i < ids.length; ++i) spinIds.push(ids[i]);
+        } catch {}
+    }
+
     function settle(uint256 pick, uint256 word) external {
         if (spinIds.length == 0) return;
         BachaGame.Spin memory s = game.getSpin(spinIds[pick % spinIds.length]);

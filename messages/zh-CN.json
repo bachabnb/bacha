@@ -758,7 +758,8 @@
       "running": "机器运转中",
       "tryAgain": "重试",
       "notEnough": "BNB 余额不足",
-      "notEnoughHint": "本次转动需要 {amount} BNB，外加 Gas 费。充值后再来。"
+      "notEnoughHint": "本次转动需要 {amount} BNB，外加 Gas 费。充值后再来。",
+      "notEnoughManyHint": "{count} 次转动需要 {amount} BNB，外加 Gas 费。减少次数或充值后再来。"
     },
     "status": {
       "machine": "机器",
@@ -788,7 +789,18 @@
       "delivered": "已发送到你的钱包。",
       "paidBnb": "已以 {amount} BNB 发放。",
       "takeBnb": "改领 BNB",
-      "takingBnb": "正在发送 BNB…"
+      "takingBnb": "正在发送 BNB…",
+      "batchTitle": "你的 {count} 次转动",
+      "batchProgress": "已揭晓 {settled}/{count} · 已到账 {delivered}",
+      "batchValue": "奖品总价值",
+      "batchPaid": "你支付了 {amount} BNB",
+      "batchDelivering": "正在为你买入股票——每个奖品揭晓后几秒内就会到达你的钱包。",
+      "batchSlow": "部分奖品买入比平时慢。它们仍会到账——你也可以在「我的 Bacha」中改领等值 BNB。",
+      "batchDone": "所有奖品都已到达你的钱包。",
+      "batchRefunded": "{count} 次转动已退款。",
+      "spinAgainMany": "再转 ×{count}",
+      "myBacha": "我的 Bacha",
+      "pending": "等待中"
     },
     "stage": {
       "eyebrow": "机器",
@@ -823,14 +835,21 @@
       "spinLabel": "转动 {label} — {price}",
       "connectPrompt": "连接钱包后即可转动。",
       "switchPrompt": "请切换到 BNB Chain。",
-      "pausedPrompt": "这台机器暂时无法使用。"
+      "pausedPrompt": "这台机器暂时无法使用。",
+      "spins": "转动次数",
+      "spinsTotal": "{count} × {each} BNB = {total} BNB",
+      "spinsMax": "当前最多可一次转 {max} 次。",
+      "spinManyLabel": "转动 {label} ×{count} — {price}",
+      "decrease": "少转一次",
+      "increase": "多转一次"
     },
     "states": {
       "waitingSignature": "等待签名…",
       "submitted": "转动已提交。",
       "waitingRandomness": "等待随机数…",
       "resultReceived": "已收到结果。",
-      "tx": "交易"
+      "tx": "交易",
+      "settledProgress": "已揭晓 {settled}/{count}…"
     },
     "session": {
       "title": "本次会话",

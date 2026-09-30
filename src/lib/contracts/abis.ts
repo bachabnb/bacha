@@ -78,6 +78,19 @@ export const bachaGameAbi = [
   },
   {
     "type": "function",
+    "name": "MAX_SPINS_PER_CALL",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MIN_REVEAL_TIMEOUT",
     "inputs": [],
     "outputs": [
@@ -932,6 +945,30 @@ export const bachaGameAbi = [
   },
   {
     "type": "function",
+    "name": "spinMany",
+    "inputs": [
+      {
+        "name": "tierId",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "count",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "spinIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
     "name": "spinsOf",
     "inputs": [
       {
@@ -1698,6 +1735,17 @@ export const bachaGameAbi = [
       },
       {
         "name": "minimum",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidSpinCount",
+    "inputs": [
+      {
+        "name": "count",
         "type": "uint256",
         "internalType": "uint256"
       }

@@ -9,6 +9,7 @@ import { BachaMachine, type MachineState, type MachineToken } from '@/components
 import { BachaGhostMark } from '@/components/brand/BachaLogo'
 import { ControlConsole } from './ControlConsole'
 import { ResultCard } from './ResultCard'
+import { BatchResults } from './BatchResults'
 import { MachineStatusRow } from './MachineStatusRow'
 import { RecentDropsRail } from './RecentDropsRail'
 import { InsideMachine } from './InsideMachine'
@@ -61,8 +62,15 @@ export function PlayClient({
   )
   const machine = machineById(machineId) ?? machines[0]
 
-  const { phase, record, txHash, error, deliverySlow, spin, claim, reset, markRevealed } = useSpin()
+  const { phase, record, batch, txHash, error, deliverySlow, spin, claim, reset, markRevealed } = useSpin()
   const { play } = useSound()
+  // How many spins the next purchase buys, and how many the one on screen did.
+  const [count, setCount] = useState(1)
+  const [boughtCount, setBoughtCount] = useState(1)
+  const startSpin = (n: number) => {
+    setBoughtCount(n)
+    void spin(machine.id, n)
+  }
 
   useEffect(() => {
     if (phase === 'confirming') play('arm')
@@ -180,17 +188,32 @@ export function PlayClient({
 
               {/* The result arrives where the capsule did. */}
               <div className="mx-auto mt-5 w-full max-w-[26rem]">
-                <ResultCard
-                  spin={record}
-                  phase={phase}
-                  valueUsd={rewardValueUsd}
-                  onSpinAgain={() => {
-                    reset()
-                    void spin(machine.id)
-                  }}
-                  onClaim={() => void claim()}
-                  deliverySlow={deliverySlow}
-                />
+                {batch ? (
+                  <BatchResults
+                    batch={batch}
+                    expected={boughtCount}
+                    phase={phase}
+                    quotes={quotes}
+                    txHash={txHash}
+                    deliverySlow={deliverySlow}
+                    onSpinAgain={() => {
+                      reset()
+                      startSpin(batch.length)
+                    }}
+                  />
+                ) : (
+                  <ResultCard
+                    spin={record}
+                    phase={phase}
+                    valueUsd={rewardValueUsd}
+                    onSpinAgain={() => {
+                      reset()
+                      startSpin(1)
+                    }}
+                    onClaim={() => void claim()}
+                    deliverySlow={deliverySlow}
+                  />
+                )}
               </div>
             </div>
 
@@ -221,7 +244,12 @@ export function PlayClient({
                 phase={phase}
                 txHash={txHash}
                 error={error}
-                onSpin={() => void spin(machine.id)}
+                count={count}
+                onCountChange={setCount}
+                batchProgress={
+                  batch ? { settled: batch.filter((r) => r.status !== 'PENDING').length, total: boughtCount } : null
+                }
+                onSpin={() => startSpin(count)}
                 onReset={reset}
               />
             </div>

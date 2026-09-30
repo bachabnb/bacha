@@ -168,6 +168,119 @@ contract BachaGameTest is BachaBase {
         game.spin{value: PRICE}(TIER);
     }
 
+    // ---------------------------------------------------------- spinMany
+
+    function _spinMany(address who, uint256 count) internal returns (uint256[] memory ids) {
+        vm.prank(who);
+        ids = game.spinMany{value: uint256(PRICE) * count}(TIER, count);
+    }
+
+    function test_spinManyOpensIndependentSpins() public {
+        uint256 seedsBefore = randomness.availableCommitments();
+        uint256[] memory ids = _spinMany(alice, 5);
+
+        assertEq(ids.length, 5);
+        assertEq(game.spinCount(), 5);
+        assertEq(randomness.availableCommitments(), seedsBefore - 5, "one seed per spin");
+        assertEq(game.pendingReserve(), uint256(EPIC) * 5, "each spin reserves the biggest prize");
+        for (uint256 i; i < ids.length; ++i) {
+            BachaGame.Spin memory s = game.getSpin(ids[i]);
+            assertEq(ids[i], i + 1);
+            assertEq(s.player, alice);
+            assertEq(s.payment, PRICE, "each spin carries one price");
+            assertEq(s.reserve, EPIC);
+            assertEq(uint8(s.status), uint8(BachaGame.SpinStatus.Pending));
+            if (i > 0) assertTrue(s.requestId != game.getSpin(ids[i - 1]).requestId, "own randomness request");
+        }
+        (, uint256 total) = game.spinsOf(alice, 0, 10);
+        assertEq(total, 5);
+    }
+
+    function test_spinManyRejectsBadCountAndPayment() public {
+        uint256 max = game.MAX_SPINS_PER_CALL();
+        assertEq(max, 25);
+
+        vm.startPrank(alice);
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.InvalidSpinCount.selector, 0));
+        game.spinMany{value: 0}(TIER, 0);
+
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.InvalidSpinCount.selector, max + 1));
+        game.spinMany{value: uint256(PRICE) * (max + 1)}(TIER, max + 1);
+
+        vm.expectRevert(abi.encodeWithSelector(BachaGame.IncorrectPayment.selector, PRICE, uint256(PRICE) * 3));
+        game.spinMany{value: PRICE}(TIER, 3);
+        vm.stopPrank();
+
+        vm.prank(operator);
+        game.pause();
+        vm.prank(alice);
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        game.spinMany{value: uint256(PRICE) * 2}(TIER, 2);
+    }
+
+    function test_spinManyIsAllOrNothingOnTheBankroll() public {
+        uint64 v = game.getTier(TIER).versionId;
+        uint256 funded = game.remainingFundedSpins(v);
+
+        uint256 count = funded + 1 > game.MAX_SPINS_PER_CALL() ? game.MAX_SPINS_PER_CALL() : funded + 1;
+        // Shrink the bankroll until `count` is one spin too many.
+        uint256 spare = address(game).balance - (uint256(EPIC) - PRICE) * (count - 1);
+        vm.prank(treasurer);
+        game.withdrawFees(treasurer, spare);
+        assertEq(game.remainingFundedSpins(v), count - 1);
+
+        vm.prank(alice);
+        vm.expectPartialRevert(BachaGame.InsufficientBankroll.selector);
+        game.spinMany{value: uint256(PRICE) * count}(TIER, count);
+        assertEq(game.spinCount(), 0, "no spin of a refused batch survives");
+        assertEq(game.pendingReserve(), 0);
+
+        _spinMany(alice, count - 1);
+        assertEq(game.remainingFundedSpins(v), 0);
+    }
+
+    function test_spinManySpinsSettleDeliverAndRefundOnTheirOwn() public {
+        uint256[] memory ids = _spinMany(alice, 3);
+
+        _settle(ids[0], WORD_COMMON);
+        vm.prank(settler);
+        game.deliver(ids[0], _v2(address(nvda)), 1, block.timestamp);
+        assertEq(uint8(game.getSpin(ids[0]).status), uint8(BachaGame.SpinStatus.Delivered));
+
+        _settle(ids[1], WORD_RARE);
+        uint256 before = alice.balance;
+        vm.prank(alice);
+        game.payInBnb(ids[1]);
+        assertEq(alice.balance, before + 0.0036 ether);
+
+        vm.warp(game.getSpin(ids[2]).requestedAt + game.revealTimeout());
+        before = alice.balance;
+        game.refundExpiredSpin(ids[2]);
+        assertEq(alice.balance, before + PRICE, "a refund returns one spin's price, not the batch");
+
+        assertEq(game.obligations(), 0);
+    }
+
+    function test_fullBatchThroughTheRealBeacon() public {
+        uint256 max = game.MAX_SPINS_PER_CALL();
+        vm.prank(alice);
+        uint256 before = gasleft();
+        uint256[] memory ids = game.spinMany{value: uint256(PRICE) * max}(TIER, max);
+        emit log_named_uint("spinMany(25) gas", before - gasleft());
+
+        BachaRandomness.Request memory last = randomness.getRequest(game.getSpin(ids[max - 1]).requestId);
+        vm.roll(last.revealBlock + 1);
+        for (uint256 i; i < max; ++i) {
+            uint256 requestId = game.getSpin(ids[i]).requestId;
+            BachaRandomness.Request memory req = randomness.getRequest(requestId);
+            vm.prank(committer);
+            randomness.reveal(requestId, _seed(req.commitmentIndex));
+            assertEq(uint8(game.getSpin(ids[i]).status), uint8(BachaGame.SpinStatus.Settled));
+        }
+        assertEq(game.pendingReserve(), 0);
+        assertLe(game.obligations(), address(game).balance);
+    }
+
     // ------------------------------------------------------------- settle
 
     function test_settleMovesReserveToOwed() public {
