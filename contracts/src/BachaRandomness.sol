@@ -59,6 +59,15 @@ contract BachaRandomness is AccessControl {
     ///      cannot be completed and the spin falls through to the refund path.
     uint256 public constant BLOCKHASH_WINDOW = 256;
 
+    /// @dev Gas forwarded to the consumer callback, and required to be on hand
+    ///      before delivery is attempted. Without the requirement,
+    ///      eth_estimateGas finds the smallest limit at which `reveal`
+    ///      succeeds — one where the callback runs out of gas, is caught, and
+    ///      the request is left undelivered. Sized for a 64-prize table's worst
+    ///      case walk plus settlement writes (~300k, see BachaGasBudget.t.sol)
+    ///      with headroom.
+    uint256 public constant CALLBACK_GAS = 500_000;
+
     uint8 public constant MIN_REVEAL_DELAY = 1;
     /// @dev Bounded well inside the blockhash window so a configured delay can
     ///      never make reveals impossible.
@@ -105,6 +114,7 @@ contract BachaRandomness is AccessControl {
     error EmptyCommitBatch();
     error ZeroCommitment(uint256 index);
     error ZeroAddress();
+    error InsufficientGasForDelivery(uint256 available, uint256 required);
 
     event Committed(uint256 indexed index, bytes32 commitment, uint64 committedAt);
     event RandomnessRequested(
@@ -231,7 +241,15 @@ contract BachaRandomness is AccessControl {
         words[0] = req.word;
 
         address consumer = req.consumer;
-        try IRandomnessConsumer(consumer).rawFulfillRandomWords(requestId, words) {
+
+        // A call forwards at most 63/64 of what remains, so require enough that
+        // the full CALLBACK_GAS actually reaches the consumer. Reverting here
+        // undoes the reveal too, so a starved transaction changes nothing and
+        // the same reveal can simply be sent again with a proper limit.
+        uint256 required = CALLBACK_GAS * 64 / 63 + 10_000;
+        if (gasleft() < required) revert InsufficientGasForDelivery(gasleft(), required);
+
+        try IRandomnessConsumer(consumer).rawFulfillRandomWords{gas: CALLBACK_GAS}(requestId, words) {
             req.delivered = true;
             emit Delivered(requestId, consumer);
         } catch {

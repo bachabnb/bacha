@@ -275,6 +275,27 @@ contract BachaRandomnessTest is Test {
         assertEq(beacon.getRequest(requestId).word, req.word);
     }
 
+    /// @dev Regression: a reveal sent with just enough gas for itself used to
+    ///      "succeed" while the callback ran out of gas and was caught — the
+    ///      exact limit eth_estimateGas converges on, so every worker reveal
+    ///      left its spin undelivered. It must now revert and change nothing.
+    function test_starvedRevealRevertsInsteadOfFailingDelivery() public {
+        _commit(1);
+        uint256 requestId = _request();
+        vm.roll(beacon.getRequest(requestId).revealBlock + 1);
+
+        vm.prank(committer);
+        (bool ok,) = address(beacon).call{gas: 200_000}(abi.encodeCall(beacon.reveal, (requestId, _seed(0))));
+        assertFalse(ok, "starved reveal must revert");
+        assertFalse(beacon.getRequest(requestId).revealed, "a starved reveal must not record the seed");
+        assertEq(consumer.deliveries(), 0);
+
+        vm.prank(committer);
+        beacon.reveal(requestId, _seed(0));
+        assertTrue(beacon.getRequest(requestId).delivered);
+        assertEq(consumer.deliveries(), 1);
+    }
+
     function test_cannotDeliverTwice() public {
         _commit(1);
         uint256 requestId = _request();
