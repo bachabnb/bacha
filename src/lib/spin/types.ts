@@ -30,6 +30,8 @@ export interface SpinRecord {
   rarity: Rarity | null
   prizeIndex: number | null
   status: SpinStatus
+  /** When a still-pending spin can be refunded (ms). Onchain only. */
+  refundableAt?: number | null
   txHash: string | null
   claimTxHash: string | null
 }

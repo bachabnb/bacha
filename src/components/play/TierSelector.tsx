@@ -4,7 +4,8 @@ import { useTranslations } from 'next-intl'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ArtImage } from '@/components/brand/ArtImage'
 import { rarityStyle } from '@/lib/rarity'
-import { machines, rarityBreakdown, type Machine } from '@/lib/machine'
+import { rarityBreakdown, type Machine } from '@/lib/machine'
+import { useMachines } from '@/lib/machines-context'
 import type { ArtId } from '@/lib/art'
 import { cn } from '@/lib/cn'
 
@@ -32,6 +33,7 @@ export function TierSelector({
   disabled?: boolean
 }) {
   const t = useTranslations('play.selector')
+  const { machines } = useMachines()
   const reduce = useReducedMotion()
 
   if (machines.length < 2) return null

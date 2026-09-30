@@ -8,7 +8,8 @@ import { OddsBar } from '@/components/ui/OddsBar'
 import { Button } from '@/components/ui/Button'
 import { TokenMark } from '@/components/ui/TokenMark'
 import { BachaMachine } from '@/components/brand/BachaMachine'
-import { machines, rarityBreakdown } from '@/lib/machine'
+import { rarityBreakdown } from '@/lib/machine'
+import { useMachines } from '@/lib/machines-context'
 import { tokenByAddress } from '@/lib/tokens'
 import { contractsConfigured } from '@/lib/env'
 import { networkLabel } from '@/lib/chain'
@@ -25,6 +26,7 @@ import { cn } from '@/lib/cn'
  */
 export function MachinePreview({ latest }: { latest: SpinRecord | null }) {
   const t = useTranslations('machinePreview')
+  const { machines } = useMachines()
   const [active, setActive] = useState(machines[0].id)
   const reduce = useReducedMotion()
   const machine = machines.find((m) => m.id === active) ?? machines[0]

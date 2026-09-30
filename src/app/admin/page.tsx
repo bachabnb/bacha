@@ -1,5 +1,7 @@
 import { PageHeader, Card, Metric, StatusPill } from '@/components/admin/AdminPrimitives'
-import { machines, rosterTokens } from '@/lib/machine'
+import { rosterTokens } from '@/lib/machine'
+import { getLiveMachines } from '@/lib/onchain/machines'
+import { listOnchainSpins } from '@/lib/onchain/spins'
 import { publicEnv, contractsConfigured, spinMode } from '@/lib/env'
 import { networkLabel } from '@/lib/chain'
 import { listDemoSpins } from '@/lib/demo/store'
@@ -9,7 +11,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminOverview() {
   const roster = rosterTokens()
-  const { total } = spinMode === 'demo' ? listDemoSpins({ limit: 1 }) : { total: 0 }
+  const machines = await getLiveMachines()
+  const { total } =
+    spinMode === 'demo'
+      ? listDemoSpins({ limit: 1 })
+      : await listOnchainSpins({ limit: 0 }).catch(() => ({ total: 0 }))
 
   return (
     <>
@@ -22,8 +28,9 @@ export default async function AdminOverview() {
         <div className="mb-6 rounded-[12px] border border-warning/30 bg-warning-soft px-5 py-4 text-[0.86rem] leading-relaxed text-warning">
           Contracts are not deployed on this deployment. The console shows the local configuration a
           deploy would publish; nothing here can be executed until{' '}
-          <code className="num">NEXT_PUBLIC_BACHA_GAME_ADDRESS</code> and{' '}
-          <code className="num">NEXT_PUBLIC_BACHA_VAULT_ADDRESS</code> are set.
+          <code className="num">NEXT_PUBLIC_BACHA_GAME_ADDRESS</code>,{' '}
+          <code className="num">NEXT_PUBLIC_BACHA_VAULT_ADDRESS</code> and{' '}
+          <code className="num">NEXT_PUBLIC_BACHA_RANDOMNESS_ADDRESS</code> are set.
         </div>
       )}
 

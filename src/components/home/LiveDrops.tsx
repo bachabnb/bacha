@@ -26,7 +26,7 @@ export function LiveDrops() {
   const { data, error } = useFeed('/api/spins?limit=8', 12_000)
   const reduce = useReducedMotion()
 
-  const spins = (data?.spins ?? []).filter((s) => s.status !== 'PENDING').slice(0, 6)
+  const spins = (data?.spins ?? []).filter((s) => s.status === 'SETTLED' || s.status === 'CLAIMED').slice(0, 6)
 
   return (
     <section data-zone="pale" className="canvas-atmosphere section-viewport">

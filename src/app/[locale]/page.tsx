@@ -11,7 +11,8 @@ import { GachaRebuilt } from '@/components/home/GachaRebuilt'
 import { WhitepaperSection } from '@/components/home/WhitepaperSection'
 import { FinalCta } from '@/components/home/FinalCta'
 import { getMarketSnapshot, quoteFor } from '@/lib/market'
-import { rosterTokens, machines, oddsOf, defaultMachine } from '@/lib/machine'
+import { rosterTokens, oddsOf } from '@/lib/machine'
+import { getLiveMachines } from '@/lib/onchain/machines'
 import { latestSettledSpin } from '@/lib/spin/latest'
 import type { MachineToken } from '@/components/brand/BachaMachine'
 
@@ -21,7 +22,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const { locale } = await params
   setRequestLocale(locale)
 
-  const [snapshot, latest] = await Promise.all([getMarketSnapshot(), latestSettledSpin()])
+  const [snapshot, latest, machines] = await Promise.all([getMarketSnapshot(), latestSettledSpin(), getLiveMachines()])
   const roster = rosterTokens()
 
   const entries: RosterEntry[] = roster.map((token) => ({
@@ -46,7 +47,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
   return (
     <>
-      <Hero tokens={chamberTokens} machine={defaultMachine} roster={roster} />
+      <Hero tokens={chamberTokens} machine={machines[0]} roster={roster} />
       <MachinePreview latest={latest} />
       <WhatsInside roster={entries} />
       <HowItWorks />

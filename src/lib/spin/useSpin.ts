@@ -3,9 +3,10 @@
 import { useCallback, useRef, useState } from 'react'
 import { useAccount, useChainId, usePublicClient, useWriteContract } from 'wagmi'
 import { decodeEventLog } from 'viem'
-import { bachaGameAbi } from '@/lib/contracts/abis'
+import { bachaGameAbi, bachaRandomnessAbi } from '@/lib/contracts/abis'
 import { publicEnv, spinMode } from '@/lib/env'
-import { machineById, machineByTier, selectPrize, type Machine } from '@/lib/machine'
+import { selectPrize, type Machine } from '@/lib/machine'
+import { useMachines } from '@/lib/machines-context'
 import { tokenByAddress } from '@/lib/tokens'
 import { unitsToNumber } from '@/lib/format'
 import { errorKey } from '@/lib/errors'
@@ -18,7 +19,7 @@ import type { SpinRecord } from './types'
  *
  * Phases map one-to-one onto what is actually happening, which is why there
  * is no synthetic delay anywhere in here — the machine animates for exactly
- * as long as the real work takes, whether that is a VRF round trip or a
+ * as long as the real work takes, whether that is a beacon reveal or a
  * local request.
  */
 export type SpinPhase =
@@ -40,6 +41,13 @@ export interface SpinState {
   error: string | null
 }
 
+/**
+ * The game ABI plus the beacon's errors. `spin` calls into the beacon, and a
+ * dry beacon reverts with its own NoCommitmentAvailable — which only decodes
+ * into something readable if its definition is in the ABI viem is given.
+ */
+const spinAbi = [...bachaGameAbi, ...bachaRandomnessAbi.filter((item) => item.type === 'error')] as const
+
 const INITIAL: SpinState = { phase: 'idle', record: null, txHash: null, error: null }
 
 export function useSpin() {
@@ -50,6 +58,7 @@ export function useSpin() {
   const publicClient = usePublicClient()
   const { writeContractAsync } = useWriteContract()
   const cancelled = useRef(false)
+  const { byId: machineById } = useMachines()
 
   const reset = useCallback(() => {
     cancelled.current = true
@@ -90,12 +99,28 @@ export function useSpin() {
         if (!publicEnv.gameAddress) throw new Error(t('noContracts'))
         if (!publicClient) throw new Error(t('noRpc'))
 
+        // Pay what the contract charges right now, not what the page was
+        // rendered with: a tier can be repriced between render and click, and
+        // a stale value would only buy an IncorrectPayment revert.
+        const [tier, paused] = await Promise.all([
+          publicClient.readContract({
+            address: publicEnv.gameAddress,
+            abi: bachaGameAbi,
+            functionName: 'getTier',
+            args: [machine.tierId],
+          }),
+          publicClient.readContract({ address: publicEnv.gameAddress, abi: bachaGameAbi, functionName: 'paused' }),
+        ])
+        if (paused) throw new Error('EnforcedPause')
+        if (!tier.active) throw new Error('TierInactive')
+        if (cancelled.current) return
+
         const hash = await writeContractAsync({
           address: publicEnv.gameAddress,
-          abi: bachaGameAbi,
+          abi: spinAbi,
           functionName: 'spin',
           args: [machine.tierId],
-          value: machine.priceWei,
+          value: tier.price,
           chainId: publicEnv.chainId,
         })
         if (cancelled.current) return
@@ -104,13 +129,14 @@ export function useSpin() {
         const receipt = await publicClient.waitForTransactionReceipt({ hash })
         if (cancelled.current) return
 
+        if (receipt.status !== 'success') throw new Error('SpinReverted')
         const spinId = extractSpinId(receipt.logs)
-        if (spinId === null) throw new Error('The spin transaction did not emit a spin id.')
+        if (spinId === null) throw new Error('SpinReverted')
 
-        const pending = pendingRecord(spinId, machine, address, hash)
+        const pending = pendingRecord(spinId, machine, tier.price, address, hash)
         setState({ phase: 'settling', record: pending, txHash: hash, error: null })
 
-        const settled = await pollForSettlement(spinId, machine.tierId, publicClient, cancelled)
+        const settled = await pollForSettlement(spinId, machine, publicClient, cancelled)
         if (cancelled.current || !settled) return
 
         setState({
@@ -124,7 +150,7 @@ export function useSpin() {
         setState((s) => ({ ...s, phase: 'error', error: t(errorKey(error)) }))
       }
     },
-    [address, chainId, publicClient, writeContractAsync, t],
+    [address, chainId, publicClient, writeContractAsync, t, machineById],
   )
 
   const claim = useCallback(async () => {
@@ -153,7 +179,8 @@ export function useSpin() {
         args: [BigInt(record.id)],
         chainId: publicEnv.chainId,
       })
-      await publicClient?.waitForTransactionReceipt({ hash })
+      const receipt = await publicClient?.waitForTransactionReceipt({ hash })
+      if (receipt && receipt.status !== 'success') throw new Error('ClaimReverted')
       setState((s) => ({
         ...s,
         phase: 'claimed',
@@ -192,6 +219,7 @@ async function runDemoSpin(
 function pendingRecord(
   spinId: bigint,
   machine: Machine,
+  priceWei: bigint,
   player: `0x${string}`,
   hash: `0x${string}`,
 ): SpinRecord {
@@ -203,7 +231,7 @@ function pendingRecord(
     tierId: machine.tierId,
     machineVersion: 'pending',
     prizeTableHash: machine.localTableHash,
-    paymentWei: machine.priceWei.toString(),
+    paymentWei: priceWei.toString(),
     requestedAt: Date.now(),
     settledAt: null,
     requestId: null,
@@ -231,7 +259,7 @@ function extractSpinId(logs: readonly { data: `0x${string}`; topics: readonly `0
         return (decoded.args as unknown as { spinId: bigint }).spinId
       }
     } catch {
-      // Not one of ours — VRF and token logs land in the same receipt.
+      // Not one of ours — beacon and token logs land in the same receipt.
     }
   }
   return null
@@ -251,7 +279,7 @@ interface ContractSpin {
 
 async function pollForSettlement(
   spinId: bigint,
-  tierId: number,
+  machine: Machine,
   publicClient: NonNullable<ReturnType<typeof usePublicClient>>,
   cancelled: React.MutableRefObject<boolean>,
 ): Promise<Partial<SpinRecord> | null> {
@@ -269,7 +297,6 @@ async function pollForSettlement(
     // 2 = Settled, 3 = Claimed in BachaGame.SpinStatus
     if (raw.status === 2 || raw.status === 3) {
       // Decimals come from the verified registry — never inferred from a ticker.
-      const machine = machineByTier(tierId)
       const decimals = tokenByAddress(raw.rewardToken)?.decimals ?? null
       return {
         machineVersion: raw.versionId.toString(),
@@ -281,17 +308,22 @@ async function pollForSettlement(
         rewardAmountUnits: raw.rewardAmount.toString(),
         rewardAmount: decimals !== null ? unitsToNumber(raw.rewardAmount, decimals) : null,
         rarity: rarityFromIndex(raw.rarity),
-        prizeIndex: machine ? selectPrize(machine, raw.randomWord).index : null,
+        // The live roster carries the version the tier sells; a spin stamped
+        // with an older one cannot be indexed against it.
+        prizeIndex:
+          machine.source === 'onchain' && machine.versionId === raw.versionId.toString()
+            ? selectPrize(machine, raw.randomWord).index
+            : null,
         status: raw.status === 3 ? 'CLAIMED' : 'SETTLED',
       }
     }
 
-    if (raw.status === 4) throw new Error('This spin was refunded before randomness arrived.')
+    if (raw.status === 4) throw new Error('SpinRefunded')
     await sleep(3000)
   }
 
   if (cancelled.current) return null
-  throw new Error('Randomness has not arrived yet. Your spin is still pending and can be claimed later.')
+  throw new Error('StillPending')
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {

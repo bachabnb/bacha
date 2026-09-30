@@ -10,6 +10,8 @@ import { AgeGate } from '@/components/site/AgeGate'
 import { ThemeScript } from '@/lib/theme/ThemeScript'
 import { routing, locales, localeMeta, type Locale } from '@/i18n/routing'
 import { publicEnv } from '@/lib/env'
+import { MachinesProvider } from '@/lib/machines-context'
+import { getLiveMachinesSerialized } from '@/lib/onchain/machines'
 import '@/app/globals.css'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' })
@@ -90,7 +92,10 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) notFound()
   setRequestLocale(locale)
 
-  const t = await getTranslations({ locale, namespace: 'nav' })
+  const [t, machines] = await Promise.all([
+    getTranslations({ locale, namespace: 'nav' }),
+    getLiveMachinesSerialized(),
+  ])
   const fontVars = `${inter.variable} ${interTight.variable} ${mono.variable} ${
     locale === 'zh-CN' ? notoSC.variable : ''
   }`
@@ -104,16 +109,18 @@ export default async function LocaleLayout({
         <ThemeScript />
         <NextIntlClientProvider>
           <Providers>
-            <a
-              href="#main"
-              className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-brand focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-brand-foreground"
-            >
-              {t('skipToContent')}
-            </a>
-            <SiteHeader />
-            <main id="main" className="-mt-[78px] pt-[78px] sm:-mt-[90px] sm:pt-[90px]">{children}</main>
-            <SiteFooter />
-            <AgeGate />
+            <MachinesProvider machines={machines}>
+              <a
+                href="#main"
+                className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-md focus:bg-brand focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-brand-foreground"
+              >
+                {t('skipToContent')}
+              </a>
+              <SiteHeader />
+              <main id="main" className="-mt-[78px] pt-[78px] sm:-mt-[90px] sm:pt-[90px]">{children}</main>
+              <SiteFooter />
+              <AgeGate />
+            </MachinesProvider>
           </Providers>
         </NextIntlClientProvider>
       </body>

@@ -13,6 +13,10 @@ import { useCallback } from 'react'
 const PATTERNS: [RegExp, string][] = [
   [/user rejected|user denied|rejected the request|ACTION_REJECTED|4001/i, 'userRejected'],
   [/insufficient funds|exceeds balance|gas required exceeds/i, 'insufficientFunds'],
+  [/NoCommitmentAvailable/i, 'machineBusy'],
+  [/SpinRefunded/i, 'spinRefunded'],
+  [/StillPending/i, 'stillPending'],
+  [/SpinReverted|ClaimReverted/i, 'txReverted'],
   [/IncorrectPayment/i, 'priceChanged'],
   [/InsufficientInventory/i, 'outOfInventory'],
   [/TierInactive|UnknownTier/i, 'tierInactive'],

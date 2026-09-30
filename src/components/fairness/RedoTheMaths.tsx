@@ -5,7 +5,8 @@ import { useTranslations } from 'next-intl'
 import { SectionLabel } from './HowProduced'
 import { ArtImage } from '@/components/brand/ArtImage'
 import { RarityChip } from '@/components/ui/RarityChip'
-import { machines, selectPrize } from '@/lib/machine'
+import { selectPrize } from '@/lib/machine'
+import { useMachines } from '@/lib/machines-context'
 import { formatPercent, formatTokenAmount } from '@/lib/format'
 import { cn } from '@/lib/cn'
 
@@ -25,6 +26,7 @@ const EXAMPLE_WORD = 827361504928374615n
  */
 export function RedoTheMaths() {
   const t = useTranslations('fairness.math')
+  const { machines } = useMachines()
   const o = useTranslations('fairness.odds')
   const [machineId, setMachineId] = useState(machines[0].id)
   const [copied, setCopied] = useState(false)

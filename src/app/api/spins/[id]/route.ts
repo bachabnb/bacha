@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getDemoSpin, listDemoSpins } from '@/lib/demo/store'
-import { getOnchainSpin, listOnchainSpins } from '@/lib/onchain/spins'
+import { getOnchainSpin } from '@/lib/onchain/spins'
 import { spinMode } from '@/lib/env'
 import type { SpinRecord } from '@/lib/spin/types'
 
@@ -25,7 +25,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 
   try {
-    const spin = spinMode === 'onchain' ? await findOnchain(query, isId) : findDemo(query, isId)
+    const spin = spinMode === 'onchain' ? await findOnchain(query) : findDemo(query, isId)
     if (!spin) return NextResponse.json({ error: 'not-found' }, { status: 404 })
     return NextResponse.json({ mode: spin.mode, spin })
   } catch {
@@ -33,10 +33,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   }
 }
 
-async function findOnchain(query: string, isId: boolean): Promise<SpinRecord | null> {
-  if (isId) return getOnchainSpin(query)
-  const { spins } = await listOnchainSpins({ limit: 200 })
-  return matchByHash(spins, query)
+async function findOnchain(query: string): Promise<SpinRecord | null> {
+  return getOnchainSpin(query)
 }
 
 function findDemo(query: string, isId: boolean): SpinRecord | null {

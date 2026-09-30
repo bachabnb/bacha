@@ -7,7 +7,8 @@ import { SectionHeader } from './SectionHeader'
 import { OddsBar } from '@/components/ui/OddsBar'
 import { Button } from '@/components/ui/Button'
 import { ArtImage } from '@/components/brand/ArtImage'
-import { machines, rarityBreakdown } from '@/lib/machine'
+import { rarityBreakdown } from '@/lib/machine'
+import { useMachines } from '@/lib/machines-context'
 import type { ArtId } from '@/lib/art'
 import { cn } from '@/lib/cn'
 
@@ -28,6 +29,7 @@ const ART: Record<string, ArtId> = {
  */
 export function TierCards() {
   const t = useTranslations('tiers')
+  const { machines } = useMachines()
   const reduce = useReducedMotion()
 
   return (

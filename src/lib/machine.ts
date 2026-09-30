@@ -34,6 +34,34 @@ export interface Machine {
   expectedValueUsd: number
   referenceReturnToPlayer: number
   prizes: PrizeEntry[]
+  /** False when the contract has the tier switched off (or never configured it). */
+  active: boolean
+  /**
+   * `onchain` — price and prizes were read from the tier's live version.
+   * `config`  — taken from data/machine.json (demo mode, or the chain could
+   *             not be read). Never presented as the live table.
+   */
+  source: 'onchain' | 'config'
+  /** The prize table version the tier currently sells. Onchain only. */
+  versionId: string | null
+}
+
+/** Wire form: bigints as strings, registry objects dropped (rehydrated by address). */
+export type SerializedMachine = Omit<Machine, 'priceWei' | 'prizes'> & {
+  priceWei: string
+  prizes: Omit<PrizeEntry, 'token_'>[]
+}
+
+export function serializeMachine(m: Machine): SerializedMachine {
+  return { ...m, priceWei: m.priceWei.toString(), prizes: m.prizes.map(({ token_: _, ...p }) => p) }
+}
+
+export function deserializeMachine(m: SerializedMachine): Machine {
+  return {
+    ...m,
+    priceWei: BigInt(m.priceWei),
+    prizes: m.prizes.map((p) => ({ ...p, token_: tokenByAddress(p.token) })),
+  }
 }
 
 export const machines: Machine[] = machineConfig.machines.map((m) => ({
@@ -61,6 +89,9 @@ export const machines: Machine[] = machineConfig.machines.map((m) => ({
     referenceValueUsd: p.valueUsd,
     token_: tokenById(p.tokenId),
   })),
+  active: true,
+  source: 'config' as const,
+  versionId: null,
 }))
 
 export const machineConfigGeneratedAt = machineConfig.generatedAt

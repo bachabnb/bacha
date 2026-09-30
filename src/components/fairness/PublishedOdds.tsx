@@ -6,7 +6,8 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { SectionLabel } from './HowProduced'
 import { TokenMark } from '@/components/ui/TokenMark'
 import { RarityChip } from '@/components/ui/RarityChip'
-import { machines, rarityBreakdown, machineConfigGeneratedAt } from '@/lib/machine'
+import { rarityBreakdown, machineConfigGeneratedAt } from '@/lib/machine'
+import { useMachines } from '@/lib/machines-context'
 import { tokenByAddress } from '@/lib/tokens'
 import { RARITIES, rarityStyle, type Rarity } from '@/lib/rarity'
 import { formatPercent, formatTokenAmount, formatUsd, shortAddress, shortHash } from '@/lib/format'
@@ -25,6 +26,7 @@ type Filter = 'ALL' | Rarity
  */
 export function PublishedOdds() {
   const t = useTranslations('fairness.odds')
+  const { machines } = useMachines()
   const r = useTranslations('rarity')
   const { mode } = useViewMode()
   const reduce = useReducedMotion()
@@ -121,7 +123,7 @@ export function PublishedOdds() {
       <div className="mt-5 card-physical overflow-hidden">
         <dl className="grid gap-px border-b border-border bg-border sm:grid-cols-3 lg:grid-cols-6">
           <Meta label={t('spin')} value={`$${machine.referencePriceUsd.toFixed(0)}`} />
-          <Meta label={t('version')} value={machine.id === machines[0].id ? 'v1' : 'v1'} />
+          <Meta label={t('version')} value={machine.versionId ? `v${machine.versionId}` : '—'} />
           <Meta label={t('assets')} value={String(distinctAssets)} />
           <Meta label={t('published')} value={machineConfigGeneratedAt} />
           <Meta label={t('totalWeight')} value={machine.totalWeight.toLocaleString()} />

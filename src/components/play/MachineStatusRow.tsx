@@ -7,12 +7,15 @@ import { contractsConfigured } from '@/lib/env'
 import type { Machine } from '@/lib/machine'
 import type { SpinRecord } from '@/lib/spin/types'
 import { cn } from '@/lib/cn'
+import { useMachineHealth } from '@/lib/spin/useMachineHealth'
+import { healthLabel } from './ControlConsole'
 
 /**
  * A quiet instrument row beneath the stage.
  *
  * Real values only. Pool health is omitted entirely until there is a deployed
- * vault to report on — an unbacked "Healthy" would be worse than a gap — and
+ * vault to report on, and once there is, it is read from the contracts rather
+ * than asserted — an unbacked "Healthy" would be worse than a gap — and
  * "last drop" stays empty until a spin has actually settled.
  */
 export function MachineStatusRow({
@@ -28,6 +31,8 @@ export function MachineStatusRow({
 }) {
   const t = useTranslations('play.status')
   const s = useTranslations('play.stage')
+  const h = useTranslations('health')
+  const health = useMachineHealth(machine)
 
   return (
     <dl
@@ -50,7 +55,9 @@ export function MachineStatusRow({
       </Cell>
       {contractsConfigured && (
         <Cell label={t('pool')}>
-          <span className="text-success">{t('healthy')}</span>
+          <span className={health.status === 'ready' ? 'text-success' : 'text-foreground-secondary'}>
+            {healthLabel(health, h)}
+          </span>
         </Cell>
       )}
       <Cell label={t('rewards')}>

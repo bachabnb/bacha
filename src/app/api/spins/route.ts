@@ -13,7 +13,8 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request: Request) {
   const url = new URL(request.url)
-  const limit = Math.min(Number(url.searchParams.get('limit') ?? '40') || 40, 200)
+  const requested = Number(url.searchParams.get('limit') ?? '40')
+  const limit = Number.isFinite(requested) ? Math.min(Math.max(Math.floor(requested), 0), 200) : 40
   const playerParam = url.searchParams.get('player')
   const player = playerParam && /^0x[0-9a-fA-F]{40}$/.test(playerParam) ? playerParam : undefined
 

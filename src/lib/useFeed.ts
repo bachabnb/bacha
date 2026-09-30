@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SpinFeedResponse } from './spin/types'
 
 /**
@@ -13,6 +13,7 @@ import type { SpinFeedResponse } from './spin/types'
 export default function useFeed(url: string, intervalMs = 15_000) {
   const [data, setData] = useState<SpinFeedResponse | null>(null)
   const [error, setError] = useState<Error | null>(null)
+  const [nonce, setNonce] = useState(0)
   const mounted = useRef(true)
 
   useEffect(() => {
@@ -45,7 +46,10 @@ export default function useFeed(url: string, intervalMs = 15_000) {
       mounted.current = false
       if (timer) clearTimeout(timer)
     }
-  }, [url, intervalMs])
+  }, [url, intervalMs, nonce])
 
-  return { data, error }
+  /** Refetch now — after a transaction the person is waiting to see reflected. */
+  const reload = useCallback(() => setNonce((n) => n + 1), [])
+
+  return { data, error, reload }
 }

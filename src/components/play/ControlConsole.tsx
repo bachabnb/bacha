@@ -14,6 +14,7 @@ import { networkLabel } from '@/lib/chain'
 import { formatBnb, shortHash, formatTokenAmount } from '@/lib/format'
 import { cn } from '@/lib/cn'
 import type { SpinPhase } from '@/lib/spin/useSpin'
+import { useMachineHealth, blocksSpin, type MachineHealth } from '@/lib/spin/useMachineHealth'
 
 interface ControlConsoleProps {
   machine: Machine
@@ -52,6 +53,8 @@ export function ControlConsole({
   const wrongNetwork = isConnected && chainId !== publicEnv.chainId
   const insufficient = Boolean(balance && balance.value < machine.priceWei)
   const busy = phase === 'confirming' || phase === 'submitted' || phase === 'settling'
+  const health = useMachineHealth(machine)
+  const h = useTranslations('health')
 
   const drops = dedupeTokens(machine)
 
@@ -92,7 +95,7 @@ export function ControlConsole({
         {contractsConfigured && (
           <>
             <Fact label={t('fairness')} value={t('vrf')} tone="brand" />
-            <Fact label={t('treasury')} value={t('healthy')} tone="brand" />
+            <Fact label={t('treasury')} value={healthLabel(health, h)} tone={healthTone(health)} />
           </>
         )}
       </dl>
@@ -152,6 +155,7 @@ export function ControlConsole({
             machine={machine}
             phase={phase}
             insufficient={insufficient}
+            blocked={blocksSpin(health)}
             onSpin={onSpin}
             onReset={onReset}
           />
@@ -194,17 +198,20 @@ function SpinButton({
   machine,
   phase,
   insufficient,
+  blocked,
   onSpin,
   onReset,
 }: {
   machine: Machine
   phase: SpinPhase
   insufficient: boolean
+  blocked: boolean
   onSpin: () => void
   onReset: () => void
 }) {
   const t = useTranslations('play.actions')
   const c = useTranslations('play.console')
+  const h = useTranslations('health')
 
   const base =
     'inline-flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[13px] text-[0.98rem] font-semibold ' +
@@ -240,6 +247,16 @@ function SpinButton({
       </button>
     )
   }
+  if (blocked && phase === 'idle') {
+    return (
+      <div>
+        <button disabled className={cn(base, primary)}>
+          {c('spinLabel', { label: machine.label, price: `$${machine.referencePriceUsd.toFixed(0)}` })}
+        </button>
+        <p className="mt-2.5 text-center text-[0.76rem] text-foreground-muted">{h('blockedHint')}</p>
+      </div>
+    )
+  }
   if (insufficient) {
     return (
       <div>
@@ -260,6 +277,18 @@ function SpinButton({
 }
 
 /* -------------------------------------------------------------- bits */
+
+export function healthLabel(health: MachineHealth, h: (key: string, values?: Record<string, number>) => string) {
+  if (health.status === 'low') return h('low', { count: health.fundedSpins })
+  if (health.status === 'demo') return '—'
+  return h(health.status)
+}
+
+export function healthTone(health: MachineHealth): 'brand' | 'muted' | 'default' {
+  if (health.status === 'ready') return 'brand'
+  if (health.status === 'unknown' || health.status === 'demo') return 'muted'
+  return 'default'
+}
 
 function Fact({
   label,

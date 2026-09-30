@@ -13,12 +13,12 @@ export async function latestSettledSpin(): Promise<SpinRecord | null> {
     if (spinMode === 'onchain') {
       const { listOnchainSpins } = await import('../onchain/spins')
       const { spins } = await listOnchainSpins({ limit: 10 })
-      return spins.find((s) => s.status !== 'PENDING') ?? null
+      return spins.find((s) => s.status === 'SETTLED' || s.status === 'CLAIMED') ?? null
     }
 
     const { listDemoSpins } = await import('../demo/store')
     const { spins } = listDemoSpins({ limit: 10 })
-    return spins.find((s) => s.status !== 'PENDING') ?? null
+    return spins.find((s) => s.status === 'SETTLED' || s.status === 'CLAIMED') ?? null
   } catch {
     return null
   }

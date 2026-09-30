@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/Button'
 import { Capsule } from '@/components/brand/Capsule'
 import { formatUsd, formatPercent, formatTokenAmount, shortAddress } from '@/lib/format'
 import { explorer } from '@/lib/chain'
-import { machinesContaining, oddsOf, machines } from '@/lib/machine'
+import { machinesContaining, oddsOf } from '@/lib/machine'
+import { useMachines } from '@/lib/machines-context'
 import { rarityStyle } from '@/lib/rarity'
 import type { RewardToken } from '@/lib/tokens'
 import type { MarketQuote } from '@/lib/market'
@@ -24,6 +25,7 @@ export interface RewardCard {
 
 export function RewardsGrid({ cards }: { cards: RewardCard[] }) {
   const t = useTranslations('rewards')
+  const { machines } = useMachines()
   const [selected, setSelected] = useState<RewardToken | null>(null)
   const reduce = useReducedMotion()
   const activeQuote = cards.find((c) => c.token.address === selected?.address)?.quote ?? null

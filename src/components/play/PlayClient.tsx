@@ -17,7 +17,7 @@ import { SessionPanel } from './SessionPanel'
 import { SoundToggle } from './SoundToggle'
 import { useSound } from './SoundProvider'
 import { useSpin } from '@/lib/spin/useSpin'
-import { machines, machineById } from '@/lib/machine'
+import { useMachines } from '@/lib/machines-context'
 import { tokenByAddress } from '@/lib/tokens'
 import { rarityStyle } from '@/lib/rarity'
 import { contractsConfigured } from '@/lib/env'
@@ -51,6 +51,7 @@ export function PlayClient({
   latest: SpinRecord | null
 }) {
   const t = useTranslations('play.stage')
+  const { machines, byId: machineById } = useMachines()
   const params = useSearchParams()
   const reduce = useReducedMotion()
 

@@ -7,7 +7,8 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { TokenMark } from '@/components/ui/TokenMark'
 import { RarityChip } from '@/components/ui/RarityChip'
 import { useViewMode } from './ViewMode'
-import { machineById, selectPrize } from '@/lib/machine'
+import { machineById, selectPrize, type Machine, type PrizeEntry } from '@/lib/machine'
+import { rarityFromIndex } from '@/lib/rarity'
 import { tokenByAddress } from '@/lib/tokens'
 import { shortAddress, shortHash, formatTokenAmount, formatBnb } from '@/lib/format'
 import { explorer } from '@/lib/chain'
@@ -174,9 +175,10 @@ function ProofCard({ spin, technical }: { spin: SpinRecord; technical: boolean }
   const s = useTranslations('status')
   const machine = machineById(spin.machineId)
   const token = spin.rewardTokenAddress ? tokenByAddress(spin.rewardTokenAddress) : undefined
+  const table = useStampedTable(spin, machine)
 
   // Independent re-derivation from the table this spin was stamped with.
-  const recomputed = machine && spin.randomWord ? selectPrize(machine, BigInt(spin.randomWord)) : null
+  const recomputed = table && spin.randomWord ? selectPrize(table, BigInt(spin.randomWord)) : null
   const matches =
     recomputed && spin.rewardTokenAddress
       ? recomputed.prize.token.toLowerCase() === spin.rewardTokenAddress.toLowerCase() &&
@@ -190,6 +192,10 @@ function ProofCard({ spin, technical }: { spin: SpinRecord; technical: boolean }
       {/* ------------------------------------------------------ verdict */}
       {pending ? (
         <Notice tone="warning" title={t('states.pending')} body={t('states.pendingHint')} />
+      ) : spin.status === 'REFUNDED' ? (
+        <Notice tone="warning" title={t('states.refunded')} body={t('states.refundedHint')} />
+      ) : table === undefined ? (
+        <Notice tone="warning" title={t('recomputed.loading')} body="" />
       ) : matches ? (
         <Notice
           tone="success"
@@ -279,12 +285,65 @@ function ProofCard({ spin, technical }: { spin: SpinRecord; technical: boolean }
   )
 }
 
+/**
+ * The prize table a spin was sold against. Demo spins use the local config;
+ * onchain spins fetch their own version from the contract, because the tier
+ * may have moved to a newer one since. `undefined` while loading, `null` if it
+ * could not be read — which then reads as unverified, never as matched.
+ */
+function useStampedTable(spin: SpinRecord, machine: Machine | undefined): Machine | null | undefined {
+  const onchain = spin.mode === 'onchain' && /^\d+$/.test(spin.machineVersion)
+  const [table, setTable] = useState<Machine | null | undefined>(onchain ? undefined : (machine ?? null))
+
+  useEffect(() => {
+    if (!onchain) {
+      setTable(machine ?? null)
+      return
+    }
+    let live = true
+    setTable(undefined)
+    fetch(`/api/versions/${spin.machineVersion}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: VersionResponse | null) => {
+        if (!live) return
+        if (!body || !machine) return setTable(null)
+        const prizes: PrizeEntry[] = body.prizes.map((p) => {
+          const token_ = tokenByAddress(p.token)
+          return {
+            tokenId: token_?.id ?? '',
+            token: p.token,
+            symbol: token_?.symbol ?? '?',
+            decimals: token_?.decimals ?? 18,
+            amount: 0,
+            amountUnits: p.amountUnits,
+            weight: p.weight,
+            rarity: rarityFromIndex(p.rarity),
+            referenceValueUsd: 0,
+            token_,
+          }
+        })
+        setTable({ ...machine, totalWeight: body.totalWeight, prizes })
+      })
+      .catch(() => live && setTable(null))
+    return () => {
+      live = false
+    }
+  }, [onchain, spin.machineVersion, machine])
+
+  return table
+}
+
+interface VersionResponse {
+  totalWeight: number
+  prizes: { token: `0x${string}`; amountUnits: string; weight: number; rarity: number }[]
+}
+
 /* ------------------------------------------------------------- timeline */
 
 function Timeline({ spin }: { spin: SpinRecord }) {
   const t = useTranslations('fairness.verifier.timeline')
 
-  const settled = spin.status !== 'PENDING'
+  const settled = spin.status === 'SETTLED' || spin.status === 'CLAIMED'
   const claimed = spin.status === 'CLAIMED'
 
   const steps = [

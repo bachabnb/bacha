@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccount, usePublicClient, useWriteContract } from 'wagmi'
 import { useTranslations } from 'next-intl'
 import { motion, useReducedMotion } from 'framer-motion'
 import useFeed from '@/lib/useFeed'
@@ -14,6 +14,8 @@ import { Capsule } from '@/components/brand/Capsule'
 import { useTimeAgo } from '@/lib/useTimeAgo'
 import { tokenByAddress } from '@/lib/tokens'
 import { machineById } from '@/lib/machine'
+import { bachaGameAbi } from '@/lib/contracts/abis'
+import { publicEnv, spinMode } from '@/lib/env'
 import { formatTokenAmount, formatUsd, shortHash } from '@/lib/format'
 import { explorer } from '@/lib/chain'
 import { useHumanError } from '@/lib/errors'
@@ -31,11 +33,14 @@ export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
   const t = useTranslations('me')
   const { address, isConnected } = useAccount()
   const humanError = useHumanError()
+  const publicClient = usePublicClient({ chainId: publicEnv.chainId })
+  const { writeContractAsync } = useWriteContract()
   const [claiming, setClaiming] = useState(false)
+  const [refunding, setRefunding] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const reduce = useReducedMotion()
 
-  const { data } = useFeed(
+  const { data, reload } = useFeed(
     address ? `/api/spins?limit=100&player=${address}` : '/api/spins?limit=0',
     20_000,
   )
@@ -46,21 +51,58 @@ export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
     let rewardValue = 0
     let rare = 0
     const unclaimed: SpinRecord[] = []
+    const pending: SpinRecord[] = []
+    const refundable: SpinRecord[] = []
+    const now = Date.now()
     for (const spin of spins) {
       if (spin.rarity === 'RARE' || spin.rarity === 'EPIC') rare++
       if (spin.status === 'SETTLED') unclaimed.push(spin)
+      if (spin.status === 'PENDING') {
+        if (spin.refundableAt != null && spin.refundableAt <= now) refundable.push(spin)
+        else pending.push(spin)
+      }
       const quote = spin.rewardTokenAddress ? quotes[spin.rewardTokenAddress.toLowerCase()] : undefined
       if (quote?.priceUsd != null && spin.rewardAmount != null && spin.status !== 'PENDING') {
         rewardValue += quote.priceUsd * spin.rewardAmount
       }
     }
-    return { total: spins.length, rewardValue, rare, unclaimed }
+    return { total: spins.length, rewardValue, rare, unclaimed, pending, refundable }
   }, [spins, quotes])
+
+  /** Send one game transaction from the connected wallet and wait for it to land. */
+  async function sendGameTx(functionName: 'claimMany' | 'refundExpiredSpin', args: readonly [bigint[]] | readonly [bigint]) {
+    if (!publicEnv.gameAddress || !publicClient) throw new Error('noContracts')
+    const hash =
+      functionName === 'claimMany'
+        ? await writeContractAsync({
+            address: publicEnv.gameAddress,
+            abi: bachaGameAbi,
+            functionName,
+            args: args as readonly [bigint[]],
+            chainId: publicEnv.chainId,
+          })
+        : await writeContractAsync({
+            address: publicEnv.gameAddress,
+            abi: bachaGameAbi,
+            functionName,
+            args: args as readonly [bigint],
+            chainId: publicEnv.chainId,
+          })
+    const receipt = await publicClient.waitForTransactionReceipt({ hash })
+    if (receipt.status !== 'success') throw new Error('ClaimReverted')
+  }
 
   async function claimAll() {
     setClaiming(true)
     setError(null)
     try {
+      if (spinMode === 'onchain') {
+        // One transaction for every settled spin. claimMany pays each to the
+        // wallet that bought it, so this can never redirect a reward.
+        await sendGameTx('claimMany', [summary.unclaimed.map((s) => BigInt(s.id))])
+        reload()
+        return
+      }
       for (const spin of summary.unclaimed) {
         const res = await fetch('/api/demo/claim', {
           method: 'POST',
@@ -69,10 +111,25 @@ export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
         })
         if (!res.ok) throw new Error(String(res.status))
       }
+      reload()
     } catch (e) {
       setError(humanError(e))
     } finally {
       setClaiming(false)
+    }
+  }
+
+  /** Return the BNB for spins whose randomness never arrived. One transaction each. */
+  async function refundAll() {
+    setRefunding(true)
+    setError(null)
+    try {
+      for (const spin of summary.refundable) await sendGameTx('refundExpiredSpin', [BigInt(spin.id)])
+    } catch (e) {
+      setError(humanError(e))
+    } finally {
+      setRefunding(false)
+      reload()
     }
   }
 
@@ -104,14 +161,29 @@ export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
             {summary.unclaimed.length > 0 && (
-              <Button onClick={claimAll} disabled={claiming}>
+              <Button onClick={claimAll} disabled={claiming || refunding}>
                 {claiming ? t('claiming') : t('claimAll')}
+              </Button>
+            )}
+            {summary.refundable.length > 0 && (
+              <Button variant="secondary" onClick={refundAll} disabled={claiming || refunding}>
+                {refunding ? t('refunding') : t('refund', { count: summary.refundable.length })}
               </Button>
             )}
             <Button asChild variant="secondary">
               <Link href="/activity">{t('viewActivity')}</Link>
             </Button>
           </div>
+
+          {summary.refundable.length > 0 ? (
+            <p className="mt-4 max-w-2xl text-[0.8rem] text-foreground-secondary">
+              {t('refundNote', { count: summary.refundable.length })}
+            </p>
+          ) : summary.pending.length > 0 ? (
+            <p className="mt-4 max-w-2xl text-[0.8rem] text-foreground-muted">
+              {t('pendingNote', { count: summary.pending.length })}
+            </p>
+          ) : null}
 
           {error && (
             <p className="mt-4 rounded-[8px] border border-danger/25 bg-danger-soft p-3 text-[0.8rem] text-danger">

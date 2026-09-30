@@ -180,7 +180,7 @@
   "rewards": {
     "eyebrow": "Reward roster",
     "title": "What's in the machine?",
-    "body": "Every asset here is a BNB Chain project, verified by contract address before it was ever added. Bridged versions of other chains' assets are deliberately left out.",
+    "body": "Every reward is a tokenized US stock — a bStock issued by BTECH Holdings and backed 1:1 by a share held in custody — verified by contract address before it was ever added. bStocks are not available to US persons.",
     "allRewards": "All rewards",
     "price": "Price",
     "bestOdds": "Best odds",
@@ -190,8 +190,8 @@
     "page": {
       "eyebrow": "The roster",
       "title": "Inside Bacha.",
-      "body": "Every asset below was verified by contract address against three independent sources before it was added, and every percentage comes from the prize table a spin actually resolves against.",
-      "changes": "The reward roster changes as the BNB ecosystem changes.",
+      "body": "Every stock below is a bStock verified by contract address — read from BNB Chain and checked against the issuer's own contract — before it was added, and every percentage comes from the prize table a spin actually resolves against.",
+      "changes": "More stocks are added to the roster over time.",
       "assets": "Assets",
       "machines": "Machines",
       "footnote": "Prices are indicative and sourced from a cached third-party feed. They are never an input to settlement — a spin resolves to a fixed token amount, and what that amount is worth is a separate question the market answers.",
@@ -366,13 +366,16 @@
         "claimed": "Claimed — reward delivered.",
         "simulated": "Simulated spin. Settled locally, not onchain.",
         "unreachable": "Could not reach the verifier.",
-        "unreachableHint": "This is a connection problem, not a problem with the spin. Try again shortly."
+        "unreachableHint": "This is a connection problem, not a problem with the spin. Try again shortly.",
+        "refunded": "Refunded — randomness never arrived.",
+        "refundedHint": "No outcome was drawn. The BNB paid for this spin went back to the wallet that paid it."
       },
       "recomputed": {
         "matched": "Independently re-derived.",
         "matchedDetail": "Running the recorded random word through machine version {version}'s prize table in your browser produced entry #{index} — the same asset and amount the machine recorded.",
         "mismatched": "Re-derivation did not match.",
-        "mismatchedDetail": "The recorded reward differs from what this table produces for that random word. Treat this result as unverified and report it."
+        "mismatchedDetail": "The recorded reward differs from what this table produces for that random word. Treat this result as unverified and report it.",
+        "loading": "Fetching the prize table this spin was sold against…"
       },
       "timeline": {
         "title": "Timeline",
@@ -381,7 +384,7 @@
         "locked": "Prize table locked",
         "lockedDetail": "Stamped with machine version {version}.",
         "requested": "Randomness requested",
-        "requestedDetail": "Request opened with the coordinator.",
+        "requestedDetail": "Request opened with the randomness beacon, bound to its next committed seed.",
         "returned": "Randomness returned",
         "returnedDetail": "Random word recorded.",
         "calculated": "Result calculated",
@@ -639,7 +642,7 @@
       "rows": {
         "chain": {
           "label": "Chain",
-          "value": "BNB Smart Chain. Rewards are BEP-20 assets from projects native to it — no bridged representations from elsewhere."
+          "value": "BNB Smart Chain. Rewards are bStocks — BEP-20 tokenized shares of US companies, issued by BTECH Holdings and backed 1:1."
         },
         "contracts": {
           "label": "Contracts",
@@ -673,10 +676,10 @@
     }
   },
   "discovery": {
-    "eyebrow": "Token discovery",
-    "titleLead": "Every spin discovers",
-    "titleAccent": "a piece of BNB Chain.",
-    "body": "The roster is built from projects native to BNB Chain — a DEX, a money market, a launchpad, a wallet, a couple of community tokens. Pulling one is how most people meet it.",
+    "eyebrow": "Tokenized stocks",
+    "titleLead": "Every spin pulls",
+    "titleAccent": "a slice of a real share.",
+    "body": "The roster is tokenized shares of well-known US companies, issued as bStocks on BNB Chain and backed 1:1. A pull is a fraction of one share, held in your own wallet.",
     "cta": "Explore rewards",
     "orbitAlt": "An isometric render of an orbital arrangement of empty mounting plates.",
     "assetsLabel": "Reward assets",
@@ -693,7 +696,7 @@
     "capsuleAlt": "An isometric render of a large Bacha capsule opening."
   },
   "footer": {
-    "tagline": "An onchain gacha game for discovering BNB Chain tokens.",
+    "tagline": "An onchain gacha game for tokenized stocks on BNB Chain.",
     "builtOn": "Built on BNB Smart Chain",
     "columns": {
       "play": "Play",
@@ -871,7 +874,11 @@
     "history": "History",
     "noSpins": "No spins yet.",
     "noSpinsHint": "Your pulls will appear here as soon as one settles.",
-    "valueNote": "Values are indicative and based on current prices. They are not a performance figure."
+    "valueNote": "Values are indicative and based on current prices. They are not a performance figure.",
+    "refund": "Refund {count}",
+    "refunding": "Refunding…",
+    "refundNote": "{count, plural, one {# spin never received randomness and} other {# spins never received randomness and}} can be refunded to the paying wallet.",
+    "pendingNote": "{count, plural, one {# spin is} other {# spins are}} waiting for randomness. If it never arrives, the BNB can be refunded after the timeout."
   },
   "rarity": {
     "COMMON": "Common",
@@ -926,6 +933,20 @@
     "noRpc": "No RPC connection.",
     "notFound": "Not found",
     "notFoundBody": "That page doesn't exist. The machine is still where you left it.",
-    "backHome": "Back to the machine"
+    "backHome": "Back to the machine",
+    "machineBusy": "The machine is waiting for fresh randomness. Nothing was spent — try again in a minute.",
+    "spinRefunded": "This spin was refunded because its randomness never arrived. The BNB went back to your wallet.",
+    "stillPending": "Your spin is still waiting for randomness. It will settle on its own — claim it later from My Bacha.",
+    "txReverted": "The transaction was mined but reverted. Check it on BscScan before trying again."
+  },
+  "health": {
+    "ready": "Healthy",
+    "low": "Low · {count} left",
+    "empty": "Out of stock",
+    "paused": "Paused",
+    "inactive": "Closed",
+    "noRandomness": "Awaiting seeds",
+    "unknown": "Checking…",
+    "blockedHint": "This machine can't take a spin right now — it would only revert. Nothing will be charged."
   }
 }

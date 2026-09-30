@@ -22,7 +22,7 @@ export function RecentDropsRail() {
   const { data } = useFeed('/api/spins?limit=14', 12_000)
   const reduce = useReducedMotion()
 
-  const spins = (data?.spins ?? []).filter((s) => s.status !== 'PENDING').slice(0, 10)
+  const spins = (data?.spins ?? []).filter((s) => s.status === 'SETTLED' || s.status === 'CLAIMED').slice(0, 10)
 
   return (
     <section aria-labelledby="recent-drops">
