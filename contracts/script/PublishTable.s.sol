@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import {Script, console2} from "forge-std/Script.sol";
 import {BachaGame} from "../src/BachaGame.sol";
 import {BachaVault} from "../src/BachaVault.sol";
+import {CliSigner} from "./CliSigner.sol";
 
 /// @notice Approves reward assets and publishes the opening prize table.
 /// @dev    Reads a JSON table so odds never live in Solidity source. Run with
@@ -14,9 +15,10 @@ import {BachaVault} from "../src/BachaVault.sol";
 ///           "tiers":  [ { "id": 0, "label": "QUICK", "price": "2600000000000000" }, ... ] }
 ///
 ///         Rarity: 0 common, 1 uncommon, 2 rare, 3 epic.
-contract PublishTable is Script {
+///
+///         The signer must hold vault admin and game OPERATOR_ROLE — the admin.
+contract PublishTable is CliSigner {
     function run() external {
-        uint256 pk = vm.envUint("PRIVATE_KEY");
         address gameAddr = vm.envAddress("BACHA_GAME_ADDRESS");
         address vaultAddr = vm.envAddress("BACHA_VAULT_ADDRESS");
         string memory path = vm.envString("BACHA_TABLE_FILE");
@@ -54,7 +56,7 @@ contract PublishTable is Script {
             totalWeight += weight;
         }
 
-        vm.startBroadcast(pk);
+        _startBroadcast();
 
         for (uint256 i; i < tokens.length; ++i) {
             if (!vault.approvedAsset(tokens[i])) {

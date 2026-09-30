@@ -5,6 +5,7 @@ import {Script, console2} from "forge-std/Script.sol";
 import {BachaGame} from "../src/BachaGame.sol";
 import {BachaVault} from "../src/BachaVault.sol";
 import {BachaRandomness} from "../src/BachaRandomness.sol";
+import {CliSigner} from "./CliSigner.sol";
 
 /// @notice Deploys the Bacha machine — beacon, vault, game — and wires them.
 /// @dev    Deliberately stops short of publishing a prize table, activating
@@ -14,26 +15,26 @@ import {BachaRandomness} from "../src/BachaRandomness.sol";
 ///         see `PublishTable.s.sol`, `scripts/randomness-worker.mjs` and
 ///         DEPLOYMENT.md.
 ///
+///         Signer: pass it on the command line — `--account <keystore name>`
+///         or `--ledger` — so no key is ever written to a file. PRIVATE_KEY
+///         in the environment still works, for local rehearsals only.
+///
 ///         Required environment:
-///           PRIVATE_KEY       deployer key
 ///           BACHA_ADMIN       address that receives admin/operator/treasurer
 ///                             roles — use a multisig on mainnet
 ///           BACHA_COMMITTER   address that commits and reveals seeds. This is
 ///                             a hot key held by the reveal worker; keep it
 ///                             separate from admin, and fund it with gas only.
-contract Deploy is Script {
+contract Deploy is CliSigner {
     function run() external returns (BachaVault vault, BachaGame game, BachaRandomness randomness) {
-        uint256 pk = vm.envUint("PRIVATE_KEY");
         address admin = vm.envAddress("BACHA_ADMIN");
         address committer = vm.envAddress("BACHA_COMMITTER");
 
-        address deployer = vm.addr(pk);
+        address deployer = _startBroadcast();
         console2.log("deployer     ", deployer);
         console2.log("admin        ", admin);
         console2.log("committer    ", committer);
         console2.log("chain id     ", block.chainid);
-
-        vm.startBroadcast(pk);
 
         // The deployer holds admin briefly so it can call setGame and grant
         // the consumer role, then hands every role to `admin` and steps out.

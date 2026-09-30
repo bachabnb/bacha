@@ -14,6 +14,7 @@ contracts/out/
 contracts/cache/
 contracts/broadcast/
 contracts/lib/
+contracts/.env.launch
 coverage/
 .bacha-demo-state.json
 .env.local
