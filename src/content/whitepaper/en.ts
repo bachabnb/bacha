@@ -65,7 +65,7 @@ export const en: WhitepaperContent = {
           t: 'ul',
           items: [
             'A paid game with randomised outcomes, played one spin at a time.',
-            'A way to receive small amounts of assets from projects native to BNB Chain.',
+            'A way to receive fractions of tokenized US stocks (bStocks) on BNB Chain.',
             'A system whose odds, randomness and settlement can be inspected by anyone.',
           ],
         },
@@ -231,7 +231,7 @@ export const en: WhitepaperContent = {
       blocks: [
         {
           t: 'p',
-          text: 'The reward roster is drawn from projects native to BNB Chain. Bridged representations of assets from other chains are excluded deliberately — Bacha exists partly to introduce people to this ecosystem, and a wrapped asset from elsewhere does not do that.',
+          text: 'The reward roster is tokenized US stocks: bStocks, issued on BNB Chain by BTECH Holdings (a Binance group affiliate regulated in ADGM) and backed 1:1 by shares held in custody. Each is added by contract address and checked against the issuer\'s own contract infrastructure, because a copied ticker is easy and a copied issuer is not. bStocks are not offered to US persons, and their balances adjust automatically for dividends and stock splits.',
         },
         { t: 'live', kind: 'tokens' },
         {

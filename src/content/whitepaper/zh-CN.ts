@@ -68,7 +68,7 @@ export const zhCN: WhitepaperContent = {
           t: 'ul',
           items: [
             '一款付费游戏，结果随机，一次一抽。',
-            '一种获得 BNB Chain 原生项目少量资产的方式。',
+            '一种在 BNB Chain 上获得代币化美国股票（bStocks）零碎份额的方式。',
             '一套概率、随机数与结算都可供任何人查验的系统。',
           ],
         },
@@ -234,7 +234,7 @@ export const zhCN: WhitepaperContent = {
       blocks: [
         {
           t: 'p',
-          text: '奖励名单取自 BNB Chain 的原生项目。来自其他链的跨链映射资产被刻意排除在外——Bacha 存在的部分意义是带人认识这个生态，而一枚来自别处的封装资产做不到这一点。',
+          text: '奖励名单是代币化的美国股票：bStocks，由 BTECH Holdings（币安集团关联公司，受 ADGM 监管）在 BNB Chain 上发行，并以托管中的股票 1:1 支持。每一种都按合约地址加入，并与发行方自身的合约基础设施核对——复制一个代码很容易，复制一个发行方则不然。bStocks 不向美国人士提供，其余额会因分红和拆股自动调整。',
         },
         { t: 'live', kind: 'tokens' },
         {

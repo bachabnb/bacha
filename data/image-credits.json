@@ -2,41 +2,39 @@
   "$comment": "Provenance for every third-party image shipped in this repo. Anything added to public/ that Bacha did not generate itself must be recorded here.",
   "tokenLogos": {
     "usage": "Project logos are used nominatively, to identify the token a reward consists of. Each remains the trademark of its respective project. Bacha is not affiliated with, endorsed by or operated by any of them.",
-    "retrievedVia": "DexScreener token metadata (api.dexscreener.com/latest/dex/tokens/{address}, info.imageUrl), normalised to a 128px square PNG. mubarak and ASTER predate this and came from the CoinGecko coin API.",
-    "retrievedAt": "2026-09-25",
-    "script": "scripts/fetch-token-logos.mjs",
+    "retrievedVia": "DexScreener token metadata (info.imageUrl on the token's BSC pools), normalised to a 128px square PNG by scripts/add-token.mjs.",
+    "retrievedAt": "2026-09-30",
+    "script": "scripts/add-token.mjs",
     "files": [
       {
-        "file": "public/tokens/b2.png",
-        "token": "B2",
-        "address": "0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2"
+        "file": "public/tokens/spcx.png",
+        "token": "SPCXB",
+        "address": "0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1"
       },
       {
-        "file": "public/tokens/lobster.png",
-        "token": "龙虾",
-        "address": "0xeCCBb861c0dda7eFd964010085488B69317e4444"
+        "file": "public/tokens/nvda.png",
+        "token": "NVDAB",
+        "address": "0x02Fca66C1D1aFB4E2A7884261eB00F63598a7436"
       },
       {
-        "file": "public/tokens/marscoin.png",
-        "token": "MarsCoin",
-        "address": "0xFe189E97832DA1573e4e4Ff034F4fFC3a15c7777"
+        "file": "public/tokens/msft.png",
+        "token": "MSFTB",
+        "address": "0x80106cb3EAD06659A5ad19DF39D9b4733863B9b0"
       },
       {
-        "file": "public/tokens/mubarak.jpg",
-        "token": "mubarak",
-        "address": "0x5C85D6C6825aB4032337F11Ee92a72DF936b46F6",
-        "coingeckoId": "mubarak"
+        "file": "public/tokens/googl.png",
+        "token": "GOOGLB",
+        "address": "0x3F53De71c126BdaBAe20f9cD64848d317f6C3238"
       },
       {
-        "file": "public/tokens/aster.png",
-        "token": "ASTER",
-        "address": "0x000Ae314E2A2172a039B26378814C252734f556A",
-        "coingeckoId": "aster-2"
+        "file": "public/tokens/tsla.png",
+        "token": "TSLAB",
+        "address": "0x5b1910eAaD6450E50f816082Aa078C41F10C292f"
       },
       {
-        "file": "public/tokens/giggle.png",
-        "token": "GIGGLE",
-        "address": "0x20d6015660b3fe52e6690a889b5C51F69902cE0e"
+        "file": "public/tokens/aapl.png",
+        "token": "AAPLB",
+        "address": "0x431a3BEE82E2ca41e49895CbECE5bB0F76A89b7A"
       }
     ]
   },

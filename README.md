@@ -1,6 +1,6 @@
 # Bacha
 
-An onchain gacha game for discovering BNB Chain tokens.
+An onchain gacha game for tokenized stocks on BNB Chain.
 
 You pay a fixed price for one spin, the contract picks exactly one reward from
 a prize table that was frozen the moment you paid, and a commit–reveal beacon
@@ -19,10 +19,10 @@ named in it.
 connect  →  choose a machine  →  pay  →  randomness settles  →  claim
 ```
 
-Three machines (Quick, Boost, Max) share one roster of ten verified BNB Chain
-assets. Each machine has its own prize table; higher tiers cost more and weight
-the table further toward the rare end. That is the only difference — a higher
-tier is a different distribution, not a better deal.
+One machine, one price (0.0026 BNB, about $2). Every reward is a fraction of a
+tokenized US stock — a bStock, issued on BNB Chain by BTECH Holdings and backed
+1:1 by shares in custody. The odds are 68% common, 23% uncommon, 8% rare and 1%
+epic, and the prize table is authored in `scripts/build-machine-config.mjs`.
 
 ---
 
@@ -119,12 +119,16 @@ prices are hidden rather than guessed. The contract has no price oracle.
 
 ### Tokens are identified by address
 
-`data/tokens.json` holds ten assets, each verified on 2026-09-24 against three
-independent sources: CoinGecko, DexScreener, and a direct `eth_call` to BNB
-Smart Chain for `decimals()`, `symbol()` and `totalSupply()`. There is
-deliberately no `tokenBySymbol` — a ticker is not an identifier. Bridged
-representations of other chains' assets are excluded on purpose; this is a BNB
-Chain showcase.
+`data/tokens.json` holds the roster. Every entry is added with
+`node scripts/add-token.mjs <dexscreener link>`, which resolves the link to the
+token, reads `name()`, `symbol()`, `decimals()` and `totalSupply()` straight
+from BNB Smart Chain, and refuses any contract that does not delegate to the
+bStocks issuer beacon — a copied ticker is easy, a copied issuer is not. There
+is deliberately no `tokenBySymbol`: a ticker is not an identifier.
+
+bStocks must not be offered to US persons, their balances rebase for dividends
+and splits, and the issuer can block addresses. Set `BACHA_BLOCKED_COUNTRIES`
+accordingly before launch.
 
 ---
 

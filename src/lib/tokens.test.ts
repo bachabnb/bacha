@@ -37,12 +37,12 @@ describe('token registry', () => {
     // or the wrong amount by orders of magnitude. Changing this table should
     // require the same verification that produced it.
     const verified: Record<string, [`0x${string}`, number]> = {
-      b2: ['0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2', 18],
-      lobster: ['0xeCCBb861c0dda7eFd964010085488B69317e4444', 18],
-      marscoin: ['0xFe189E97832DA1573e4e4Ff034F4fFC3a15c7777', 18],
-      mubarak: ['0x5C85D6C6825aB4032337F11Ee92a72DF936b46F6', 18],
-      aster: ['0x000Ae314E2A2172a039B26378814C252734f556A', 18],
-      giggle: ['0x20d6015660b3fe52e6690a889b5C51F69902cE0e', 18],
+      spcx: ['0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1', 18],
+      nvda: ['0x02Fca66C1D1aFB4E2A7884261eB00F63598a7436', 18],
+      tsla: ['0x5b1910eAaD6450E50f816082Aa078C41F10C292f', 18],
+      aapl: ['0x431a3BEE82E2ca41e49895CbECE5bB0F76A89b7A', 18],
+      msft: ['0x80106cb3EAD06659A5ad19DF39D9b4733863B9b0', 18],
+      googl: ['0x3F53De71c126BdaBAe20f9cD64848d317f6C3238', 18],
     }
 
     expect(allTokens.map((t) => t.id).sort()).toEqual(Object.keys(verified).sort())

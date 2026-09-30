@@ -1,56 +1,56 @@
 {
   "prizes": [
     {
-      "token": "0x5C85D6C6825aB4032337F11Ee92a72DF936b46F6",
-      "amount": "32000000000000000000",
+      "token": "0x02Fca66C1D1aFB4E2A7884261eB00F63598a7436",
+      "amount": "4000000000000000",
       "weight": 2600,
       "rarity": 0
     },
     {
-      "token": "0xFe189E97832DA1573e4e4Ff034F4fFC3a15c7777",
-      "amount": "12000000000000000000",
+      "token": "0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1",
+      "amount": "6000000000000000",
       "weight": 2300,
       "rarity": 0
     },
     {
-      "token": "0xeCCBb861c0dda7eFd964010085488B69317e4444",
-      "amount": "11000000000000000000",
+      "token": "0x431a3BEE82E2ca41e49895CbECE5bB0F76A89b7A",
+      "amount": "2700000000000000",
       "weight": 1900,
       "rarity": 0
     },
     {
-      "token": "0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2",
-      "amount": "4500000000000000000",
+      "token": "0x5b1910eAaD6450E50f816082Aa078C41F10C292f",
+      "amount": "4200000000000000",
       "weight": 1400,
       "rarity": 1
     },
     {
-      "token": "0xeCCBb861c0dda7eFd964010085488B69317e4444",
-      "amount": "20000000000000000000",
+      "token": "0x3F53De71c126BdaBAe20f9cD64848d317f6C3238",
+      "amount": "4200000000000000",
       "weight": 900,
       "rarity": 1
     },
     {
-      "token": "0x000Ae314E2A2172a039B26378814C252734f556A",
-      "amount": "5500000000000000000",
+      "token": "0x80106cb3EAD06659A5ad19DF39D9b4733863B9b0",
+      "amount": "5300000000000000",
       "weight": 450,
       "rarity": 2
     },
     {
-      "token": "0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2",
-      "amount": "9500000000000000000",
+      "token": "0x5b1910eAaD6450E50f816082Aa078C41F10C292f",
+      "amount": "8500000000000000",
       "weight": 280,
       "rarity": 2
     },
     {
-      "token": "0x20d6015660b3fe52e6690a889b5C51F69902cE0e",
-      "amount": "75000000000000000",
+      "token": "0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1",
+      "amount": "19000000000000000",
       "weight": 70,
       "rarity": 2
     },
     {
-      "token": "0x000Ae314E2A2172a039B26378814C252734f556A",
-      "amount": "8000000000000000000",
+      "token": "0x5b1910eAaD6450E50f816082Aa078C41F10C292f",
+      "amount": "13000000000000000",
       "weight": 100,
       "rarity": 3
     }
@@ -59,7 +59,7 @@
     {
       "id": 0,
       "label": "BACHA",
-      "price": "3900000000000000"
+      "price": "2600000000000000"
     }
   ]
 }
