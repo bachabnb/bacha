@@ -1,0 +1,29 @@
+# The three Bacha workers, as one small image. Each Railway service runs it
+# with BACHA_WORKER set to randomness, treasury or governor — and only that
+# worker's key in its variables.
+#
+#   RAILWAY_DOCKERFILE_PATH=Dockerfile.workers   (service variable)
+#   BACHA_WORKER=randomness|treasury|governor
+#   BACHA_WORKER_ARGS=--quote                    (optional: override the flags,
+#                                                 e.g. for the first dry runs)
+#
+# The workers import nothing but viem, so the website's dependencies are left
+# out. Keep the version in step with package-lock.json.
+FROM node:24-slim
+
+WORKDIR /app
+RUN npm init -y >/dev/null && npm install --no-audit --no-fund --loglevel=error viem@2.56.8
+
+COPY data/tokens.json data/tokens.json
+COPY scripts/randomness-worker.mjs scripts/treasury-worker.mjs scripts/solvency-governor.mjs scripts/
+
+ENV NODE_ENV=production
+
+# Treasury and governor transact only with --live; BACHA_WORKER_ARGS replaces
+# the default flags when set.
+CMD ["sh", "-c", "case \"$BACHA_WORKER\" in \
+  randomness) exec node scripts/randomness-worker.mjs ${BACHA_WORKER_ARGS:-} ;; \
+  treasury)   exec node scripts/treasury-worker.mjs ${BACHA_WORKER_ARGS:---live} ;; \
+  governor)   exec node scripts/solvency-governor.mjs ${BACHA_WORKER_ARGS:---live} ;; \
+  *) echo 'Set BACHA_WORKER to randomness, treasury or governor.' >&2; exit 1 ;; \
+esac"]
