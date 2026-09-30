@@ -1,52 +1,32 @@
-import { http, createConfig, cookieStorage, createStorage } from 'wagmi'
-import { bsc, bscTestnet } from 'wagmi/chains'
-import { injected, walletConnect } from 'wagmi/connectors'
+import { http, cookieStorage, createStorage } from 'wagmi'
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
+import { bsc, bscTestnet } from '@reown/appkit/networks'
 import { publicEnv } from './env'
 
 /**
- * Wallet setup.
+ * Wallet setup, through Reown AppKit.
  *
- * `injected` covers MetaMask, Trust Wallet's in-app browser, Coinbase Wallet's
- * extension, Rabby and any other EIP-1193 provider. WalletConnect is added only
- * when a project id is configured — without one the connector throws at
- * runtime, so it is better to omit it than to ship a button that cannot work.
+ * AppKit brings the connect modal: injected wallets (MetaMask, Trust, Rabby,
+ * OKX, Binance Wallet's extension…), WalletConnect QR and mobile deep links,
+ * all discovered through EIP-6963. Wagmi stays underneath, so every hook in
+ * the app keeps working unchanged.
  *
- * The dedicated Coinbase connector is deliberately not used: it pulls the
- * whole `@coinbase/cdp-sdk` tree in for no benefit here.
+ * Only the configured chain is offered. A player who ends up elsewhere sees
+ * the switch-network button, never a testnet in the modal's network list.
  */
-const connectors = [
-  injected({ shimDisconnect: true }),
-  ...(publicEnv.walletConnectProjectId
-    ? [
-        walletConnect({
-          projectId: publicEnv.walletConnectProjectId,
-          showQrModal: true,
-          metadata: {
-            name: 'Bacha',
-            description: 'An onchain gacha game for discovering BNB Chain tokens.',
-            url: publicEnv.siteUrl,
-            icons: [`${publicEnv.siteUrl}/icon.png`],
-          },
-        }),
-      ]
-    : []),
-]
 
-export const wagmiConfig = createConfig({
-  chains: [bsc, bscTestnet],
-  connectors,
+/** Public by design: it identifies the dapp to Reown and ships in the bundle. */
+export const reownProjectId = publicEnv.walletConnectProjectId
+
+export const activeNetwork = publicEnv.chainId === 97 ? bscTestnet : bsc
+
+export const wagmiAdapter = new WagmiAdapter({
+  projectId: reownProjectId,
+  networks: [activeNetwork],
   ssr: true,
   storage: createStorage({ storage: cookieStorage }),
-  transports: {
-    [bsc.id]: http(publicEnv.chainId === 56 ? publicEnv.rpcUrl : undefined),
-    [bscTestnet.id]: http(publicEnv.chainId === 97 ? publicEnv.rpcUrl : undefined),
-  },
+  transports: { [activeNetwork.id]: http(publicEnv.rpcUrl) },
+  customRpcUrls: { [`eip155:${activeNetwork.id}`]: [{ url: publicEnv.rpcUrl }] },
 })
 
-declare module 'wagmi' {
-  interface Register {
-    config: typeof wagmiConfig
-  }
-}
-
-export const walletConnectAvailable = Boolean(publicEnv.walletConnectProjectId)
+export const wagmiConfig = wagmiAdapter.wagmiConfig

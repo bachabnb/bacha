@@ -721,7 +721,6 @@
   },
   "wallet": {
     "connect": "Connect Wallet",
-    "connecting": "Waiting…",
     "connected": "Connected",
     "disconnect": "Disconnect",
     "copyAddress": "Copy address",
@@ -730,12 +729,7 @@
     "myBacha": "My Bacha",
     "wrongNetwork": "Wrong network",
     "switchNetwork": "Switch to {network}",
-    "switching": "Check your wallet…",
-    "dialogTitle": "Connect a wallet",
-    "dialogBody": "Bacha runs on {network}. Your wallet stays yours — Bacha never asks for a seed phrase and never signs on your behalf.",
-    "connectAction": "Connect",
-    "termsNotice": "By connecting you accept the terms. Reward values change and a spin does not guarantee a profit.",
-    "termsLink": "terms"
+    "switching": "Check your wallet…"
   },
   "play": {
     "eyebrow": "The machine",

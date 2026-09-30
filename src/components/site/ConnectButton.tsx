@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { useTranslations } from 'next-intl'
-import { useAccount, useConnect, useDisconnect, useSwitchChain, useChainId, useBalance } from 'wagmi'
+import { useAccount, useDisconnect, useSwitchChain, useChainId, useBalance } from 'wagmi'
+import { useAppKit } from '@reown/appkit/react'
 import { Link } from '@/i18n/routing'
 import { Button } from '@/components/ui/Button'
 import { shortAddress, formatBnb } from '@/lib/format'
@@ -15,7 +16,8 @@ import { cn } from '@/lib/cn'
 
 /**
  * Wallet entry point. Three states, each with exactly one obvious action:
- * disconnected → connect, wrong chain → switch, connected → open the panel.
+ * disconnected → the Reown connect modal, wrong chain → switch,
+ * connected → open the panel.
  */
 /**
  * The wallet CTA anchors the right-hand side, so it is deliberately the
@@ -36,6 +38,7 @@ export function ConnectButton({
   const { address, isConnected } = useAccount()
   const chainId = useChainId()
   const [open, setOpen] = useState(false)
+  const { open: openConnectModal } = useAppKit()
 
   const height = compact
     ? 'h-10 w-10 text-[0.84rem]'
@@ -45,22 +48,19 @@ export function ConnectButton({
 
   if (!isConnected) {
     return (
-      <>
-        <button
-          onClick={() => setOpen(true)}
-          className={cn(
-            'inline-flex items-center justify-center gap-2 rounded-[12px] bg-brand font-semibold text-brand-foreground',
-            'shadow-[var(--shadow-brand)] transition-[background-color,transform] duration-150 ease-[var(--ease-physical)]',
-            'hover:bg-brand-hover active:translate-y-px active:bg-brand-pressed',
-            height,
-            className,
-          )}
-        >
-          <WalletIcon />
-          {compact ? <span className="sr-only">{t('connect')}</span> : t('connect')}
-        </button>
-        <ConnectDialog open={open} onOpenChange={setOpen} />
-      </>
+      <button
+        onClick={() => openConnectModal({ view: 'Connect' })}
+        className={cn(
+          'inline-flex items-center justify-center gap-2 rounded-[12px] bg-brand font-semibold text-brand-foreground',
+          'shadow-[var(--shadow-brand)] transition-[background-color,transform] duration-150 ease-[var(--ease-physical)]',
+          'hover:bg-brand-hover active:translate-y-px active:bg-brand-pressed',
+          height,
+          className,
+        )}
+      >
+        <WalletIcon />
+        {compact ? <span className="sr-only">{t('connect')}</span> : t('connect')}
+      </button>
     )
   }
 
@@ -134,75 +134,6 @@ export function SwitchNetworkButton({ className }: { className?: string }) {
         </p>
       )}
     </div>
-  )
-}
-
-function ConnectDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
-  const t = useTranslations('wallet')
-  const humanError = useHumanError()
-  const { connectors, connect, isPending } = useConnect()
-  const [error, setError] = useState<string | null>(null)
-  const [attempting, setAttempting] = useState<string | null>(null)
-
-  return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(26rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 panel-raised p-6 focus:outline-none">
-          <Dialog.Title className="font-display text-xl font-bold tracking-[-0.03em] text-foreground">
-            {t('dialogTitle')}
-          </Dialog.Title>
-          <Dialog.Description className="mt-1.5 text-[0.84rem] leading-relaxed text-foreground-secondary">
-            {t('dialogBody', { network: networkLabel })}
-          </Dialog.Description>
-
-          <div className="mt-5 space-y-2">
-            {connectors.map((connector) => (
-              <button
-                key={connector.uid}
-                disabled={isPending}
-                onClick={() => {
-                  setError(null)
-                  setAttempting(connector.uid)
-                  connect(
-                    { connector },
-                    {
-                      onError: (e) => {
-                        if (!isUserRejection(e)) setError(humanError(e))
-                        setAttempting(null)
-                      },
-                      onSuccess: () => {
-                        setAttempting(null)
-                        onOpenChange(false)
-                      },
-                    },
-                  )
-                }}
-                className="flex min-h-[3.25rem] w-full items-center justify-between rounded-[10px] border border-border bg-surface px-4 py-3 text-left transition-colors hover:border-border-strong hover:bg-surface-hover disabled:opacity-50"
-              >
-                <span className="text-[0.9rem] font-medium text-foreground">{connector.name}</span>
-                <span className="text-[0.72rem] text-foreground-muted">
-                  {attempting === connector.uid ? t('connecting') : t('connectAction')}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          {error && (
-            <p className="mt-4 rounded-[8px] border border-danger/25 bg-danger-soft p-3 text-[0.78rem] text-danger">
-              {error}
-            </p>
-          )}
-
-          <p className="mt-5 text-[0.7rem] leading-relaxed text-foreground-muted">
-            {t('termsNotice')}{' '}
-            <Link href="/terms" className="underline decoration-border-strong underline-offset-2 hover:text-foreground-secondary">
-              {t('termsLink')}
-            </Link>
-          </p>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
   )
 }
 

@@ -721,7 +721,6 @@
   },
   "wallet": {
     "connect": "连接钱包",
-    "connecting": "等待中…",
     "connected": "已连接",
     "disconnect": "断开连接",
     "copyAddress": "复制地址",
@@ -730,12 +729,7 @@
     "myBacha": "我的 Bacha",
     "wrongNetwork": "网络不正确",
     "switchNetwork": "切换到 {network}",
-    "switching": "请在钱包中确认…",
-    "dialogTitle": "连接钱包",
-    "dialogBody": "Bacha 运行在 {network} 上。你的钱包始终属于你——Bacha 从不索要助记词，也不会代你签名。",
-    "connectAction": "连接",
-    "termsNotice": "连接即表示你接受相关条款。奖励价值会变动，一次转动并不保证盈利。",
-    "termsLink": "条款"
+    "switching": "请在钱包中确认…"
   },
   "play": {
     "eyebrow": "机器",

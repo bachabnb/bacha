@@ -23,7 +23,9 @@ const chainId = rawChainId === 97 ? 97 : 56
 export const publicEnv = {
   chainId,
   rpcUrl: optional(process.env.NEXT_PUBLIC_BSC_RPC_URL) ?? DEFAULT_RPC[chainId],
-  walletConnectProjectId: optional(process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID),
+  /** Reown (WalletConnect) project. Public — it ships in the bundle either way. */
+  walletConnectProjectId:
+    optional(process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID) ?? 'bc92f3593e8b9859ceb450323b647150',
   gameAddress: normaliseAddress(process.env.NEXT_PUBLIC_BACHA_GAME_ADDRESS),
   randomnessAddress: normaliseAddress(process.env.NEXT_PUBLIC_BACHA_RANDOMNESS_ADDRESS),
   siteUrl: optional(process.env.NEXT_PUBLIC_SITE_URL) ?? 'http://localhost:3000',
