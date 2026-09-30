@@ -441,11 +441,7 @@
       "source": "Source",
       "game": {
         "name": "Bacha Game",
-        "role": "Spin requests, machine versions, randomness and results"
-      },
-      "vault": {
-        "name": "Bacha Vault",
-        "role": "Reward reserves and payouts"
+        "role": "Spins, prize tables, the BNB bankroll and prize delivery"
       },
       "beacon": {
         "name": "BachaRandomness",
@@ -455,7 +451,6 @@
         "network": "Network",
         "chainId": "Chain ID",
         "game": "Game",
-        "vault": "Vault",
         "randomness": "Randomness",
         "source": "Source",
         "deployed": "Deployed",
@@ -793,7 +788,13 @@
       "settlement": "Settlement",
       "settlementVrf": "Commit–reveal",
       "unknownAsset": "Unknown asset",
-      "dialogLabel": "Spin result"
+      "dialogLabel": "Spin result",
+      "delivering": "Buying your {symbol} now — it lands in your wallet in a few seconds.",
+      "deliverySlow": "Your {symbol} is taking longer than usual to buy. It will still arrive — or you can take the prize in BNB instead.",
+      "delivered": "Delivered to your wallet.",
+      "paidBnb": "Paid out as {amount} BNB.",
+      "takeBnb": "Take BNB instead",
+      "takingBnb": "Sending BNB…"
     },
     "stage": {
       "eyebrow": "The machine",
@@ -878,7 +879,9 @@
     "refund": "Refund {count}",
     "refunding": "Refunding…",
     "refundNote": "{count, plural, one {# spin never received randomness and} other {# spins never received randomness and}} can be refunded to the paying wallet.",
-    "pendingNote": "{count, plural, one {# spin is} other {# spins are}} waiting for randomness. If it never arrives, the BNB can be refunded after the timeout."
+    "pendingNote": "{count, plural, one {# spin is} other {# spins are}} waiting for randomness. If it never arrives, the BNB can be refunded after the timeout.",
+    "takeBnb": "Take {count, plural, one {# stuck prize} other {# stuck prizes}} in BNB",
+    "deliveringNote": "{count, plural, one {# prize is} other {# prizes are}} being bought and sent to your wallet. It usually takes a few seconds."
   },
   "rarity": {
     "COMMON": "Common",
@@ -889,8 +892,9 @@
   "status": {
     "PENDING": "Pending",
     "SETTLED": "Settled",
-    "CLAIMED": "Claimed",
-    "REFUNDED": "Refunded"
+    "CLAIMED": "Delivered",
+    "REFUNDED": "Refunded",
+    "PAID_BNB": "Paid in BNB"
   },
   "common": {
     "loading": "Loading…",

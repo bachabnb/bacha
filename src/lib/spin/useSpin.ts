@@ -39,6 +39,11 @@ export interface SpinState {
   record: SpinRecord | null
   txHash: string | null
   error: string | null
+  /**
+   * A settled prize has not been delivered for a while — the moment to offer
+   * taking it in BNB instead.
+   */
+  deliverySlow: boolean
 }
 
 /**
@@ -48,7 +53,10 @@ export interface SpinState {
  */
 const spinAbi = [...bachaGameAbi, ...bachaRandomnessAbi.filter((item) => item.type === 'error')] as const
 
-const INITIAL: SpinState = { phase: 'idle', record: null, txHash: null, error: null }
+const INITIAL: SpinState = { phase: 'idle', record: null, txHash: null, error: null, deliverySlow: false }
+
+/** How long a settled prize may wait for delivery before BNB is offered. */
+const DELIVERY_SLOW_MS = 90_000
 
 export function useSpin() {
   const t = useTranslations('errors')
@@ -124,7 +132,7 @@ export function useSpin() {
           chainId: publicEnv.chainId,
         })
         if (cancelled.current) return
-        setState({ phase: 'submitted', record: null, txHash: hash, error: null })
+        setState({ ...INITIAL, phase: 'submitted', txHash: hash })
 
         const receipt = await publicClient.waitForTransactionReceipt({ hash })
         if (cancelled.current) return
@@ -134,16 +142,24 @@ export function useSpin() {
         if (spinId === null) throw new Error('SpinReverted')
 
         const pending = pendingRecord(spinId, machine, tier.price, address, hash)
-        setState({ phase: 'settling', record: pending, txHash: hash, error: null })
+        setState({ ...INITIAL, phase: 'settling', record: pending, txHash: hash })
 
         const settled = await pollForSettlement(spinId, machine, publicClient, cancelled)
         if (cancelled.current || !settled) return
 
-        setState({
-          phase: 'revealing',
-          record: { ...pending, ...settled },
-          txHash: hash,
-          error: null,
+        setState({ ...INITIAL, phase: 'revealing', record: { ...pending, ...settled }, txHash: hash })
+
+        // The worker buys and sends the prize within seconds of settlement.
+        // Watch for it without holding up the reveal.
+        void pollForDelivery(spinId, publicClient, cancelled, () =>
+          setState((s) => (s.record?.id === pending.id ? { ...s, deliverySlow: true } : s)),
+        ).then((delivered) => {
+          if (!delivered || cancelled.current) return
+          setState((s) => {
+            if (s.record?.id !== pending.id) return s
+            const phase = s.phase === 'settled' || s.phase === 'claiming' ? 'claimed' : s.phase
+            return { ...s, phase, deliverySlow: false, record: { ...s.record, ...delivered } }
+          })
         })
       } catch (error) {
         if (cancelled.current) return
@@ -171,11 +187,13 @@ export function useSpin() {
         return
       }
 
+      // Onchain the worker delivers the stock; the player's own action is the
+      // fallback — take the prize's value in BNB instead.
       if (!publicEnv.gameAddress) throw new Error(t('noContracts'))
       const hash = await writeContractAsync({
         address: publicEnv.gameAddress,
         abi: bachaGameAbi,
-        functionName: 'claimFor',
+        functionName: 'payInBnb',
         args: [BigInt(record.id)],
         chainId: publicEnv.chainId,
       })
@@ -184,7 +202,8 @@ export function useSpin() {
       setState((s) => ({
         ...s,
         phase: 'claimed',
-        record: s.record ? { ...s.record, status: 'CLAIMED', claimTxHash: hash } : s.record,
+        deliverySlow: false,
+        record: s.record ? { ...s.record, status: 'PAID_BNB', claimTxHash: hash } : s.record,
       }))
     } catch (error) {
       setState((s) => ({ ...s, phase: 'settled', error: t(errorKey(error)) }))
@@ -207,11 +226,11 @@ async function runDemoSpin(
     player,
   })
   if (cancelled.current) return
-  setState({ phase: 'settling', record: created.spin, txHash: null, error: null })
+  setState({ ...INITIAL, phase: 'settling', record: created.spin })
 
   const settled = await postJson<{ spin: SpinRecord }>('/api/demo/settle', { id: created.spin.id })
   if (cancelled.current) return
-  setState({ phase: 'revealing', record: settled.spin, txHash: null, error: null })
+  setState({ ...INITIAL, phase: 'revealing', record: settled.spin })
 }
 
 /* --------------------------------------------------------------- onchain */
@@ -271,10 +290,29 @@ interface ContractSpin {
   settledAt: bigint
   randomWord: bigint
   rewardToken: `0x${string}`
-  rewardAmount: bigint
+  rewardValue: bigint
+  deliveredAmount: bigint
   rarity: number
   requestId: bigint
   prizeTableHash: `0x${string}`
+}
+
+// BachaGame.SpinStatus
+const SETTLED = 2
+const DELIVERED = 3
+const PAID_IN_BNB = 4
+const REFUNDED = 5
+
+async function readSpin(
+  spinId: bigint,
+  publicClient: NonNullable<ReturnType<typeof usePublicClient>>,
+): Promise<ContractSpin> {
+  return (await publicClient.readContract({
+    address: publicEnv.gameAddress!,
+    abi: bachaGameAbi,
+    functionName: 'getSpin',
+    args: [spinId],
+  })) as unknown as ContractSpin
 }
 
 async function pollForSettlement(
@@ -287,17 +325,19 @@ async function pollForSettlement(
   const TIMEOUT_MS = 10 * 60_000
 
   while (!cancelled.current && Date.now() - started < TIMEOUT_MS) {
-    const raw = (await publicClient.readContract({
-      address: publicEnv.gameAddress!,
-      abi: bachaGameAbi,
-      functionName: 'getSpin',
-      args: [spinId],
-    })) as unknown as ContractSpin
+    const raw = await readSpin(spinId, publicClient)
 
-    // 2 = Settled, 3 = Claimed in BachaGame.SpinStatus
-    if (raw.status === 2 || raw.status === 3) {
-      // Decimals come from the verified registry — never inferred from a ticker.
+    if (raw.status >= SETTLED && raw.status <= PAID_IN_BNB) {
+      // The live roster carries the version the tier sells; a spin stamped
+      // with an older one cannot be indexed against it.
+      const index =
+        machine.source === 'onchain' && machine.versionId === raw.versionId.toString()
+          ? selectPrize(machine, raw.randomWord).index
+          : null
+      // Until delivery, show what the value buys at the table's price.
+      const estimate = index !== null ? machine.prizes[index].amount : null
       const decimals = tokenByAddress(raw.rewardToken)?.decimals ?? null
+      const delivered = raw.status === DELIVERED
       return {
         machineVersion: raw.versionId.toString(),
         prizeTableHash: raw.prizeTableHash,
@@ -305,25 +345,58 @@ async function pollForSettlement(
         requestId: raw.requestId.toString(),
         randomWord: raw.randomWord.toString(),
         rewardTokenAddress: raw.rewardToken.toLowerCase() as `0x${string}`,
-        rewardAmountUnits: raw.rewardAmount.toString(),
-        rewardAmount: decimals !== null ? unitsToNumber(raw.rewardAmount, decimals) : null,
+        rewardValueWei: raw.rewardValue.toString(),
+        rewardAmountUnits: delivered ? raw.deliveredAmount.toString() : null,
+        rewardAmount:
+          delivered && decimals !== null ? unitsToNumber(raw.deliveredAmount, decimals) : estimate,
+        rewardAmountExact: delivered,
         rarity: rarityFromIndex(raw.rarity),
-        // The live roster carries the version the tier sells; a spin stamped
-        // with an older one cannot be indexed against it.
-        prizeIndex:
-          machine.source === 'onchain' && machine.versionId === raw.versionId.toString()
-            ? selectPrize(machine, raw.randomWord).index
-            : null,
-        status: raw.status === 3 ? 'CLAIMED' : 'SETTLED',
+        prizeIndex: index,
+        status: delivered ? 'CLAIMED' : raw.status === PAID_IN_BNB ? 'PAID_BNB' : 'SETTLED',
       }
     }
 
-    if (raw.status === 4) throw new Error('SpinRefunded')
+    if (raw.status === REFUNDED) throw new Error('SpinRefunded')
     await sleep(3000)
   }
 
   if (cancelled.current) return null
   throw new Error('StillPending')
+}
+
+/**
+ * Waits for the settlement worker to buy and deliver the prize. Resolves with
+ * the delivered amount, or the BNB payout if the player took that instead.
+ * Calls `onSlow` once if nothing has happened after DELIVERY_SLOW_MS.
+ */
+async function pollForDelivery(
+  spinId: bigint,
+  publicClient: NonNullable<ReturnType<typeof usePublicClient>>,
+  cancelled: React.MutableRefObject<boolean>,
+  onSlow: () => void,
+): Promise<Partial<SpinRecord> | null> {
+  const started = Date.now()
+  let flagged = false
+
+  while (!cancelled.current && Date.now() - started < 30 * 60_000) {
+    const raw = await readSpin(spinId, publicClient).catch(() => null)
+    if (raw?.status === DELIVERED) {
+      const decimals = tokenByAddress(raw.rewardToken)?.decimals ?? null
+      return {
+        status: 'CLAIMED',
+        rewardAmountUnits: raw.deliveredAmount.toString(),
+        rewardAmount: decimals !== null ? unitsToNumber(raw.deliveredAmount, decimals) : null,
+        rewardAmountExact: true,
+      }
+    }
+    if (raw?.status === PAID_IN_BNB) return { status: 'PAID_BNB' }
+    if (!flagged && Date.now() - started > DELIVERY_SLOW_MS) {
+      flagged = true
+      onSlow()
+    }
+    await sleep(3000)
+  }
+  return null
 }
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {

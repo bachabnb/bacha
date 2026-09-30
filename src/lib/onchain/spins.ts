@@ -1,9 +1,10 @@
 import 'server-only'
-import { decodeEventLog, parseAbiItem } from 'viem'
+import { decodeEventLog, formatEther, parseAbiItem, parseUnits } from 'viem'
 import { publicClient, gameAddress } from './client'
 import { bachaGameAbi } from '../contracts/abis'
 import { tokenByAddress } from '../tokens'
-import { machineByTier } from '../machine'
+import { machineByTier, bnbUsdOf } from '../machine'
+import { getMarketSnapshot, quoteFor } from '../market'
 import { rarityFromIndex } from '../rarity'
 import { unitsToNumber } from '../format'
 import type { SpinRecord, SpinStatus } from '../spin/types'
@@ -24,7 +25,7 @@ const SPIN_REQUESTED = parseAbiItem(
 )
 
 const SPIN_CLAIMED = parseAbiItem(
-  'event SpinClaimed(uint256 indexed spinId, address indexed player, address indexed rewardToken, uint128 rewardAmount, address caller)',
+  'event SpinDelivered(uint256 indexed spinId, address indexed player, address indexed rewardToken, uint96 rewardValue, uint256 amountOut, address caller)',
 )
 
 /** Recent window scanned for transaction links. Small enough for capped providers. */
@@ -39,7 +40,8 @@ const LINK_BUDGET_MS = 2_500
 const LINK_BACKOFF_MS = 5 * 60_000
 let linksDisabledUntil = 0
 
-const STATUS: Record<number, SpinStatus> = { 1: 'PENDING', 2: 'SETTLED', 3: 'CLAIMED', 4: 'REFUNDED' }
+// BachaGame.SpinStatus: 3 is Delivered, which the UI calls CLAIMED — the reward is in the wallet.
+const STATUS: Record<number, SpinStatus> = { 1: 'PENDING', 2: 'SETTLED', 3: 'CLAIMED', 4: 'PAID_BNB', 5: 'REFUNDED' }
 
 type ContractSpin = {
   player: `0x${string}`
@@ -50,8 +52,10 @@ type ContractSpin = {
   requestedAt: bigint
   settledAt: bigint
   payment: bigint
+  reserve: bigint
   rewardToken: `0x${string}`
-  rewardAmount: bigint
+  rewardValue: bigint
+  deliveredAmount: bigint
   requestId: bigint
   randomWord: bigint
   prizeTableHash: `0x${string}`
@@ -130,7 +134,7 @@ async function readSpins(ids: bigint[]): Promise<SpinRecord[]> {
   })
 
   // The prize index is not stored; the contract's own walk reproduces it.
-  const settled = found.filter((s) => s.raw.status === 2 || s.raw.status === 3)
+  const settled = found.filter((s) => s.raw.status >= 2 && s.raw.status <= 4)
   const previews = await publicClient.multicall({
     contracts: settled.map(
       (s) =>
@@ -147,20 +151,32 @@ async function readSpins(ids: bigint[]): Promise<SpinRecord[]> {
     if (p.status === 'success') prizeIndex.set(settled[i].id, Number((p.result as readonly unknown[])[0]))
   })
 
-  const links = await recentLinks(ids)
+  const [links, market] = await Promise.all([recentLinks(ids), getMarketSnapshot().catch(() => null)])
 
   return found.map(({ id, raw }) => {
     const key = id.toString()
     const status = STATUS[raw.status] ?? 'PENDING'
-    const hasReward = status === 'SETTLED' || status === 'CLAIMED'
+    const hasReward = status === 'SETTLED' || status === 'CLAIMED' || status === 'PAID_BNB'
+    const delivered = status === 'CLAIMED'
     const token = hasReward ? tokenByAddress(raw.rewardToken) : undefined
     const requestedAt = Number(raw.requestedAt) * 1000
+    const machine = machineByTier(raw.tier)
+
+    // Delivered: exactly what arrived. Otherwise an estimate of what the value
+    // buys at the current price — shown as approximate.
+    let rewardUnits: bigint | null = null
+    if (delivered) rewardUnits = raw.deliveredAmount
+    else if (status === 'SETTLED' && token && machine) {
+      const price = market ? quoteFor(market, raw.rewardToken)?.priceUsd : null
+      const valueUsd = Number(formatEther(raw.rewardValue)) * bnbUsdOf(machine)
+      if (price) rewardUnits = parseUnits((valueUsd / price).toFixed(token.decimals), token.decimals)
+    }
 
     return {
       id: key,
       mode: 'onchain',
       player: raw.player.toLowerCase() as `0x${string}`,
-      machineId: machineByTier(raw.tier)?.id ?? `tier-${raw.tier}`,
+      machineId: machine?.id ?? `tier-${raw.tier}`,
       tierId: raw.tier,
       machineVersion: raw.versionId.toString(),
       prizeTableHash: raw.prizeTableHash,
@@ -170,8 +186,10 @@ async function readSpins(ids: bigint[]): Promise<SpinRecord[]> {
       requestId: raw.requestId.toString(),
       randomWord: hasReward ? raw.randomWord.toString() : null,
       rewardTokenAddress: hasReward ? (raw.rewardToken.toLowerCase() as `0x${string}`) : null,
-      rewardAmountUnits: hasReward ? raw.rewardAmount.toString() : null,
-      rewardAmount: hasReward && token ? unitsToNumber(raw.rewardAmount, token.decimals) : null,
+      rewardValueWei: hasReward ? raw.rewardValue.toString() : null,
+      rewardAmountUnits: rewardUnits !== null ? rewardUnits.toString() : null,
+      rewardAmount: rewardUnits !== null && token ? unitsToNumber(rewardUnits, token.decimals) : null,
+      rewardAmountExact: delivered,
       rarity: hasReward ? rarityFromIndex(raw.rarity) : null,
       prizeIndex: prizeIndex.get(id) ?? null,
       status,

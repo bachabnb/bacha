@@ -32,8 +32,8 @@ export default async function DocsPage({ params }: { params: Promise<{ locale: s
           </h1>
           <p className="mt-5 text-[1rem] leading-relaxed text-foreground-secondary">
             {zh
-              ? '合约、随机性、金库安全与代币配置——足够你判断这台机器值不值得信。'
-              : 'Contracts, randomness, treasury safety and token configuration — enough to judge whether this machine is worth trusting.'}
+              ? '合约、随机性、资金池安全与代币配置——足够你判断这台机器值不值得信。'
+              : 'Contracts, randomness, bankroll safety and token configuration — enough to judge whether this machine is worth trusting.'}
           </p>
         </div>
         <div className="relative mx-auto lg:sticky lg:top-28">
@@ -71,23 +71,24 @@ export default async function DocsPage({ params }: { params: Promise<{ locale: s
           <p>
             <Code>BachaGame</Code>
             {zh
-              ? ' 负责档位、奖池表版本、转动、随机性请求与结算、以及领取。'
-              : ' holds tiers, prize-table versions, spins, the randomness request and settlement, and claims.'}
-          </p>
-          <p>
-            <Code>BachaVault</Code>
-            {zh
-              ? ' 保管奖励库存并执行发放。它不能动用任何已被转动占用的资产——可提取额度等于余额减去全部欠付，欠付由游戏合约计算。'
-              : ' custodies reward inventory and performs payouts. It cannot release anything a spin has a claim on: withdrawable equals balance minus everything owed, and the game contract is the single source of that number.'}
+              ? ' 负责档位、奖池表版本、转动、随机性请求与结算、BNB 资金池，以及奖品发放。'
+              : ' holds tiers, prize-table versions, spins, the randomness request and settlement, the BNB bankroll, and prize delivery.'}
           </p>
           <p>
             {zh
-              ? '随机数回调只写存储——不转账、不调用外部合约、不做无界循环。发放是一个独立的、任何人都能触发的 '
-              : 'The VRF callback writes storage and nothing else — no transfers, no external calls, no unbounded loops. Moving the prize is a separate, permissionless '}
-            <Code>claimFor(spinId)</Code>
+              ? '没有单独的金库。游戏合约只持有 BNB，每份奖品都是一个固定的 BNB 价值。已欠付的部分无法被提走：可提取额度等于余额减去在途转动的预留额与已结算未发放的奖品价值。'
+              : 'There is no separate vault. The game holds only BNB, and every prize is a fixed BNB value. Nothing owed can be withdrawn: withdrawable equals balance minus the reserve behind every pending spin and the value of every settled, undelivered prize.'}
+          </p>
+          <p>
             {zh
-              ? '，收款地址在随机数存在之前就已写死，因此结算机器人可以代为触发，却无法改变收款人。'
-              : ', whose destination was fixed before randomness existed — so a settlement bot can trigger it on a player’s behalf without being able to redirect anything.'}
+              ? '随机数回调只写存储——不转账、不兑换、不调用外部合约、不做无界循环。买入奖品是独立的一步 '
+              : 'The randomness callback writes storage and nothing else — no transfers, no swaps, no external calls, no unbounded loops. Buying the prize is a separate step, '}
+            <Code>deliver(spinId, route, minOut, deadline)</Code>
+            {zh
+              ? '：它在 PancakeSwap 上把奖品的 BNB 价值兑换成对应股票，直接发到玩家钱包。结算机器人持有 SETTLER_ROLE，可以代玩家调用，但只能选择兑换路径与最低输出——代币、金额与收款人都由合约锁定，合约还会检查路径以 WBNB 开头、以奖品代币结尾，且只经过已批准的中转代币。玩家也可以改用 '
+              : ', which swaps the prize’s BNB value into the stock on PancakeSwap, straight to the player. The settlement bot holds SETTLER_ROLE and can call it on a player’s behalf, but it only picks the route and the minimum output: the contract fixes the token, the amount and the recipient, and checks that the route starts at WBNB, ends at the prize token and uses only approved hops. A player can instead take the prize in BNB with '}
+            <Code>payInBnb(spinId)</Code>
+            {zh ? ' 直接领取 BNB。' : '.'}
           </p>
         </Section>
 
@@ -111,16 +112,16 @@ export default async function DocsPage({ params }: { params: Promise<{ locale: s
           </p>
         </Section>
 
-        <Section id="treasury" title={zh ? '金库安全' : 'Treasury safety'}>
+        <Section id="treasury" title={zh ? '资金池安全' : 'Bankroll safety'}>
           <p>
             {zh
-              ? 'Bacha 不会产生它付不起的奖励。接受新转动之前，合约会检查金库是否持有足够覆盖最坏情况的每一种资产——即所有在途转动同时命中该资产最大奖项。'
-              : 'Bacha never produces a reward it cannot pay. Before accepting a spin, the contract checks the vault holds enough of every asset in the table to cover the worst case on top of everything already owed — that is, every in-flight spin landing on that asset’s largest entry at once.'}
+              ? 'Bacha 不会承诺它付不起的奖品。每次在途转动都会预留其奖池表最大奖与自身付款两者中的较大值；每份已结算未发放的奖品都按全额计为欠付；只有 BNB 余额足以覆盖全部这些时，合约才接受新的转动。'
+              : 'Bacha never promises a prize it cannot pay. Every pending spin reserves the larger of its table’s biggest prize and its own payment; every settled, undelivered prize is owed in full; and a new spin is refused unless the BNB balance covers all of it.'}
           </p>
           <p>
             {zh
-              ? '库存不足时，受影响的机型直接拒绝新转动，已在途的义务不受任何影响。'
-              : 'When inventory falls short, the affected machine refuses new spins outright and pending obligations are left untouched.'}
+              ? '资金池不足时，受影响的机型直接拒绝新转动，已在途的义务不受任何影响。由于奖品以 BNB 价值计，支付率由奖池表固定——代币价格涨跌不会让机器资不抵债，也就不需要任何机制去重新调整。'
+              : 'When the bankroll falls short, the affected machine refuses new spins outright and pending obligations are left untouched. Because prizes are BNB values, the payout rate is fixed by the table — token prices moving cannot make the machine insolvent, so nothing needs to rescale it.'}
           </p>
         </Section>
 
@@ -171,8 +172,8 @@ export default async function DocsPage({ params }: { params: Promise<{ locale: s
             q={zh ? '奖励会自动到账吗？' : 'Are rewards sent automatically?'}
             a={
               zh
-                ? '领取是独立的一步，任何人都能触发，但收款地址在随机数存在之前就已确定，无法更改。你也可以自己领取。'
-                : 'Claiming is a separate, permissionless step — but the recipient was fixed before randomness existed and cannot be changed. You can always claim it yourself.'
+                ? '结算机器人可以在转动结算后替你发放奖品——把它的 BNB 价值兑换成对应股票并发到你的钱包。它只能选择兑换路径，永远无法改变代币、金额或收款人。你也始终可以自己发放，或改为直接领取 BNB。'
+                : 'A settlement bot can deliver your prize once the spin settles — swapping its BNB value into the stock and sending it to your wallet. It chooses only the route, never the token, the amount or the recipient. You can always deliver it yourself, or take the prize in BNB instead.'
             }
           />
         </Section>

@@ -11,6 +11,30 @@ Ledger (`--ledger`).
 
 ---
 
+## Buy-at-spin (current design)
+
+Prizes are no longer stockpiled. Each prize is a fixed amount of BNB, and the
+moment a spin settles the worker swaps that BNB into the stock on PancakeSwap
+and sends it to the player (`BachaGame.deliver`). If no route fills, the
+player can take the prize in BNB (`payInBnb`). The house holds only BNB.
+
+What that changes below:
+
+- There is **no vault, treasury worker or solvency governor**. Ignore any step
+  that stocks inventory, grants TREASURER/OPERATOR roles to worker wallets, or
+  runs `treasury:*` / `governor:*`.
+- **The bankroll is BNB in the game contract.** A pending spin needs the
+  biggest prize minus the spin price — about 0.0034 BNB ($2.60) — so 0.1 BNB
+  covers ~29 spins at once. Fund it with `cast send $BACHA_GAME_ADDRESS
+  "fund()" --value <amount>ether`.
+- **One worker.** The randomness worker also delivers prizes: give it
+  `BACHA_GAME_ADDRESS`; Configure grants its wallet SETTLER_ROLE.
+- **Deploy** reuses the existing randomness beacon when
+  `BACHA_RANDOMNESS_ADDRESS` is set, then **Configure** (admin) connects the
+  new game to it and, with `BACHA_OLD_GAME_ADDRESS`, cuts the old game off.
+
+---
+
 ## The numbers
 
 Prices from 2026-09-30 (BNB $763.60). Gas on BNB Chain was 0.05 gwei;

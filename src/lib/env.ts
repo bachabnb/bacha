@@ -25,7 +25,6 @@ export const publicEnv = {
   rpcUrl: optional(process.env.NEXT_PUBLIC_BSC_RPC_URL) ?? DEFAULT_RPC[chainId],
   walletConnectProjectId: optional(process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID),
   gameAddress: normaliseAddress(process.env.NEXT_PUBLIC_BACHA_GAME_ADDRESS),
-  vaultAddress: normaliseAddress(process.env.NEXT_PUBLIC_BACHA_VAULT_ADDRESS),
   randomnessAddress: normaliseAddress(process.env.NEXT_PUBLIC_BACHA_RANDOMNESS_ADDRESS),
   siteUrl: optional(process.env.NEXT_PUBLIC_SITE_URL) ?? 'http://localhost:3000',
   /** Shows the environment ribbon. Never set in a production deploy. */
@@ -40,9 +39,7 @@ function normaliseAddress(value: string | undefined): `0x${string}` | undefined 
 }
 
 /** True once real contracts are wired up on the configured chain. */
-export const contractsConfigured = Boolean(
-  publicEnv.gameAddress && publicEnv.vaultAddress && publicEnv.randomnessAddress,
-)
+export const contractsConfigured = Boolean(publicEnv.gameAddress && publicEnv.randomnessAddress)
 
 /**
  * The machine runs in one of two modes and the UI always says which.

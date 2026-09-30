@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * Reward assets are configuration, not code: enabling or disabling one is a
- * change to `data/tokens.json` plus a vault approval, never an edit to a
+ * change to `data/tokens.json` plus a game approval, never an edit to a
  * component. This page is the read side of that, with the verification trail
  * for each entry.
  */
@@ -17,7 +17,7 @@ export default function AdminAssets() {
     <>
       <PageHeader
         title="Reward assets"
-        description="Every asset the machine is allowed to hold. Adding one means verifying its contract address against independent sources, approving it on the vault, then including it in a published prize table."
+        description="Every asset the machine is allowed to hold. Adding one means verifying its contract address against independent sources, approving it on the game, then including it in a published prize table."
       />
 
       <Card title="Verification policy" className="mb-4">
@@ -93,10 +93,10 @@ export default function AdminAssets() {
 
       <p className="mt-4 max-w-3xl text-[0.78rem] leading-relaxed text-foreground-muted">
         Assets flagged with transfer notes need care. Decimals are read from the contract and never
-        assumed, and the vault credits the measured balance delta rather than the requested amount,
-        so a fee-on-transfer asset cannot leave the accounting short. Thin on-DEX liquidity keeps
-        prize amounts small — a reward that cannot be sold near the shown price is not worth what
-        it appears to be.
+        assumed, and a delivery records the player&apos;s measured balance change rather than a quoted
+        amount, so a fee-on-transfer asset cannot misstate what was paid. Thin on-DEX liquidity keeps
+        prize values small — a prize is bought with a swap at delivery, and a pool that cannot absorb
+        it fills at a worse price.
       </p>
     </>
   )

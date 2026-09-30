@@ -46,9 +46,9 @@ export default function AdminMachines() {
       </div>
 
       <p className="mt-4 max-w-3xl text-[0.78rem] leading-relaxed text-foreground-muted">
-        Reference RTP is computed from prices captured when the table was authored. It is a design
-        aid for the operator and is never shown to players as a promise — prices move, and the
-        contract settles token amounts, not value.
+        Reference RTP is expected prize value over price. Every prize is a fixed BNB value, so in BNB
+        the rate is exactly what the table says; only the token amount a prize buys moves, and that
+        is decided by the swap at delivery.
       </p>
     </>
   )

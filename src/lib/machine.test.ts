@@ -53,7 +53,7 @@ describe('prize selection', () => {
     const first = selectPrize(machine, word)
     const second = selectPrize(machine, word)
     expect(second.index).toBe(first.index)
-    expect(second.prize.amountUnits).toBe(first.prize.amountUnits)
+    expect(second.prize.valueWei).toBe(first.prize.valueWei)
   })
 })
 
@@ -107,17 +107,17 @@ describe('prize table integrity', () => {
     }
   })
 
-  it('amounts are exact base units that match the token decimals', () => {
+  it('values are exact wei that match the BNB figure', () => {
     for (const machine of machines) {
       for (const prize of machine.prizes) {
         const token = tokenByAddress(prize.token)!
         expect(prize.decimals).toBe(token.decimals)
-        // A whole number of base units — never a float.
-        expect(prize.amountUnits).toMatch(/^\d+$/)
-        expect(BigInt(prize.amountUnits) > 0n).toBe(true)
-        // The display amount and the base units describe the same quantity.
-        const reconstructed = Number(BigInt(prize.amountUnits)) / 10 ** token.decimals
-        expect(reconstructed).toBeCloseTo(prize.amount, 6)
+        // A whole number of wei — never a float. This is what the contract stores.
+        expect(prize.valueWei).toMatch(/^\d+$/)
+        expect(BigInt(prize.valueWei) > 0n).toBe(true)
+        expect(Number(BigInt(prize.valueWei)) / 1e18).toBeCloseTo(prize.valueBnb, 12)
+        // The share estimate is display-only but must be positive.
+        expect(prize.amount).toBeGreaterThan(0)
       }
     }
   })

@@ -28,8 +28,10 @@ export async function GET() {
         token: p.token,
         symbol: p.symbol,
         decimals: p.decimals,
+        valueWei: p.valueWei,
+        valueBnb: p.valueBnb,
+        // Estimated at the reference price; the swap at delivery decides.
         amount: p.amount,
-        amountUnits: p.amountUnits,
         weight: p.weight,
         rarity: p.rarity,
       })),

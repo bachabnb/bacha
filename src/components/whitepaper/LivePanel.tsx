@@ -48,11 +48,6 @@ async function DeploymentMatrix() {
       ok: Boolean(publicEnv.gameAddress),
     },
     {
-      label: t('vault'),
-      value: publicEnv.vaultAddress ? t('deployed') : t('notDeployed'),
-      ok: Boolean(publicEnv.vaultAddress),
-    },
-    {
       label: t('randomness'),
       value: contractsConfigured ? t('commitReveal') : t('simulated'),
       ok: contractsConfigured,
@@ -65,7 +60,7 @@ async function DeploymentMatrix() {
   ]
 
   return (
-    <dl className="wp-block grid gap-px overflow-hidden rounded-[14px] border border-border bg-border sm:grid-cols-3 lg:grid-cols-6">
+    <dl className="wp-block grid gap-px overflow-hidden rounded-[14px] border border-border bg-border sm:grid-cols-5">
       {cells.map((cell) => (
         <div key={cell.label} className="bg-surface px-4 py-3.5">
           <dt className="text-[0.58rem] uppercase tracking-[0.16em] text-foreground-muted">
@@ -151,12 +146,11 @@ async function ContractsPanel() {
 
   const rows = [
     { name: 'BachaGame', address: publicEnv.gameAddress },
-    { name: 'BachaVault', address: publicEnv.vaultAddress },
     { name: 'BachaRandomness', address: beacon.address },
   ]
 
   return (
-    <div className="wp-block grid gap-px overflow-hidden rounded-[14px] border border-border bg-border sm:grid-cols-3">
+    <div className="wp-block grid gap-px overflow-hidden rounded-[14px] border border-border bg-border sm:grid-cols-2">
       {rows.map((row) => (
         <div key={row.name} className="bg-surface px-4 py-4">
           <p className="num text-[0.82rem] font-semibold text-foreground">{row.name}</p>

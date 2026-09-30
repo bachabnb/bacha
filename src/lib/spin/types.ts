@@ -1,6 +1,13 @@
 import type { Rarity } from '../rarity'
 
-export type SpinStatus = 'PENDING' | 'SETTLED' | 'CLAIMED' | 'REFUNDED'
+/**
+ * PENDING  — paid, waiting on randomness
+ * SETTLED  — prize decided, not yet bought for the player
+ * CLAIMED  — prize bought and delivered to the player's wallet
+ * PAID_BNB — the player took the prize's value in BNB instead
+ * REFUNDED — randomness never came; the payment went back
+ */
+export type SpinStatus = 'PENDING' | 'SETTLED' | 'CLAIMED' | 'PAID_BNB' | 'REFUNDED'
 
 /**
  * One spin, in the shape the UI consumes.
@@ -24,9 +31,17 @@ export interface SpinRecord {
   requestId: string | null
   randomWord: string | null
   rewardTokenAddress: `0x${string}` | null
+  /** BNB, in wei, the prize is worth — what the contract pays out. */
+  rewardValueWei?: string | null
+  /**
+   * Token base units the player received. Exact once delivered; before that,
+   * an estimate at the current price (see `rewardAmountExact`).
+   */
   rewardAmountUnits: string | null
   /** Whole token units, for display only. */
   rewardAmount: number | null
+  /** True once the prize was delivered and `rewardAmount` is what arrived. */
+  rewardAmountExact?: boolean
   rarity: Rarity | null
   prizeIndex: number | null
   status: SpinStatus

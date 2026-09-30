@@ -13,7 +13,7 @@ const NAV = [
   { href: '/admin/assets', label: 'Reward assets' },
   { href: '/admin/machines', label: 'Machines' },
   { href: '/admin/tables', label: 'Prize tables' },
-  { href: '/admin/vault', label: 'Vault' },
+  { href: '/admin/vault', label: 'Bankroll' },
   { href: '/admin/spins', label: 'Spins' },
   { href: '/admin/settings', label: 'Settings' },
 ]

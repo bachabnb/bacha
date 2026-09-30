@@ -1,6 +1,6 @@
 import 'server-only'
 import { machines, machineById, selectPrize, type Machine } from '../machine'
-import { unitsToNumber } from '../format'
+import { parseUnits } from 'viem'
 import type { SpinRecord } from '../spin/types'
 import { demoRandomWord } from './randomness'
 
@@ -32,8 +32,10 @@ function settleAgainst(machine: Machine, word: bigint) {
   return {
     prizeIndex: index,
     rewardTokenAddress: prize.token,
-    rewardAmountUnits: prize.amountUnits,
-    rewardAmount: unitsToNumber(BigInt(prize.amountUnits), prize.decimals),
+    rewardValueWei: prize.valueWei,
+    // What the value buys at the reference price; a demo has no real swap.
+    rewardAmountUnits: parseUnits(prize.amount.toFixed(prize.decimals), prize.decimals).toString(),
+    rewardAmount: prize.amount,
     rarity: prize.rarity,
   }
 }
@@ -62,6 +64,7 @@ function seed() {
       requestId: `0x${(nextId * 0x9e3779b1).toString(16).padStart(16, '0')}`,
       randomWord: word.toString(),
       status: i % 9 === 0 ? 'SETTLED' : 'CLAIMED',
+      rewardAmountExact: i % 9 !== 0,
       txHash: null,
       claimTxHash: null,
       ...outcome,
@@ -127,6 +130,7 @@ export function claimDemoSpin(id: string): SpinRecord | undefined {
   const record = spins.find((s) => s.id === id)
   if (!record || record.status !== 'SETTLED') return record
   record.status = 'CLAIMED'
+  record.rewardAmountExact = true
   return record
 }
 

@@ -18,5 +18,4 @@ export const publicClient = createPublicClient({
 })
 
 export const gameAddress = publicEnv.gameAddress
-export const vaultAddress = publicEnv.vaultAddress
 export const randomnessAddress = publicEnv.randomnessAddress

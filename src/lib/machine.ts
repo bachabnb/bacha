@@ -8,10 +8,18 @@ export interface PrizeEntry {
   token: `0x${string}`
   symbol: string
   decimals: number
-  /** Whole token units, for display. */
+  /**
+   * BNB, in wei as a decimal string, spent on this token when the prize is
+   * won. The number the contract stores — the prize *is* this value.
+   */
+  valueWei: string
+  /** `valueWei` in BNB, for display. */
+  valueBnb: number
+  /**
+   * Shares the value buys at the reference (or live) price. Display only: the
+   * swap at delivery decides the real amount.
+   */
   amount: number
-  /** Exact base units, as a decimal string. The number the contract stores. */
-  amountUnits: string
   weight: number
   rarity: Rarity
   /** Snapshot value at table-authoring time. Never used for settlement. */
@@ -82,8 +90,9 @@ export const machines: Machine[] = machineConfig.machines.map((m) => ({
     token: p.token as `0x${string}`,
     symbol: p.symbol,
     decimals: p.decimals,
+    valueWei: p.valueWei,
+    valueBnb: p.valueBnb,
     amount: p.amount,
-    amountUnits: p.amountUnits,
     weight: p.weight,
     rarity: rarityFromIndex(p.rarity),
     referenceValueUsd: p.valueUsd,
@@ -161,4 +170,9 @@ export function selectPrize(machine: Machine, randomWord: bigint): { index: numb
 /** Rarity breakdown for the probability bar. */
 export function rarityBreakdown(machine: Machine): { rarity: Rarity; share: number }[] {
   return machine.rarityShare.map((share, i) => ({ rarity: rarityFromIndex(i), share }))
+}
+
+/** The BNB/USD rate a machine's reference prices were built at. */
+export function bnbUsdOf(machine: Machine): number {
+  return machine.priceBnb > 0 ? machine.referencePriceUsd / machine.priceBnb : 0
 }

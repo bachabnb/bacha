@@ -40,7 +40,6 @@ export default function AdminSettings() {
         <Card title="Contracts">
           <dl className="space-y-3 text-[0.82rem]">
             <Row label="BachaGame" value={publicEnv.gameAddress ?? 'Not set'} />
-            <Row label="BachaVault" value={publicEnv.vaultAddress ?? 'Not set'} />
             <Row label="Randomness beacon" value={vrf.address ?? 'Not deployed'} />
           </dl>
           <div className="mt-4">
@@ -83,7 +82,7 @@ export default function AdminSettings() {
       <Card title="Emergency pause" className="mt-4">
         <p className="text-[0.86rem] leading-relaxed text-foreground-secondary">
           Pausing stops new spins immediately. It does not touch spins already in flight: those keep
-          their locked prize table, settle normally when randomness arrives, and remain claimable.
+          their locked prize table, settle normally when randomness arrives, and remain deliverable.
         </p>
         <p className="mt-3 text-[0.8rem] leading-relaxed text-foreground-muted">
           Execute with the operator wallet:{' '}

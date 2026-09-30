@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useTranslations } from 'next-intl'
+import { formatEther } from 'viem'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { Link } from '@/i18n/routing'
 import { Capsule } from '@/components/brand/Capsule'
@@ -30,12 +31,16 @@ export function ResultCard({
   valueUsd,
   onSpinAgain,
   onClaim,
+  deliverySlow = false,
 }: {
   spin: SpinRecord | null
   phase: SpinPhase
   valueUsd: number | null
   onSpinAgain: () => void
+  /** Demo: claim the reward. Onchain: take the prize in BNB instead. */
   onClaim: () => void
+  /** Onchain delivery is taking long enough to offer BNB instead. */
+  deliverySlow?: boolean
 }) {
   const t = useTranslations('play.reveal')
   const reduce = useReducedMotion()
@@ -46,6 +51,7 @@ export function ResultCard({
   const rarity = spin?.rarity ?? 'COMMON'
   const style = rarityStyle[rarity]
   const token = spin?.rewardTokenAddress ? tokenByAddress(spin.rewardTokenAddress) : undefined
+  const onchain = spin?.mode === 'onchain'
 
   useEffect(() => {
     if (phase === 'revealing') play(style.celebrate ? 'epic' : 'reveal')
@@ -97,7 +103,7 @@ export function ResultCard({
                 transition={{ delay: 0.18, duration: 0.4 }}
               >
                 {spin.rewardAmount != null
-                  ? formatTokenAmount(spin.rewardAmount, token?.symbol ?? '')
+                  ? `${spin.rewardAmountExact === false ? '≈ ' : ''}${formatTokenAmount(spin.rewardAmount, token?.symbol ?? '')}`
                   : '—'}
               </motion.div>
 
@@ -115,14 +121,30 @@ export function ResultCard({
             </div>
           </div>
 
+          {onchain && (
+            <p className="relative mt-4 text-[0.8rem] leading-snug text-foreground-secondary">
+              {spin.status === 'SETTLED'
+                ? deliverySlow
+                  ? t('deliverySlow', { symbol: token?.symbol ?? '' })
+                  : t('delivering', { symbol: token?.symbol ?? '' })
+                : spin.status === 'CLAIMED'
+                  ? t('delivered')
+                  : spin.status === 'PAID_BNB'
+                    ? t('paidBnb', { amount: spin.rewardValueWei ? formatEther(BigInt(spin.rewardValueWei)) : '' })
+                    : null}
+            </p>
+          )}
+
           <div className="relative mt-5 flex flex-wrap gap-2">
-            {spin.status === 'SETTLED' && (
+            {spin.status === 'SETTLED' && (!onchain || deliverySlow) && (
               <button
                 onClick={onClaim}
                 disabled={phase === 'claiming'}
                 className="inline-flex h-10 flex-1 items-center justify-center rounded-[11px] bg-brand px-4 text-[0.86rem] font-semibold text-brand-foreground transition-colors hover:bg-brand-hover disabled:opacity-50"
               >
-                {phase === 'claiming' ? t('claiming') : t('claim')}
+                {phase === 'claiming'
+                  ? t(onchain ? 'takingBnb' : 'claiming')
+                  : t(onchain ? 'takeBnb' : 'claim')}
               </button>
             )}
             <button

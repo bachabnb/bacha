@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { formatEther } from 'viem'
 import { Button } from '@/components/ui/Button'
 import { OddsBar } from '@/components/ui/OddsBar'
 import { TokenMark } from '@/components/ui/TokenMark'
@@ -8,36 +9,59 @@ import { Card, Metric, StatusPill } from './AdminPrimitives'
 import { rewardTokens, tokenByAddress } from '@/lib/tokens'
 import { machines } from '@/lib/machine'
 import { RARITIES, rarityIndex } from '@/lib/rarity'
-import { previewTable, fundableSpins, type DraftPrize } from '@/lib/admin/preview'
-import { numberToUnits, unitsToNumber, formatTokenAmount, formatPercent } from '@/lib/format'
-import { cn } from '@/lib/cn'
+import { previewTable, fundableSpins, bnbToWei, type DraftPrize } from '@/lib/admin/preview'
+import { formatBnb, formatPercent } from '@/lib/format'
 
 interface Row extends DraftPrize {
-  /** Whole-token input value, kept alongside the exact base units. */
-  amountInput: string
+  /** BNB input as typed, kept alongside the exact wei value. */
+  valueInput: string
+}
+
+interface DraftTier {
+  id: number
+  label: string
+  /** Price in BNB as typed, and the exact wei it parses to ('0' if invalid). */
+  priceInput: string
+  price: string
+}
+
+/** What the tables page could read from the game; zeros when it could not. */
+export interface EditorBankroll {
+  available: boolean
+  /** Balance above every obligation — the BNB free to back new spins. */
+  withdrawableWei: string
+  maxPrizeValueWei: string
 }
 
 /**
  * Prize-table editor.
  *
- * Amounts are authored in whole tokens but stored as exact base units, so a
- * float never reaches a published table. Every check the contract performs is
- * mirrored here, and publishing is blocked until the draft would actually
- * succeed onchain — an operator should not learn about a bad table from a
- * reverted transaction.
+ * A prize is a BNB value spent on a token at delivery. Values are typed in BNB
+ * but parsed from the string straight into exact wei, so a float never reaches
+ * a published table. Every check the contract performs is mirrored here, and
+ * publishing is blocked until the draft would actually succeed onchain — an
+ * operator should not learn about a bad table from a reverted transaction.
  */
-export function PrizeTableEditor({ vaultBalances }: { vaultBalances: Record<string, string> }) {
+export function PrizeTableEditor({ bankroll }: { bankroll: EditorBankroll }) {
   const tokens = rewardTokens()
   const [rows, setRows] = useState<Row[]>(() => seedFrom('quick'))
+  const [tier, setTier] = useState<DraftTier>(() => tierFrom('quick'))
 
   const preview = useMemo(
-    () => previewTable(rows.map(({ token, amountUnits, weight, rarity }) => ({ token, amountUnits, weight, rarity }))),
-    [rows],
+    () =>
+      previewTable(
+        rows.map(({ token, value, weight, rarity }) => ({ token, value, weight, rarity })),
+        {
+          priceWei: tier.price,
+          maxPrizeValueWei: bankroll.available ? bankroll.maxPrizeValueWei : undefined,
+        },
+      ),
+    [rows, tier.price, bankroll.available, bankroll.maxPrizeValueWei],
   )
 
   const spinsFundable = useMemo(
-    () => fundableSpins(preview.perSpinLiability, vaultBalances),
-    [preview.perSpinLiability, vaultBalances],
+    () => (bankroll.available ? fundableSpins(preview.perSpinBankrollWei, bankroll.withdrawableWei) : undefined),
+    [preview.perSpinBankrollWei, bankroll.available, bankroll.withdrawableWei],
   )
 
   function update(index: number, patch: Partial<Row>) {
@@ -45,17 +69,17 @@ export function PrizeTableEditor({ vaultBalances }: { vaultBalances: Record<stri
       current.map((row, i) => {
         if (i !== index) return row
         const next = { ...row, ...patch }
-        if (patch.amountInput !== undefined || patch.token !== undefined) {
-          const token = tokenByAddress(next.token)
-          const parsed = Number(next.amountInput)
-          next.amountUnits =
-            token && Number.isFinite(parsed) && parsed > 0
-              ? numberToUnits(parsed, token.decimals).toString()
-              : '0'
+        if (patch.valueInput !== undefined) {
+          next.value = (bnbToWei(next.valueInput) ?? 0n).toString()
         }
         return next
       }),
     )
+  }
+
+  function load(machineId: string) {
+    setRows(seedFrom(machineId))
+    setTier(tierFrom(machineId))
   }
 
   function addRow() {
@@ -64,8 +88,8 @@ export function PrizeTableEditor({ vaultBalances }: { vaultBalances: Record<stri
       ...current,
       {
         token: token.address,
-        amountInput: '1',
-        amountUnits: numberToUnits(1, token.decimals).toString(),
+        valueInput: '0.001',
+        value: (bnbToWei('0.001') ?? 0n).toString(),
         weight: 100,
         rarity: 0,
       },
@@ -85,7 +109,7 @@ export function PrizeTableEditor({ vaultBalances }: { vaultBalances: Record<stri
               {machines.map((m) => (
                 <button
                   key={m.id}
-                  onClick={() => setRows(seedFrom(m.id))}
+                  onClick={() => load(m.id)}
                   className="text-[0.76rem] text-foreground-muted underline decoration-border underline-offset-4 hover:text-foreground"
                 >
                   Load {m.label}
@@ -95,13 +119,35 @@ export function PrizeTableEditor({ vaultBalances }: { vaultBalances: Record<stri
           </div>
         }
       >
+        <div className="mb-5 flex flex-wrap items-end gap-4">
+          <label className="block">
+            <span className="text-[0.62rem] uppercase tracking-[0.15em] text-foreground-muted">
+              Tier {tier.id} price (BNB)
+            </span>
+            <input
+              value={tier.priceInput}
+              onChange={(e) =>
+                setTier((t) => ({
+                  ...t,
+                  priceInput: e.target.value,
+                  price: (bnbToWei(e.target.value) ?? 0n).toString(),
+                }))
+              }
+              inputMode="decimal"
+              aria-label="Tier price in BNB"
+              className="num mt-1.5 block h-8 w-32 rounded-[7px] border border-border bg-surface px-2 text-[0.8rem] text-foreground focus:border-brand focus:outline-none"
+            />
+          </label>
+          <span className="num pb-2 text-[0.68rem] text-foreground-muted">{tier.price} wei</span>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full min-w-[46rem] text-left text-[0.82rem]">
             <thead>
               <tr className="text-[0.6rem] uppercase tracking-[0.14em] text-foreground-muted">
                 <th className="pb-3 font-normal">Asset</th>
-                <th className="pb-3 font-normal">Amount</th>
-                <th className="pb-3 font-normal">Base units</th>
+                <th className="pb-3 font-normal">Value (BNB)</th>
+                <th className="pb-3 font-normal">Wei</th>
                 <th className="pb-3 font-normal">Weight</th>
                 <th className="pb-3 font-normal">Chance</th>
                 <th className="pb-3 font-normal">Rarity</th>
@@ -132,15 +178,15 @@ export function PrizeTableEditor({ vaultBalances }: { vaultBalances: Record<stri
                     </td>
                     <td className="py-2.5 pr-3">
                       <input
-                        value={row.amountInput}
-                        onChange={(e) => update(i, { amountInput: e.target.value })}
+                        value={row.valueInput}
+                        onChange={(e) => update(i, { valueInput: e.target.value })}
                         inputMode="decimal"
-                        aria-label={`Entry ${i + 1} amount`}
+                        aria-label={`Entry ${i + 1} value in BNB`}
                         className="num h-8 w-28 rounded-[7px] border border-border bg-surface px-2 text-[0.8rem] text-foreground focus:border-brand focus:outline-none"
                       />
                     </td>
                     <td className="num py-2.5 pr-3 text-[0.68rem] text-foreground-muted">
-                      {row.amountUnits}
+                      {row.value}
                     </td>
                     <td className="py-2.5 pr-3">
                       <input
@@ -223,56 +269,48 @@ export function PrizeTableEditor({ vaultBalances }: { vaultBalances: Record<stri
           </div>
         </Card>
 
-        <Card title="Treasury impact">
-          <Metric
-            label="Spins currently fundable"
-            value={spinsFundable.toLocaleString()}
-            tone={spinsFundable === 0 ? 'danger' : spinsFundable < 50 ? 'brand' : 'default'}
-            hint="Limited by the scarcest asset at its worst case"
-          />
-
-          <div className="mt-5">
-            <div className="mb-2 text-[0.62rem] uppercase tracking-[0.15em] text-foreground-muted">
-              Maximum liability per spin
-            </div>
-            <ul className="space-y-1.5 text-[0.8rem]">
-              {preview.perSpinLiability.map((item) => {
-                const held = vaultBalances[item.address.toLowerCase()]
-                const token = tokenByAddress(item.address)
-                const heldAmount =
-                  held && token ? unitsToNumber(BigInt(held), token.decimals) : 0
-                const short = heldAmount < item.amount
-                return (
-                  <li key={item.address} className="flex items-baseline justify-between gap-3">
-                    <span className="num text-foreground-secondary">{item.symbol}</span>
-                    <span className={cn('num', short ? 'text-danger' : 'text-foreground')}>
-                      {formatTokenAmount(item.amount)}
-                      <span className="text-foreground-muted"> / {formatTokenAmount(heldAmount)} held</span>
-                    </span>
-                  </li>
-                )
-              })}
-            </ul>
+        <Card title="Economics">
+          <div className="grid grid-cols-2 gap-5">
+            <Metric
+              label="Expected value"
+              value={`${formatBnbNumber(preview.expectedValueBnb)} BNB`}
+              hint="Σ value × weight ÷ total weight"
+            />
+            <Metric
+              label="Payout rate"
+              value={preview.returnToPlayer !== null ? formatPercent(preview.returnToPlayer, 1) : '—'}
+              tone={preview.returnToPlayer !== null && preview.returnToPlayer > 1 ? 'danger' : 'default'}
+              hint="Expected value ÷ tier price"
+            />
+            <Metric label="Max prize" value={`${formatBnb(BigInt(preview.maxValueWei))} BNB`} />
+            <Metric
+              label="Bankroll per spin"
+              value={`${formatBnb(BigInt(preview.perSpinBankrollWei))} BNB`}
+              hint="max(max prize − price, 0)"
+            />
           </div>
-
-          <div className="mt-5">
-            <div className="mb-2 text-[0.62rem] uppercase tracking-[0.15em] text-foreground-muted">
-              Expected payout per spin
-            </div>
-            <ul className="space-y-1.5 text-[0.8rem]">
-              {preview.expectedPerSpin.map((item) => (
-                <li key={item.symbol} className="flex items-baseline justify-between gap-3">
-                  <span className="num text-foreground-secondary">{item.symbol}</span>
-                  <span className="num text-foreground">{formatTokenAmount(item.amount)}</span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-[0.7rem] leading-relaxed text-foreground-muted">
-              Token terms only. A dollar expectation would depend on a price feed, and no price feed
-              is allowed anywhere near settlement.
-            </p>
-          </div>
+          <p className="mt-4 text-[0.7rem] leading-relaxed text-foreground-muted">
+            Exact in BNB: the table fixes what every prize costs the house, whatever the tokens do.
+            Token amounts are decided by the swap at delivery and never enter this sum.
+          </p>
         </Card>
+
+        {spinsFundable !== undefined && (
+          <Card title="Bankroll impact">
+            <Metric
+              label="Spins currently fundable"
+              value={spinsFundable === null ? 'Unlimited' : spinsFundable.toLocaleString()}
+              tone={
+                spinsFundable === null ? 'default' : spinsFundable === 0 ? 'danger' : spinsFundable < 50 ? 'brand' : 'default'
+              }
+              hint={
+                spinsFundable === null
+                  ? 'The price covers the biggest prize'
+                  : `${formatBnb(BigInt(bankroll.withdrawableWei))} BNB free ÷ bankroll per spin`
+              }
+            />
+          </Card>
+        )}
 
         <Card title="Publish">
           <p className="text-[0.82rem] leading-relaxed text-foreground-secondary">
@@ -296,10 +334,11 @@ export function PrizeTableEditor({ vaultBalances }: { vaultBalances: Record<stri
                 {
                   prizes: rows.map((r) => ({
                     token: r.token,
-                    amount: r.amountUnits,
+                    value: r.value,
                     weight: r.weight,
                     rarity: r.rarity,
                   })),
+                  tiers: [{ id: tier.id, label: tier.label, price: tier.price }],
                 },
                 null,
                 2,
@@ -317,9 +356,25 @@ function seedFrom(machineId: string): Row[] {
   const machine = machines.find((m) => m.id === machineId) ?? machines[0]
   return machine.prizes.map((prize) => ({
     token: prize.token,
-    amountInput: String(prize.amount),
-    amountUnits: prize.amountUnits,
+    valueInput: formatEther(BigInt(prize.valueWei)),
+    value: prize.valueWei,
     weight: prize.weight,
     rarity: rarityIndex(prize.rarity),
   }))
+}
+
+/** The tier that sells the loaded machine, as the export's `tiers` entry. */
+function tierFrom(machineId: string): DraftTier {
+  const machine = machines.find((m) => m.id === machineId) ?? machines[0]
+  return {
+    id: machine.tierId,
+    label: machine.label,
+    priceInput: formatEther(machine.priceWei),
+    price: machine.priceWei.toString(),
+  }
+}
+
+/** Expected value is a weighted mean, so it can have more digits than any prize. */
+function formatBnbNumber(value: number): string {
+  return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
 }

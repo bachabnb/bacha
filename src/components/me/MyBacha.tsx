@@ -29,6 +29,9 @@ import type { SpinRecord } from '@/lib/spin/types'
  * column is an indicative valuation of what is currently held and is labelled
  * as such, because presenting it as a return would be misleading.
  */
+/** A settled prize still undelivered after this long can be taken in BNB. */
+const STUCK_AFTER_MS = 3 * 60_000
+
 export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
   const t = useTranslations('me')
   const { address, isConnected } = useAccount()
@@ -53,10 +56,16 @@ export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
     const unclaimed: SpinRecord[] = []
     const pending: SpinRecord[] = []
     const refundable: SpinRecord[] = []
+    // Settled prizes the worker has not managed to deliver for a while — the
+    // player can take their value in BNB instead.
+    const stuck: SpinRecord[] = []
     const now = Date.now()
     for (const spin of spins) {
       if (spin.rarity === 'RARE' || spin.rarity === 'EPIC') rare++
-      if (spin.status === 'SETTLED') unclaimed.push(spin)
+      if (spin.status === 'SETTLED') {
+        unclaimed.push(spin)
+        if (spin.settledAt != null && now - spin.settledAt > STUCK_AFTER_MS) stuck.push(spin)
+      }
       if (spin.status === 'PENDING') {
         if (spin.refundableAt != null && spin.refundableAt <= now) refundable.push(spin)
         else pending.push(spin)
@@ -66,28 +75,19 @@ export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
         rewardValue += quote.priceUsd * spin.rewardAmount
       }
     }
-    return { total: spins.length, rewardValue, rare, unclaimed, pending, refundable }
+    return { total: spins.length, rewardValue, rare, unclaimed, stuck, pending, refundable }
   }, [spins, quotes])
 
   /** Send one game transaction from the connected wallet and wait for it to land. */
-  async function sendGameTx(functionName: 'claimMany' | 'refundExpiredSpin', args: readonly [bigint[]] | readonly [bigint]) {
+  async function sendGameTx(functionName: 'payInBnb' | 'refundExpiredSpin', spinId: bigint) {
     if (!publicEnv.gameAddress || !publicClient) throw new Error('noContracts')
-    const hash =
-      functionName === 'claimMany'
-        ? await writeContractAsync({
-            address: publicEnv.gameAddress,
-            abi: bachaGameAbi,
-            functionName,
-            args: args as readonly [bigint[]],
-            chainId: publicEnv.chainId,
-          })
-        : await writeContractAsync({
-            address: publicEnv.gameAddress,
-            abi: bachaGameAbi,
-            functionName,
-            args: args as readonly [bigint],
-            chainId: publicEnv.chainId,
-          })
+    const hash = await writeContractAsync({
+      address: publicEnv.gameAddress,
+      abi: bachaGameAbi,
+      functionName,
+      args: [spinId],
+      chainId: publicEnv.chainId,
+    })
     const receipt = await publicClient.waitForTransactionReceipt({ hash })
     if (receipt.status !== 'success') throw new Error('ClaimReverted')
   }
@@ -97,9 +97,9 @@ export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
     setError(null)
     try {
       if (spinMode === 'onchain') {
-        // One transaction for every settled spin. claimMany pays each to the
-        // wallet that bought it, so this can never redirect a reward.
-        await sendGameTx('claimMany', [summary.unclaimed.map((s) => BigInt(s.id))])
+        // Delivery is the worker's job. What the player can do themselves is
+        // take a stuck prize's value in BNB — one transaction each.
+        for (const spin of summary.stuck) await sendGameTx('payInBnb', BigInt(spin.id))
         reload()
         return
       }
@@ -124,7 +124,7 @@ export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
     setRefunding(true)
     setError(null)
     try {
-      for (const spin of summary.refundable) await sendGameTx('refundExpiredSpin', [BigInt(spin.id)])
+      for (const spin of summary.refundable) await sendGameTx('refundExpiredSpin', BigInt(spin.id))
     } catch (e) {
       setError(humanError(e))
     } finally {
@@ -160,11 +160,17 @@ export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
           </dl>
 
           <div className="mt-6 flex flex-wrap items-center gap-3">
-            {summary.unclaimed.length > 0 && (
-              <Button onClick={claimAll} disabled={claiming || refunding}>
-                {claiming ? t('claiming') : t('claimAll')}
-              </Button>
-            )}
+            {spinMode === 'onchain'
+              ? summary.stuck.length > 0 && (
+                  <Button onClick={claimAll} disabled={claiming || refunding}>
+                    {claiming ? t('claiming') : t('takeBnb', { count: summary.stuck.length })}
+                  </Button>
+                )
+              : summary.unclaimed.length > 0 && (
+                  <Button onClick={claimAll} disabled={claiming || refunding}>
+                    {claiming ? t('claiming') : t('claimAll')}
+                  </Button>
+                )}
             {summary.refundable.length > 0 && (
               <Button variant="secondary" onClick={refundAll} disabled={claiming || refunding}>
                 {refunding ? t('refunding') : t('refund', { count: summary.refundable.length })}
@@ -174,6 +180,12 @@ export function MyBacha({ quotes }: { quotes: Record<string, MarketQuote> }) {
               <Link href="/activity">{t('viewActivity')}</Link>
             </Button>
           </div>
+
+          {spinMode === 'onchain' && summary.unclaimed.length > summary.stuck.length && (
+            <p className="mt-4 max-w-2xl text-[0.8rem] text-foreground-muted">
+              {t('deliveringNote', { count: summary.unclaimed.length - summary.stuck.length })}
+            </p>
+          )}
 
           {summary.refundable.length > 0 ? (
             <p className="mt-4 max-w-2xl text-[0.8rem] text-foreground-secondary">

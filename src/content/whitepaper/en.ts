@@ -27,7 +27,7 @@ export const en: WhitepaperContent = {
         },
         {
           t: 'p',
-          text: 'The design is built around five properties: odds are published before a spin is bought; each spin records the machine configuration it was sold against; randomness comes from outside the operator; rewards are backed by inventory the contract checks before accepting payment; and every step of settlement is recorded where anyone can read it.',
+          text: 'The design is built around five properties: odds are published before a spin is bought; each spin records the machine configuration it was sold against; randomness comes from outside the operator; every prize is a fixed BNB value backed by a bankroll the contract checks before accepting payment; and every step of settlement is recorded where anyone can read it.',
         },
         {
           t: 'callout',
@@ -131,8 +131,8 @@ export const en: WhitepaperContent = {
           t: 'table',
           head: ['Module', 'Responsibility', 'Input', 'Output'],
           rows: [
-            ['Game contract', 'Spin requests, machine versions, randomness lifecycle, results', 'Payment, tier', 'Recorded spin and result'],
-            ['Vault', 'Reward inventory, reserve accounting, payouts', 'Funding, payout instruction', 'Transferred reward'],
+            ['Game contract', 'Spin requests, machine versions, randomness lifecycle, results, the BNB bankroll', 'Payment, tier', 'Recorded spin and result'],
+            ['Delivery', 'Swapping a settled prize’s BNB value into its stock on PancakeSwap', 'Settled spin, route, minimum output', 'Stock in the player’s wallet'],
             ['Randomness', 'One unpredictable number per spin, from committed seeds', 'Request', 'Random word'],
             ['Token registry', 'Which assets are eligible, and their exact identity', 'Verified configuration', 'Address, decimals, metadata'],
           ],
@@ -141,7 +141,7 @@ export const en: WhitepaperContent = {
           t: 'callout',
           kind: 'onchain',
           title: 'Separation of concerns',
-          text: 'The vault holds no opinion about who should be paid. It exposes a payout the game can call, and refuses to release anything a spin has a claim on. The game is the single source of truth for what is owed, so there is no second copy of that accounting to drift.',
+          text: 'The game holds one asset, BNB, and is the single source of truth for what is owed, so there is no second copy of that accounting to drift. Choosing a prize and buying it are separate steps: the randomness callback only records the result, and delivery swaps the prize’s BNB value into the stock afterwards. Whoever calls delivery picks the route and the minimum output; the contract fixes the token, the amount and the recipient.',
         },
       ],
     },
@@ -194,14 +194,14 @@ export const en: WhitepaperContent = {
             {
               n: '07',
               title: 'Result recorded',
-              body: 'The asset, amount, rarity, prize index and the random word itself are all stored and emitted.',
-              technical: 'SpinSettled carries spinId, player, rewardToken, rewardAmount, rarity, prizeIndex, randomWord and settledAt.',
+              body: 'The asset, its BNB value, rarity, prize index and the random word itself are all stored and emitted.',
+              technical: 'SpinSettled carries spinId, player, rewardToken, rewardValue, rarity, prizeIndex, randomWord and settledAt. The prize’s BNB value moves from the spin’s reserve into settledOwed.',
             },
             {
               n: '08',
-              title: 'Reward claimed',
-              body: 'The reward is transferred to the wallet that paid for the spin.',
-              technical: 'claimFor(uint256) is permissionless and reads the recipient from spin state written at request time. The status flip precedes the transfer, so a second claim is impossible.',
+              title: 'Prize delivered',
+              body: 'The prize’s BNB value is swapped into the stock on PancakeSwap and sent to the wallet that paid for the spin. The player can take it in BNB instead.',
+              technical: 'deliver(spinId, route, minOut, deadline) is callable by the player or a SETTLER_ROLE holder. The route must start at WBNB, end at the prize token and pass only through approved hops; the router pays the recorded player, and the player’s measured balance change is what is recorded. The status flips before the swap, so a second delivery is impossible. payInBnb(spinId) is the player-only alternative.',
             },
           ],
         },
@@ -246,7 +246,7 @@ export const en: WhitepaperContent = {
   decimals: number
   logo: string
   category: string
-  enabled: boolean          // custodied by the vault
+  enabled: boolean          // active in the registry
   rewardEnabled: boolean    // eligible for a prize table
   liquidityUsd?: number
   volume24hUsd?: number
@@ -272,7 +272,7 @@ export const en: WhitepaperContent = {
       blocks: [
         {
           t: 'p',
-          text: 'A prize table is a list of entries. Each entry names an asset by address, a fixed amount in base units, a weight, and a rarity band. Probability is a weight’s share of the total.',
+          text: 'A prize table is a list of entries. Each entry names an asset by address, a fixed value in BNB, a weight, and a rarity band. The table holds no token amounts: how many shares a prize buys is decided by the swap at delivery. Probability is a weight’s share of the total.',
         },
         {
           t: 'callout',
@@ -305,7 +305,7 @@ for entry in prizes:            # in published order
         { t: 'live', kind: 'odds-link' },
         {
           t: 'p',
-          text: 'Amounts are authored in whole tokens but stored as exact base units, so a floating-point value never reaches a published table. This matters more than it sounds: naive decimal conversion turns 1.2 into 1.199999999999999956 at eighteen decimals, and a table published that way would short every player by a fraction on every spin.',
+          text: 'Values are authored in BNB but stored as exact wei, so a floating-point value never reaches a published table. This matters more than it sounds: naive decimal conversion turns 1.2 into 1.199999999999999956 at eighteen decimals, and a table published that way would short every player by a fraction on every spin.',
         },
       ],
     },
@@ -391,29 +391,29 @@ for entry in prizes:            # in published order
       id: 'settlement',
       index: '09',
       title: 'Settlement and payouts',
-      lede: 'Why selecting a reward and moving it are two separate steps.',
+      lede: 'Why selecting a reward and buying it are two separate steps.',
       blocks: [
         {
           t: 'p',
-          text: 'The randomness callback records the result. It does not transfer anything. That separation is deliberate and it is the most important structural decision in the contract.',
+          text: 'The randomness callback records the result. It does not swap or transfer anything. That separation is deliberate and it is the most important structural decision in the contract.',
         },
         {
           t: 'p',
-          text: 'If the callback transferred the reward, then any asset that reverts on transfer — a paused token, a blacklisted recipient, an unusual BEP-20 — would cause the callback itself to fail. The randomness would be consumed, the spin would stay pending, and the player would be stuck. Keeping the callback to storage writes means it cannot be made to fail by the behaviour of a reward asset.',
+          text: 'If the callback bought the reward, then anything that makes a swap revert — a thin or broken pool, a paused token, a blacklisted recipient, an unusual BEP-20 — would cause the callback itself to fail. The randomness would be consumed, the spin would stay pending, and the player would be stuck. Keeping the callback to storage writes means a broken pool can delay a delivery but never block settlement.',
         },
         {
           t: 'flow',
           steps: [
             { label: 'Callback', detail: 'Records the result' },
-            { label: 'claimFor', detail: 'Anyone may call' },
-            { label: 'Vault', detail: 'Transfers to the recorded wallet' },
+            { label: 'deliver', detail: 'Player or settler picks the route' },
+            { label: 'PancakeSwap', detail: 'Swaps BNB into the stock, to the player' },
           ],
         },
         {
           t: 'callout',
           kind: 'onchain',
           title: 'A bot can help, but cannot redirect',
-          text: 'claimFor(spinId) is permissionless, so a settlement worker can deliver rewards on players’ behalf. The destination was written into spin state before the random word existed, so nothing the caller does can change who gets paid. A player can always claim for themselves.',
+          text: 'The settlement worker holds SETTLER_ROLE, so it can call deliver(spinId, …) on players’ behalf — but it chooses only the route and the minimum output. The contract fixes the token, the amount and the recipient, and checks that the route starts at WBNB, ends at the prize token and passes only through approved hops, so nothing the caller does can change what is bought or who receives it. A player can always deliver their own prize, or take it in BNB with payInBnb(spinId).',
         },
       ],
     },
@@ -421,27 +421,27 @@ for entry in prizes:            # in published order
     {
       id: 'vault',
       index: '10',
-      title: 'Vault and reserve safety',
+      title: 'Bankroll and reserve safety',
       lede: 'What the machine can actually pay.',
       blocks: [
         { t: 'art', id: 'reward-vault', alt: 'An open vault holding capsules.', width: 'narrow' },
         {
           t: 'facts',
           items: [
-            { label: 'Available', value: 'What the vault holds right now' },
-            { label: 'Reserved', value: 'Owed to settled-unclaimed and in-flight spins' },
+            { label: 'Available', value: 'The BNB the game holds right now' },
+            { label: 'Reserved', value: 'Held back for in-flight spins, plus settled prizes not yet delivered' },
             { label: 'Withdrawable', value: 'Available minus reserved — and nothing more' },
           ],
         },
         {
           t: 'p',
-          text: 'Reserved is a worst case, not an average. For every spin still waiting on randomness, the contract assumes it will land on that asset’s largest entry. If ten spins are in flight on a table whose biggest CAKE prize is 12 CAKE, the vault treats 120 CAKE as spoken for even though the expected draw is far lower.',
+          text: 'Reserved is a worst case, not an average. Every spin still waiting on randomness holds back the larger of its table’s biggest prize and its own payment. If ten spins are in flight on a table whose biggest prize is 0.006 BNB, the game treats 0.06 BNB as spoken for even though the expected draw is far lower. When a spin settles, its reserve is released and the exact value it won is owed instead, until it is delivered.',
         },
         {
           t: 'callout',
           kind: 'important',
           title: 'The machine should not promise a reward it cannot pay.',
-          text: 'Before accepting a spin, the contract checks the vault holds enough of every asset in that table to cover this spin’s worst case on top of everything already owed. If it does not, the spin is refused. Obligations already made are never touched to make room.',
+          text: 'Before accepting a spin, the contract checks its BNB balance covers this spin’s reserve on top of everything already owed — pending reserves plus settled, undelivered prize values. If it does not, the spin is refused. Obligations already made are never touched to make room.',
         },
         {
           t: 'p',
@@ -492,9 +492,9 @@ for entry in prizes:            # in published order
             { n: '01', title: 'Contract address', body: 'The asset is identified by address, sourced from a reputable listing rather than from a ticker search.' },
             { n: '02', title: 'Independent confirmation', body: 'The address is cross-checked against a second source that indexes the chain directly.' },
             { n: '03', title: 'Onchain confirmation', body: 'A direct call to the contract confirms decimals, symbol and total supply. This is the authoritative answer and overrides any listing.' },
-            { n: '04', title: 'Transfer behaviour', body: 'Anything unusual is recorded — fee-on-transfer history, non-standard decimals — and the vault credits measured balance deltas rather than requested amounts.' },
-            { n: '05', title: 'Liquidity', body: 'Thin on-DEX liquidity is noted and keeps prize amounts small, because a reward that cannot be sold at the shown price is not worth what it appears to be.' },
-            { n: '06', title: 'Approval and enablement', body: 'The vault must approve the asset before it can be custodied, and it must be flagged reward-enabled before it can appear in a table.' },
+            { n: '04', title: 'Transfer behaviour', body: 'Anything unusual is recorded — fee-on-transfer history, non-standard decimals — and a delivery records the player’s measured balance change rather than a quoted amount.' },
+            { n: '05', title: 'Liquidity', body: 'Thin on-DEX liquidity is noted and keeps prize values small, because every prize is bought with a swap at delivery and a shallow pool fills at a worse price.' },
+            { n: '06', title: 'Approval and enablement', body: 'The asset must be approved on the game before a published table can name it, and flagged reward-enabled before it can appear in a draft. Intermediate route hops are approved separately.' },
           ],
         },
         {
@@ -517,30 +517,30 @@ for entry in prizes:            # in published order
           t: 'ul',
           items: [
             'Accepts spins, verifies exact payment and stamps the machine version.',
-            'Publishes immutable prize tables and configures tiers.',
+            'Publishes immutable prize tables of BNB values and configures tiers.',
             'Requests randomness and records the settled result.',
-            'Exposes claimFor, claimMany and refundExpiredSpin.',
-            'Computes pendingLiabilityOf and remainingFundedSpins, which bound what the vault will release.',
+            'Exposes deliver, payInBnb and refundExpiredSpin.',
+            'Holds the BNB bankroll and computes obligations, withdrawableFees and remainingFundedSpins.',
           ],
         },
-        { t: 'h3', text: 'BachaVault' },
+        { t: 'h3', text: 'Prize delivery' },
         {
           t: 'ul',
           items: [
-            'Custodies approved reward assets and accepts permissionless funding.',
-            'Transfers a settled prize when the game instructs it, and only then.',
-            'Subtracts every obligation before allowing a treasurer withdrawal.',
-            'Can rescue an unapproved asset, and refuses to do so for an approved one.',
+            'Swaps a settled prize’s BNB value on PancakeSwap V2 or V3, straight to the player.',
+            'Accepts only routes that start at WBNB, end at the prize token and use approved hops.',
+            'Records what the player’s balance actually gained, and reverts below the caller’s minimum.',
+            'Lets the player take the prize in BNB instead, if no route will fill.',
           ],
         },
         {
           t: 'table',
           head: ['Role', 'Held by', 'Can'],
           rows: [
-            ['DEFAULT_ADMIN_ROLE', 'Multisig in production', 'Grant and revoke roles, approve assets, set the vault’s game'],
+            ['DEFAULT_ADMIN_ROLE', 'Multisig in production', 'Grant and revoke roles, approve assets and route hops, cap the prize value'],
             ['OPERATOR_ROLE', 'Multisig in production', 'Publish tables, configure tiers, pause, set randomness config'],
-            ['TREASURER_ROLE', 'Multisig in production', 'Withdraw unreserved inventory and spin revenue'],
-            ['GAME_ROLE', 'The game contract', 'Instruct the vault to pay a recorded winner'],
+            ['TREASURER_ROLE', 'Multisig in production', 'Withdraw BNB above every obligation'],
+            ['SETTLER_ROLE', 'The settlement worker', 'Deliver a settled prize, choosing only the route and minimum output'],
           ],
         },
       ],
@@ -557,15 +557,16 @@ for entry in prizes:            # in published order
           head: ['Protection', 'Mechanism'],
           rows: [
             ['Reentrancy', 'ReentrancyGuard on every value-moving path, with effects written before interactions'],
-            ['Unusual BEP-20 behaviour', 'SafeERC20 throughout; funding credits measured balance deltas'],
-            ['Emergency stop', 'Pausable on spin() only — pending spins still settle and stay claimable'],
-            ['Privilege', 'AccessControl with separate admin, operator, treasurer and game roles'],
+            ['Unusual BEP-20 behaviour', 'Deliveries record the player’s measured balance change, not a quoted amount'],
+            ['Emergency stop', 'Pausable on spin() only — pending spins still settle and stay deliverable'],
+            ['Privilege', 'AccessControl with separate admin, operator, treasurer and settler roles'],
             ['Odds tampering', 'Published versions are append-only; no mutator exists'],
             ['Duplicate settlement', 'A repeat callback for a settled spin is ignored, not reverted'],
-            ['Duplicate claim', 'Status flips to Claimed before the transfer, so a second claim reverts'],
-            ['Insolvency', 'Worst-case inventory checked before a spin is accepted'],
-            ['Withdrawal of owed funds', 'Withdrawable subtracts settled-unclaimed and in-flight liability'],
-            ['Arbitrary reward assets', 'Vault allowlist; tables reject unapproved assets at publish time'],
+            ['Duplicate payout', 'Status flips to Delivered or PaidInBnb before the swap or transfer, so a second payout reverts'],
+            ['Redirected prizes', 'The contract fixes token, amount and recipient; routes must start at WBNB, end at the prize token and use approved hops'],
+            ['Insolvency', 'Balance checked against pending reserves plus settled, undelivered values before a spin is accepted'],
+            ['Withdrawal of owed funds', 'Withdrawable subtracts pending reserves and settled, undelivered prizes'],
+            ['Arbitrary reward assets', 'Asset allowlist on the game; tables reject unapproved assets at publish time'],
             ['Stuck randomness', 'Permissionless refund after a bounded timeout'],
           ],
         },
@@ -573,17 +574,17 @@ for entry in prizes:            # in published order
           t: 'callout',
           kind: 'security',
           title: 'Not yet audited',
-          text: 'These contracts have not been audited by a third party. The test suite covers 51 cases including six invariants over arbitrary action sequences, but a test suite is written by the same people who wrote the code and is not a substitute for external review.',
+          text: 'These contracts have not been audited by a third party. The test suite covers 51 cases including three invariants over arbitrary action sequences, but a test suite is written by the same people who wrote the code and is not a substitute for external review.',
         },
         { t: 'h3', text: 'What operators can change' },
         {
           t: 'ul',
           items: [
             'Pause and unpause new spins.',
-            'Approve or disapprove reward assets on the vault.',
+            'Approve or disapprove reward assets and route hops.',
             'Publish new prize table versions and repoint tiers at them.',
             'Adjust tier prices and the randomness configuration.',
-            'Withdraw revenue and inventory that is not reserved.',
+            'Withdraw BNB that is not owed or reserved.',
           ],
         },
         { t: 'h3', text: 'What they cannot change' },
@@ -592,8 +593,8 @@ for entry in prizes:            # in published order
           items: [
             'The version or table hash recorded on an existing spin.',
             'A result that has already settled.',
-            'The wallet a recorded reward is paid to.',
-            'Inventory that is reserved against an obligation.',
+            'The token, value or wallet of a recorded prize.',
+            'BNB that is reserved against an obligation.',
           ],
         },
       ],
@@ -611,9 +612,9 @@ for entry in prizes:            # in published order
           rows: [
             ['Transaction rejected in wallet', 'A plain message saying nothing was spent', 'Nothing. No spin was created.'],
             ['Randomness delayed', 'The spin stays pending with its table already locked', 'Spin remains Pending; after the timeout anyone can trigger a refund of the price'],
-            ['Reward inventory low', 'That machine declines new spins', 'spin() reverts with InsufficientInventory; existing obligations untouched'],
-            ['Reward transfer fails', 'The claim does not go through; the reward stays claimable', 'Status only flips on a successful transfer, so the claim can be retried'],
-            ['Machine paused', 'A message saying the machine is unavailable', 'spin() reverts; pending spins still settle and stay claimable'],
+            ['Bankroll low', 'That machine declines new spins', 'spin() reverts with InsufficientBankroll; existing obligations untouched'],
+            ['Prize swap fails', 'The delivery does not go through; the prize stays deliverable, or can be taken in BNB', 'The status only flips on a successful swap, so delivery can be retried on another route; payInBnb is always open to the player'],
+            ['Machine paused', 'A message saying the machine is unavailable', 'spin() reverts; pending spins still settle and stay deliverable'],
             ['RPC or indexer unavailable', 'Feeds show empty rather than stale or invented rows', 'Nothing. The chain is unaffected by a frontend outage.'],
           ],
         },
@@ -628,22 +629,22 @@ for entry in prizes:            # in published order
       blocks: [
         {
           t: 'p',
-          text: 'A spin price is paid in BNB and accumulates in the game contract. It is withdrawable by a treasurer, less anything a pending spin could still reclaim through a refund. Reward inventory is funded separately into the vault; funding is permissionless and grants no claim on the assets.',
+          text: 'A spin price is paid in BNB and accumulates in the game contract, which holds nothing else. It is withdrawable by a treasurer, less everything owed: the reserve behind every pending spin and the value of every settled prize not yet delivered. Anyone may top up the bankroll with fund(); funding grants no claim on it.',
         },
         {
           t: 'p',
-          text: 'Prize tables are authored so that expected payout sits below the spin price. That margin is what funds inventory and operating costs. It is stated here because a game whose expected payout exceeded its price would not survive long enough to pay anyone.',
+          text: 'Prize tables are authored so that expected payout sits below the spin price. Because every prize is a fixed BNB value, that payout rate is exact and set by the table — it does not drift with token prices, so nothing has to rebalance it. The margin is what funds the bankroll and operating costs. It is stated here because a game whose expected payout exceeded its price would not survive long enough to pay anyone.',
         },
         {
           t: 'callout',
           kind: 'formula',
           title: 'Expected value',
-          text: 'EV = Σ ( P(i) × market value of reward i ). Every term on the right moves continuously, so this is an estimate at a moment in time and not a projection.',
+          text: 'EV = Σ ( P(i) × BNB value of prize i ). Exact in BNB and fixed by the table; only the number of shares a prize buys moves with the market.',
         },
         {
           t: 'callout',
           kind: 'risk',
-          text: 'Market prices change, so the dollar value of any published table changes with them. No spin is guaranteed to return more than it cost, and the interface never presents an estimate as a return.',
+          text: 'Market prices change, so the dollar value of any published table, and the shares each prize buys, change with them. No spin is guaranteed to return more than it cost, and the interface never presents an estimate as a return.',
         },
         {
           t: 'p',
@@ -666,7 +667,7 @@ for entry in prizes:            # in published order
             'Admin key risk. Privileged roles can pause the system and withdraw unreserved funds. Key custody is the single largest operational risk.',
             'Randomness provider risk. A delayed or failed response leaves a spin pending until the refund window opens.',
             'Reward token behaviour. An asset can be paused, upgraded or made non-transferable by its own issuer, independently of Bacha.',
-            'Liquidity risk. A displayed price may not be achievable if on-chain liquidity for that asset is thin.',
+            'Liquidity risk. A prize is bought with a swap at delivery; if on-chain liquidity is thin it buys fewer shares than the displayed price suggests.',
             'Display risk. Prices come from a third-party feed and can be wrong, stale or unavailable. They never affect settlement.',
             'Infrastructure risk. RPC or indexer outages can make the interface incomplete while the chain itself is unaffected.',
             'Regulatory risk. Paid randomised prizes with transferable value are treated differently across jurisdictions.',
@@ -731,14 +732,14 @@ for entry in prizes:            # in published order
             { label: 'BEP-20', value: 'The token standard rewards use. Equivalent in shape to ERC-20.' },
             { label: 'Machine', value: 'A tier with its own price and prize table. One is configured.' },
             { label: 'Machine version', value: 'An immutable snapshot of a prize table. Spins are stamped with one.' },
-            { label: 'Prize table', value: 'The list of entries a spin can resolve to, each with an amount, weight and rarity.' },
+            { label: 'Prize table', value: 'The list of entries a spin can resolve to, each with a BNB value, weight and rarity.' },
             { label: 'Weight', value: 'An entry’s share of the total. Probability is weight divided by total weight.' },
             { label: 'Spin', value: 'One paid pull, identified by a numeric id from the moment it is paid for.' },
             { label: 'Random word', value: 'The number returned by the randomness provider and recorded against the spin.' },
             { label: 'Settlement', value: 'The moment the random word is walked across the table and a result is recorded.' },
-            { label: 'Vault', value: 'The contract custodying reward inventory.' },
-            { label: 'Reserve', value: 'Inventory owed to settled-unclaimed and in-flight spins. Not withdrawable.' },
-            { label: 'Claim', value: 'Transferring a recorded reward to the wallet that paid for the spin.' },
+            { label: 'Bankroll', value: 'The BNB the game contract holds to pay prizes. It holds no other asset.' },
+            { label: 'Reserve', value: 'BNB held back for in-flight spins and owed to settled, undelivered prizes. Not withdrawable.' },
+            { label: 'Delivery', value: 'Swapping a settled prize’s BNB value into its stock and sending it to the wallet that paid for the spin.' },
             { label: 'Commitment', value: 'The hash of a secret seed, published before the spins that will use it.' },
             { label: 'Reveal', value: 'Opening a committed seed so the word it produces can be computed and checked.' },
           ],

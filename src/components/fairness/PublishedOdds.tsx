@@ -55,7 +55,7 @@ export function PublishedOdds() {
             token: p.token,
             symbol: p.symbol,
             decimals: p.decimals,
-            amount: p.amountUnits,
+            value: p.valueWei,
             weight: p.weight,
             rarity: RARITIES.indexOf(p.rarity),
             probability: p.weight / machine.totalWeight,
@@ -202,7 +202,8 @@ export function PublishedOdds() {
                       </span>
                     </td>
                     <td className="num px-5 py-3.5 text-[0.88rem] text-foreground-secondary">
-                      {formatTokenAmount(prize.amount)}
+                      {prize.valueBnb} BNB
+                      <span className="ml-2 text-foreground-muted">≈ {formatTokenAmount(prize.amount)}</span>
                     </td>
                     <td className="px-5 py-3.5">
                       <RarityChip rarity={prize.rarity} />
@@ -243,7 +244,7 @@ export function PublishedOdds() {
                   <div className="min-w-0 flex-1">
                     <div className="num text-[0.9rem] font-medium text-foreground">{prize.symbol}</div>
                     <div className="num mt-0.5 text-[0.76rem] text-foreground-muted">
-                      {formatTokenAmount(prize.amount)}
+                      {prize.valueBnb} BNB · ≈ {formatTokenAmount(prize.amount)}
                     </div>
                   </div>
                   <div className="text-right">

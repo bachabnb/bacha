@@ -441,11 +441,7 @@
       "source": "源码",
       "game": {
         "name": "Bacha Game",
-        "role": "转动请求、机型版本、随机性与结果"
-      },
-      "vault": {
-        "name": "Bacha Vault",
-        "role": "奖励储备与发放"
+        "role": "转动、奖池表、BNB 资金池与奖励发放"
       },
       "beacon": {
         "name": "BachaRandomness",
@@ -455,7 +451,6 @@
         "network": "网络",
         "chainId": "链 ID",
         "game": "Game",
-        "vault": "Vault",
         "randomness": "随机性",
         "source": "源码",
         "deployed": "已部署",
@@ -793,7 +788,13 @@
       "settlement": "结算方式",
       "settlementVrf": "承诺—揭示",
       "unknownAsset": "未知资产",
-      "dialogLabel": "转动结果"
+      "dialogLabel": "转动结果",
+      "delivering": "正在为你买入 {symbol}——几秒内就会到达你的钱包。",
+      "deliverySlow": "这次买入 {symbol} 比平时慢。它仍会到账——你也可以改为领取等值 BNB。",
+      "delivered": "已发送到你的钱包。",
+      "paidBnb": "已以 {amount} BNB 发放。",
+      "takeBnb": "改领 BNB",
+      "takingBnb": "正在发送 BNB…"
     },
     "stage": {
       "eyebrow": "机器",
@@ -878,7 +879,9 @@
     "refund": "退款 {count}",
     "refunding": "退款中…",
     "refundNote": "有 {count} 次转动未收到随机数，可以退款到付款钱包。",
-    "pendingNote": "有 {count} 次转动正在等待随机数。如果一直未送达，超时后可以退还 BNB。"
+    "pendingNote": "有 {count} 次转动正在等待随机数。如果一直未送达，超时后可以退还 BNB。",
+    "takeBnb": "将 {count} 个卡住的奖励改领 BNB",
+    "deliveringNote": "有 {count} 个奖励正在买入并发送到你的钱包，通常只需几秒。"
   },
   "rarity": {
     "COMMON": "普通",
@@ -889,8 +892,9 @@
   "status": {
     "PENDING": "等待中",
     "SETTLED": "已结算",
-    "CLAIMED": "已领取",
-    "REFUNDED": "已退款"
+    "CLAIMED": "已到账",
+    "REFUNDED": "已退款",
+    "PAID_BNB": "已领 BNB"
   },
   "common": {
     "loading": "加载中…",

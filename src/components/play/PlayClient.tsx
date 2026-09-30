@@ -61,7 +61,7 @@ export function PlayClient({
   )
   const machine = machineById(machineId) ?? machines[0]
 
-  const { phase, record, txHash, error, spin, claim, reset, markRevealed } = useSpin()
+  const { phase, record, txHash, error, deliverySlow, spin, claim, reset, markRevealed } = useSpin()
   const { play } = useSound()
 
   useEffect(() => {
@@ -189,6 +189,7 @@ export function PlayClient({
                     void spin(machine.id)
                   }}
                   onClaim={() => void claim()}
+                  deliverySlow={deliverySlow}
                 />
               </div>
             </div>

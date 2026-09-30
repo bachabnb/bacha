@@ -30,7 +30,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         publishedAt: Number(version.publishedAt) * 1000,
         prizes: prizes.map((p) => ({
           token: p.token.toLowerCase(),
-          amountUnits: p.amount.toString(),
+          valueWei: p.value.toString(),
           weight: p.weight,
           rarity: p.rarity,
         })),

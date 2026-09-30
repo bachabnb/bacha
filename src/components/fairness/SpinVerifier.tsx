@@ -9,6 +9,7 @@ import { RarityChip } from '@/components/ui/RarityChip'
 import { useViewMode } from './ViewMode'
 import { machineById, selectPrize, type Machine, type PrizeEntry } from '@/lib/machine'
 import { rarityFromIndex } from '@/lib/rarity'
+import { formatEther } from 'viem'
 import { tokenByAddress } from '@/lib/tokens'
 import { shortAddress, shortHash, formatTokenAmount, formatBnb } from '@/lib/format'
 import { explorer } from '@/lib/chain'
@@ -182,7 +183,7 @@ function ProofCard({ spin, technical }: { spin: SpinRecord; technical: boolean }
   const matches =
     recomputed && spin.rewardTokenAddress
       ? recomputed.prize.token.toLowerCase() === spin.rewardTokenAddress.toLowerCase() &&
-        recomputed.prize.amountUnits === spin.rewardAmountUnits
+        recomputed.prize.valueWei === spin.rewardValueWei
       : null
 
   const pending = spin.status === 'PENDING'
@@ -314,8 +315,9 @@ function useStampedTable(spin: SpinRecord, machine: Machine | undefined): Machin
             token: p.token,
             symbol: token_?.symbol ?? '?',
             decimals: token_?.decimals ?? 18,
+            valueWei: p.valueWei,
+            valueBnb: Number(formatEther(BigInt(p.valueWei))),
             amount: 0,
-            amountUnits: p.amountUnits,
             weight: p.weight,
             rarity: rarityFromIndex(p.rarity),
             referenceValueUsd: 0,
@@ -335,7 +337,7 @@ function useStampedTable(spin: SpinRecord, machine: Machine | undefined): Machin
 
 interface VersionResponse {
   totalWeight: number
-  prizes: { token: `0x${string}`; amountUnits: string; weight: number; rarity: number }[]
+  prizes: { token: `0x${string}`; valueWei: string; weight: number; rarity: number }[]
 }
 
 /* ------------------------------------------------------------- timeline */

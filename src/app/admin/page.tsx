@@ -28,8 +28,7 @@ export default async function AdminOverview() {
         <div className="mb-6 rounded-[12px] border border-warning/30 bg-warning-soft px-5 py-4 text-[0.86rem] leading-relaxed text-warning">
           Contracts are not deployed on this deployment. The console shows the local configuration a
           deploy would publish; nothing here can be executed until{' '}
-          <code className="num">NEXT_PUBLIC_BACHA_GAME_ADDRESS</code>,{' '}
-          <code className="num">NEXT_PUBLIC_BACHA_VAULT_ADDRESS</code> and{' '}
+          <code className="num">NEXT_PUBLIC_BACHA_GAME_ADDRESS</code> and{' '}
           <code className="num">NEXT_PUBLIC_BACHA_RANDOMNESS_ADDRESS</code> are set.
         </div>
       )}
@@ -66,7 +65,7 @@ export default async function AdminOverview() {
         <Card title="Contracts">
           <dl className="space-y-3 text-[0.8rem]">
             <Row label="BachaGame" value={publicEnv.gameAddress ?? 'Not deployed'} />
-            <Row label="BachaVault" value={publicEnv.vaultAddress ?? 'Not deployed'} />
+            <Row label="BachaRandomness" value={publicEnv.randomnessAddress ?? 'Not deployed'} />
             <Row label="RPC" value={publicEnv.rpcUrl} />
           </dl>
         </Card>

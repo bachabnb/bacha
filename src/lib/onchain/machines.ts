@@ -9,10 +9,11 @@ import {
   deserializeMachine,
   type Machine,
   type SerializedMachine,
+  bnbUsdOf,
 } from '../machine'
+import { getMarketSnapshot, quoteFor } from '../market'
 import { tokenByAddress } from '../tokens'
 import { rarityFromIndex } from '../rarity'
-import { unitsToNumber } from '../format'
 import { spinMode } from '../env'
 
 /**
@@ -69,24 +70,30 @@ async function overlay(local: Machine): Promise<Machine> {
     args: [tier.versionId],
   })
 
+  const bnbUsd = bnbUsdOf(local)
+  const market = await getMarketSnapshot().catch(() => null)
   const localByToken = new Map(local.prizes.map((p) => [p.token.toLowerCase(), p]))
   const livePrizes = prizes.map((p) => {
     const token = tokenByAddress(p.token)
     const ref = localByToken.get(p.token.toLowerCase())
-    const decimals = token?.decimals ?? ref?.decimals ?? 18
-    const amount = unitsToNumber(p.amount, decimals)
-    // Reference value scales with the amount; it is display-only either way.
-    const refPerUnit = ref && ref.amount > 0 ? ref.referenceValueUsd / ref.amount : 0
+    const valueBnb = Number(formatEther(p.value))
+    const valueUsd = valueBnb * bnbUsd
+    // Shares the value buys: live price if the feed has one, else the price
+    // the table was authored at. Display only — the swap decides.
+    const sharePrice =
+      (market ? quoteFor(market, p.token)?.priceUsd : null) ??
+      (ref && ref.amount > 0 ? ref.referenceValueUsd / ref.amount : null)
     return {
       tokenId: token?.id ?? ref?.tokenId ?? '',
       token: p.token,
       symbol: token?.symbol ?? ref?.symbol ?? '?',
-      decimals,
-      amount,
-      amountUnits: p.amount.toString(),
+      decimals: token?.decimals ?? ref?.decimals ?? 18,
+      valueWei: p.value.toString(),
+      valueBnb,
+      amount: sharePrice ? Number((valueUsd / sharePrice).toPrecision(3)) : 0,
       weight: p.weight,
       rarity: rarityFromIndex(p.rarity),
-      referenceValueUsd: refPerUnit * amount,
+      referenceValueUsd: valueUsd,
       token_: token,
     }
   })
@@ -97,7 +104,6 @@ async function overlay(local: Machine): Promise<Machine> {
   )
   const expectedValueUsd = livePrizes.reduce((s, p) => s + (p.referenceValueUsd * p.weight) / totalWeight, 0)
   const priceBnb = Number(formatEther(tier.price))
-  const bnbUsd = local.priceBnb > 0 ? local.referencePriceUsd / local.priceBnb : 0
 
   return {
     ...local,

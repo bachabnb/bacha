@@ -33,7 +33,7 @@ export default async function AdminSpins() {
         title="Spins"
         description={
           spinMode === 'onchain'
-            ? 'Read from contract events. Pending spins are waiting on a reveal; settled-unclaimed spins are owed a payout the vault is already holding.'
+            ? 'Read from contract events. Pending spins are waiting on a reveal; settled, undelivered spins are owed a prize the game already holds in BNB.'
             : 'Simulated spins from the local demo store. These are not transactions and settle no value.'
         }
       />
@@ -46,7 +46,7 @@ export default async function AdminSpins() {
           <Stat label="Pending randomness" value={pending.length} />
         </Card>
         <Card>
-          <Stat label="Settled, unclaimed" value={unclaimed.length} />
+          <Stat label="Settled, undelivered" value={unclaimed.length} />
         </Card>
       </div>
 

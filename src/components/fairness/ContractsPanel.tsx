@@ -27,11 +27,6 @@ export function ContractsPanel() {
       ok: Boolean(publicEnv.gameAddress),
     },
     {
-      label: t('strip.vault'),
-      value: publicEnv.vaultAddress ? t('strip.deployed') : t('strip.notDeployed'),
-      ok: Boolean(publicEnv.vaultAddress),
-    },
-    {
       label: t('strip.randomness'),
       value: contractsConfigured ? t('strip.commitReveal') : t('strip.simulated'),
       ok: contractsConfigured,
@@ -58,7 +53,7 @@ export function ContractsPanel() {
       )}
 
       {/* ---------------------------------------------------- status strip */}
-      <dl className="mt-6 grid gap-px overflow-hidden rounded-[14px] border border-border bg-border sm:grid-cols-3 lg:grid-cols-6">
+      <dl className="mt-6 grid gap-px overflow-hidden rounded-[14px] border border-border bg-border sm:grid-cols-5">
         {strip.map((cell) => (
           <div key={cell.label} className="bg-surface px-4 py-3.5">
             <dt className="text-[0.58rem] uppercase tracking-[0.16em] text-foreground-muted">
@@ -82,18 +77,13 @@ export function ContractsPanel() {
       </dl>
 
       {/* ----------------------------------------------------------- cards */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      {/* Two contracts: the game holds the BNB bankroll and delivers prizes. */}
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <ContractCard
           name={t('game.name')}
           role={t('game.role')}
           address={publicEnv.gameAddress}
           source="https://github.com/bachabnb/bacha/blob/main/contracts/src/BachaGame.sol"
-        />
-        <ContractCard
-          name={t('vault.name')}
-          role={t('vault.role')}
-          address={publicEnv.vaultAddress}
-          source="https://github.com/bachabnb/bacha/blob/main/contracts/src/BachaVault.sol"
         />
         <ContractCard
           name={t('beacon.name')}
