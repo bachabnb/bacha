@@ -22,31 +22,36 @@ contract PublishTable is Script {
         string memory path = vm.envString("BACHA_TABLE_FILE");
 
         string memory json = vm.readFile(path);
-        address[] memory tokens = vm.parseJsonAddressArray(json, ".prizes[*].token");
-        uint256[] memory amounts = vm.parseJsonUintArray(json, ".prizes[*].amount");
-        uint256[] memory weights = vm.parseJsonUintArray(json, ".prizes[*].weight");
-        uint256[] memory rarities = vm.parseJsonUintArray(json, ".prizes[*].rarity");
 
-        require(tokens.length == amounts.length, "prizes: length mismatch");
-        require(tokens.length == weights.length, "prizes: length mismatch");
-        require(tokens.length == rarities.length, "prizes: length mismatch");
+        // Read entry by entry. A `[*]` wildcard path yields several values,
+        // which current forge refuses to decode as a single array.
+        uint256 n = _count(json, ".prizes");
+        uint256 t = _count(json, ".tiers");
+        require(n > 0, "prizes: empty");
 
         BachaGame game = BachaGame(gameAddr);
         BachaVault vault = BachaVault(vaultAddr);
 
-        BachaGame.Prize[] memory prizes = new BachaGame.Prize[](tokens.length);
+        BachaGame.Prize[] memory prizes = new BachaGame.Prize[](n);
+        address[] memory tokens = new address[](n);
         uint256 totalWeight;
-        for (uint256 i; i < tokens.length; ++i) {
-            require(rarities[i] <= 3, "rarity out of range");
-            require(amounts[i] <= type(uint128).max, "amount too large");
-            require(weights[i] > 0 && weights[i] <= type(uint32).max, "bad weight");
+        for (uint256 i; i < n; ++i) {
+            string memory at = string.concat(".prizes[", vm.toString(i), "]");
+            tokens[i] = vm.parseJsonAddress(json, string.concat(at, ".token"));
+            uint256 amount = vm.parseJsonUint(json, string.concat(at, ".amount"));
+            uint256 weight = vm.parseJsonUint(json, string.concat(at, ".weight"));
+            uint256 rarity = vm.parseJsonUint(json, string.concat(at, ".rarity"));
+
+            require(rarity <= 3, "rarity out of range");
+            require(amount > 0 && amount <= type(uint128).max, "bad amount");
+            require(weight > 0 && weight <= type(uint32).max, "bad weight");
             prizes[i] = BachaGame.Prize({
                 token: tokens[i],
-                amount: uint128(amounts[i]),
-                weight: uint32(weights[i]),
-                rarity: BachaGame.Rarity(uint8(rarities[i]))
+                amount: uint128(amount),
+                weight: uint32(weight),
+                rarity: BachaGame.Rarity(uint8(rarity))
             });
-            totalWeight += weights[i];
+            totalWeight += weight;
         }
 
         vm.startBroadcast(pk);
@@ -59,17 +64,23 @@ contract PublishTable is Script {
 
         uint64 versionId = game.publishPrizeTable(prizes);
 
-        uint256[] memory tierIds = vm.parseJsonUintArray(json, ".tiers[*].id");
-        uint256[] memory tierPrices = vm.parseJsonUintArray(json, ".tiers[*].price");
-        string[] memory tierLabels = vm.parseJsonStringArray(json, ".tiers[*].label");
-        for (uint256 i; i < tierIds.length; ++i) {
-            game.configureTier(uint8(tierIds[i]), tierLabels[i], uint96(tierPrices[i]), versionId, true);
+        for (uint256 i; i < t; ++i) {
+            string memory at = string.concat(".tiers[", vm.toString(i), "]");
+            uint256 id = vm.parseJsonUint(json, string.concat(at, ".id"));
+            uint256 price = vm.parseJsonUint(json, string.concat(at, ".price"));
+            require(id <= type(uint8).max && price <= type(uint96).max, "bad tier");
+            game.configureTier(uint8(id), vm.parseJsonString(json, string.concat(at, ".label")), uint96(price), versionId, true);
         }
 
         vm.stopBroadcast();
 
         console2.log("published version", versionId);
         console2.log("total weight     ", totalWeight);
+        console2.log("tiers activated  ", t);
         console2.log("funded spins left", game.remainingFundedSpins(versionId));
+    }
+
+    function _count(string memory json, string memory key) private view returns (uint256 i) {
+        while (vm.keyExistsJson(json, string.concat(key, "[", vm.toString(i), "]"))) ++i;
     }
 }

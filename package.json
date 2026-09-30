@@ -14,6 +14,7 @@
     "art:generate": "node scripts/generate-bacha-art.mjs",
     "photos:fetch": "node scripts/fetch-photos.mjs",
     "tokens:verify": "node scripts/verify-tokens.mjs",
+    "table:export": "node scripts/export-table.mjs",
     "contracts:build": "cd contracts && forge build",
     "contracts:test": "cd contracts && forge test -vv",
     "art:list": "node scripts/generate-bacha-art.mjs --list",

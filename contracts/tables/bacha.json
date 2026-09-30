@@ -1,0 +1,65 @@
+{
+  "prizes": [
+    {
+      "token": "0x5C85D6C6825aB4032337F11Ee92a72DF936b46F6",
+      "amount": "32000000000000000000",
+      "weight": 2600,
+      "rarity": 0
+    },
+    {
+      "token": "0xFe189E97832DA1573e4e4Ff034F4fFC3a15c7777",
+      "amount": "12000000000000000000",
+      "weight": 2300,
+      "rarity": 0
+    },
+    {
+      "token": "0xeCCBb861c0dda7eFd964010085488B69317e4444",
+      "amount": "11000000000000000000",
+      "weight": 1900,
+      "rarity": 0
+    },
+    {
+      "token": "0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2",
+      "amount": "4500000000000000000",
+      "weight": 1400,
+      "rarity": 1
+    },
+    {
+      "token": "0xeCCBb861c0dda7eFd964010085488B69317e4444",
+      "amount": "20000000000000000000",
+      "weight": 900,
+      "rarity": 1
+    },
+    {
+      "token": "0x000Ae314E2A2172a039B26378814C252734f556A",
+      "amount": "5500000000000000000",
+      "weight": 450,
+      "rarity": 2
+    },
+    {
+      "token": "0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2",
+      "amount": "9500000000000000000",
+      "weight": 280,
+      "rarity": 2
+    },
+    {
+      "token": "0x20d6015660b3fe52e6690a889b5C51F69902cE0e",
+      "amount": "75000000000000000",
+      "weight": 70,
+      "rarity": 2
+    },
+    {
+      "token": "0x000Ae314E2A2172a039B26378814C252734f556A",
+      "amount": "8000000000000000000",
+      "weight": 100,
+      "rarity": 3
+    }
+  ],
+  "tiers": [
+    {
+      "id": 0,
+      "label": "BACHA",
+      "price": "3900000000000000"
+    }
+  ]
+}
