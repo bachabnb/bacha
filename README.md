@@ -7,22 +7,77 @@ a prize table that was frozen the moment you paid, and a commit–reveal beacon
 decides which one. The odds are published, the result can be recomputed by
 anyone from public inputs, and it is permanently recorded.
 
-**Built on BNB Smart Chain.** Bacha is an independent project and is not
-operated, endorsed or sponsored by BNB Chain, Binance, or any token issuer
-named in it.
+**Built on BNB Smart Chain.** Live at [www.bacha.fun](https://www.bacha.fun).
+Bacha is an independent project and is not operated, endorsed or sponsored by
+BNB Chain, Binance, or any token issuer named in it.
 
 ---
 
 ## What it does
 
 ```
-connect  →  choose a machine  →  pay  →  randomness settles  →  claim
+connect  →  pick 1–25 spins  →  pay  →  randomness settles  →  stock lands in your wallet
 ```
 
-One machine, one price (0.0026 BNB, about $2). Every reward is a fraction of a
-tokenized US stock — a bStock, issued on BNB Chain by BTECH Holdings and backed
-1:1 by shares in custody. The odds are 68% common, 23% uncommon, 8% rare and 1%
-epic, and the prize table is authored in `scripts/build-machine-config.mjs`.
+One machine, one price (0.0026 BNB, about $2 a spin), up to 25 spins in a
+single transaction. Every reward is a fraction of a tokenized US stock — a
+bStock, issued on BNB Chain by BTECH Holdings and backed 1:1 by shares in
+custody. The odds are 68% common, 23% uncommon, 8% rare and 1% epic, and the
+prize table is authored in `scripts/build-machine-config.mjs`.
+
+---
+
+## Features
+
+- **Real stocks as prizes.** NVIDIA, SpaceX, Apple, Tesla, Alphabet and
+  Microsoft bStocks, bought on PancakeSwap at the moment you win and sent
+  straight to your wallet.
+- **Provably fair.** A first-party commit–reveal beacon on BNB Smart Chain
+  decides every result; anyone can recompute it from public onchain inputs.
+- **Odds frozen at purchase.** Each spin is stamped with the prize-table version
+  it was sold against, and published versions can never be edited.
+- **Always solvent.** The contract reserves the biggest prize for every spin in
+  flight and refuses a spin it could not pay.
+- **Multi-spin.** Buy 1–25 spins in one transaction; results fill in as each
+  one settles.
+- **Player-safe fallbacks.** Take any prize in BNB if delivery stalls; get a full
+  refund if randomness never arrives.
+- **English and Simplified Chinese**, light and dark themes.
+
+---
+
+## Technology stack
+
+- **Blockchain:** BNB Smart Chain (BSC)
+- **Smart contracts:** Solidity 0.8.28, OpenZeppelin v5
+- **Development:** Foundry
+- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind v4
+- **Web3:** wagmi + viem, Reown AppKit (WalletConnect)
+- **DEX:** PancakeSwap V2 and V3, for buying prizes at spin time
+- **Worker:** Node.js randomness and delivery worker (`scripts/randomness-worker.mjs`)
+
+---
+
+## Supported networks
+
+| Network | Chain ID | Status |
+|---|---|---|
+| **BNB Smart Chain mainnet** | 56 | Live |
+| BNB Smart Chain testnet | 97 | Supported for testing (`NEXT_PUBLIC_CHAIN_ID=97`) |
+
+---
+
+## Contract addresses
+
+BNB Smart Chain mainnet, verified on BscScan:
+
+| Contract | Address |
+|---|---|
+| **BachaGame** | [`0xf85b4ae5a43387da702d9b5db368cfa4128f6157`](https://bscscan.com/address/0xf85b4ae5a43387da702d9b5db368cfa4128f6157#code) |
+| **BachaRandomness** | [`0x3C825aed2854ED84cD8D6683eE9826C13c3e7367`](https://bscscan.com/address/0x3C825aed2854ED84cD8D6683eE9826C13c3e7367#code) |
+
+Retired contracts and the full operational picture are in
+[DEPLOYMENT.md](./DEPLOYMENT.md).
 
 ---
 
@@ -43,7 +98,7 @@ and no transaction is made. Demo randomness lives in its own module
 
 ```bash
 cd contracts
-forge test        # 81 tests, including 6 invariants
+forge test        # 56 tests, including 3 invariants
 forge build
 ```
 
@@ -54,7 +109,7 @@ forge build
 | | |
 |---|---|
 | **App** | Next.js 15 (App Router), React 19, TypeScript, Tailwind v4 |
-| **Wallet** | wagmi + viem, injected + WalletConnect |
+| **Wallet** | wagmi + viem, Reown AppKit (injected + WalletConnect) |
 | **i18n** | next-intl, locale-prefixed routes (`/en`, `/zh-CN`) |
 | **Contracts** | Solidity 0.8.28, OpenZeppelin v5, Foundry |
 | **Randomness** | `BachaRandomness` — first-party commit–reveal beacon |
@@ -76,7 +131,8 @@ src/
     demo/             DEMO ONLY settlement. Never on the production path.
     onchain/          contract reads
     spin/useSpin.ts   the spin lifecycle, both modes
-contracts/            BachaGame, BachaVault, tests, deploy scripts
+contracts/            BachaGame, BachaRandomness, tests, deploy scripts
+scripts/              randomness + delivery worker, table and token tooling
 data/                 token registry, prize tables, image credits
 art-masters/          unoptimised generation masters (not served)
 messages/             en.json, zh-CN.json
@@ -96,26 +152,29 @@ cannot reach a spin already in the air. There is a test for exactly this
 
 ### The machine never owes more than it holds
 
-Before accepting a spin, the contract checks the vault holds enough of **every**
-asset in the table to cover the worst case for that spin on top of everything
-already owed — that is, every pending spin landing on the same asset's largest
-entry at once. When inventory falls short the machine refuses new spins and
-leaves pending obligations untouched. This is enforced by an invariant, not
-just a unit test.
+The game holds only BNB. Before accepting a spin it reserves the table's
+biggest prize on top of everything already owed, and a batch is checked spin by
+spin, so it is accepted whole or not at all. When the bankroll falls short the
+machine refuses new spins and leaves pending obligations untouched. This is
+enforced by an invariant, not just a unit test.
 
 ### The randomness callback cannot fail
 
-`rawFulfillRandomWords` writes storage and nothing else: no transfers, no external
-calls, no unbounded loops. Moving the prize is a separate, permissionless
-`claimFor(spinId)` whose destination was fixed before randomness existed — so a
-settlement bot can trigger it on a player's behalf without taking custody or
-being able to redirect anything. Players can always claim themselves.
+`rawFulfillRandomWords` writes storage and nothing else: no transfers, no swaps,
+no unbounded loops. Buying the prize is a separate `deliver(spinId, route, …)`,
+callable by the player or the settlement worker. The contract fixes the amount
+spent, the token bought and the recipient, and checks the route only passes
+through approved tokens. The worker can choose a route but can never redirect a
+prize. If no route fills, the player can take the prize's value in BNB with
+`payInBnb`.
 
 ### Prices never touch settlement
 
-A prize table fixes a **token quantity**. Every dollar figure in the interface
-is decoration computed from a cached third-party feed, and when that feed fails
-prices are hidden rather than guessed. The contract has no price oracle.
+A prize table fixes a **BNB value**. The stock amount is whatever that BNB buys
+on PancakeSwap at delivery, recorded from the player's actual balance change.
+Every dollar figure in the interface is decoration from a cached third-party
+feed, hidden rather than guessed when the feed fails. The contract has no price
+oracle.
 
 ### Tokens are identified by address
 
@@ -141,7 +200,7 @@ accordingly before launch.
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
 | `npm test` | frontend tests (84) |
-| `npm run contracts:test` | Foundry tests (81) |
+| `npm run contracts:test` | Foundry tests (56) |
 | `npm run art:generate` | generate the art pack (needs `OPENAI_API_KEY`) |
 | `npm run art:optimize` | trim, resize and convert to WebP |
 | `npm run logo:process` | prepare `public/brand/bacha-logo.png` for the web |
